@@ -1,0 +1,28 @@
+[
+    {
+		"name": "geoApify",
+        "dailyLimit": 3000,
+        "key": "YOUR_FREE_API_KEY_HERE"
+    },
+    {
+		
+        "name": "geocodio",
+        "dailyLimit": 2500,
+        "key": "YOUR_FREE_API_KEY_HERE"
+    },
+	{
+		"name": "openCageDataApi",
+		"dailyLimit": 2500,
+		"key": "YOUR_FREE_API_KEY_HERE"
+	},
+	{
+		"name": "abstractApi",
+		"dailyLimit": 5000,
+		"key": "YOUR_FREE_API_KEY_HERE"
+	},
+	{
+		"name": "zipCodeBase",
+		"monthlyLimit": 5000,
+		"key": "YOUR_FREE_API_KEY_HERE"
+	}
+]
