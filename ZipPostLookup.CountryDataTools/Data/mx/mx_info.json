@@ -1,0 +1,255 @@
+﻿{
+  "Country": "MX",
+  "Iso3": "MEX",
+  "Continent": "Americas",
+  "Region": "Central America",
+  "Languages": [
+    {
+      "Alpha2": "es",
+      "Alpha3": "spa",
+      "Name": "Spanish"
+    }
+  ],
+  "NameLabel": "Colonia",
+  "CodeCount": 32629,
+  "CodeRanges": false,
+  "Curated": true,
+  "CurationStatus": "Curated",
+  "LastUpdated": "2026-06-06",
+  "CodeFormat": "12345",
+  "CodeRegex": "^\\d{5}$",
+  "Description": "Mexican states and their identifiers. \u0027iso\u0027 is the 2-3 character SEPOMEX/commonly-used abbreviation used in postal data. \u0027iso3\u0027 is the ISO 3166-2 three-letter code. \u0027iso2\u0027 is the full ISO 3166-2 identifier (e.g. MX-AGU). \u0027inegi\u0027 is the numeric INEGI state code used in SEPOMEX zip code data - the first two digits of a 5-digit MX zip code identify the state.",
+  "Source": "INEGI / ISO 3166-2:MX / SEPOMEX",
+  "AdminLevels": [
+    {
+      "Level": 1,
+      "Name": "Estado",
+      "Aliases": [
+        "State",
+        "Entidad Federativa"
+      ],
+      "LocalName": "Estado",
+      "CodeType": "iso",
+      "OfficialLanguages": [],
+      "MinorityLanguages": []
+    },
+    {
+      "Level": 2,
+      "Name": "Municipio",
+      "Aliases": [
+        "Municipality",
+        "Delegaci\u00F3n"
+      ],
+      "LocalName": "Municipio",
+      "CodeType": "inegi",
+      "OfficialLanguages": [],
+      "MinorityLanguages": []
+    },
+    {
+      "Level": 3,
+      "Name": "Ciudad",
+      "Aliases": [
+        "City",
+        "Localidad"
+      ],
+      "LocalName": "Ciudad",
+      "CodeType": "none",
+      "OfficialLanguages": [],
+      "MinorityLanguages": []
+    }
+  ],
+  "Divisions": [
+    {
+      "Name": "Aguascalientes",
+      "Code": "AGS",
+      "ZipCount": 413,
+      "NameCount": 1359
+    },
+    {
+      "Name": "Baja California",
+      "Code": "BC",
+      "ZipCount": 508,
+      "NameCount": 2325
+    },
+    {
+      "Name": "Baja California Sur",
+      "Code": "BCS",
+      "ZipCount": 340,
+      "NameCount": 971
+    },
+    {
+      "Name": "Campeche",
+      "Code": "CAM",
+      "ZipCount": 289,
+      "NameCount": 1326
+    },
+    {
+      "Name": "Chiapas",
+      "Code": "CHP",
+      "ZipCount": 22,
+      "NameCount": 22
+    },
+    {
+      "Name": "Chihuahua",
+      "Code": "CHH",
+      "ZipCount": 1078,
+      "NameCount": 9290
+    },
+    {
+      "Name": "Ciudad de M\u00E9xico",
+      "Code": "CMX",
+      "ZipCount": 1258,
+      "NameCount": 1812
+    },
+    {
+      "Name": "Coahuila de Zaragoza",
+      "Code": "COA",
+      "ZipCount": 1,
+      "NameCount": 1
+    },
+    {
+      "Name": "Colima",
+      "Code": "COL",
+      "ZipCount": 279,
+      "NameCount": 828
+    },
+    {
+      "Name": "Durango",
+      "Code": "DUR",
+      "ZipCount": 6,
+      "NameCount": 6
+    },
+    {
+      "Name": "Guanajuato",
+      "Code": "GTO",
+      "ZipCount": 1903,
+      "NameCount": 11828
+    },
+    {
+      "Name": "Guerrero",
+      "Code": "GRO",
+      "ZipCount": 1919,
+      "NameCount": 7581
+    },
+    {
+      "Name": "Hidalgo",
+      "Code": "HID",
+      "ZipCount": 796,
+      "NameCount": 3838
+    },
+    {
+      "Name": "Jalisco",
+      "Code": "JAL",
+      "ZipCount": 1848,
+      "NameCount": 5265
+    },
+    {
+      "Name": "Estado de M\u00E9xico",
+      "Code": "MEX",
+      "ZipCount": 2382,
+      "NameCount": 8211
+    },
+    {
+      "Name": "Michoac\u00E1n de Ocampo",
+      "Code": "MIC",
+      "ZipCount": 1983,
+      "NameCount": 10209
+    },
+    {
+      "Name": "Morelos",
+      "Code": "MOR",
+      "ZipCount": 433,
+      "NameCount": 1756
+    },
+    {
+      "Name": "Nayarit",
+      "Code": "NAY",
+      "ZipCount": 451,
+      "NameCount": 2005
+    },
+    {
+      "Name": "Nuevo Le\u00F3n",
+      "Code": "NLE",
+      "ZipCount": 1107,
+      "NameCount": 4821
+    },
+    {
+      "Name": "Oaxaca",
+      "Code": "OAX",
+      "ZipCount": 1816,
+      "NameCount": 6282
+    },
+    {
+      "Name": "Puebla",
+      "Code": "PUE",
+      "ZipCount": 1570,
+      "NameCount": 3765
+    },
+    {
+      "Name": "Quer\u00E9taro",
+      "Code": "QRO",
+      "ZipCount": 532,
+      "NameCount": 3164
+    },
+    {
+      "Name": "Quintana Roo",
+      "Code": "ROO",
+      "ZipCount": 318,
+      "NameCount": 1207
+    },
+    {
+      "Name": "San Luis Potos\u00ED",
+      "Code": "SLP",
+      "ZipCount": 983,
+      "NameCount": 6036
+    },
+    {
+      "Name": "Sinaloa",
+      "Code": "SIN",
+      "ZipCount": 1172,
+      "NameCount": 4222
+    },
+    {
+      "Name": "Sonora",
+      "Code": "SON",
+      "ZipCount": 994,
+      "NameCount": 9223
+    },
+    {
+      "Name": "Tabasco",
+      "Code": "TAB",
+      "ZipCount": 537,
+      "NameCount": 2810
+    },
+    {
+      "Name": "Tamaulipas",
+      "Code": "TAM",
+      "ZipCount": 998,
+      "NameCount": 3364
+    },
+    {
+      "Name": "Tlaxcala",
+      "Code": "TLA",
+      "ZipCount": 36,
+      "NameCount": 36
+    },
+    {
+      "Name": "Veracruz",
+      "Code": "VER",
+      "ZipCount": 2373,
+      "NameCount": 8855
+    },
+    {
+      "Name": "Yucat\u00E1n",
+      "Code": "YUC",
+      "ZipCount": 487,
+      "NameCount": 1751
+    },
+    {
+      "Name": "Zacatecas",
+      "Code": "ZAC",
+      "ZipCount": 592,
+      "NameCount": 1769
+    }
+  ]
+}

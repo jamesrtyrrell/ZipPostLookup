@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>countrydatatools</AssemblyName>
+    <RootNamespace>ZipPostLookup.CountryDataTools</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="16.1.1" />
+    <PackageReference Include="CsvHelper" Version="33.1.0" />
+    <PackageReference Include="Dapper.Contrib" Version="2.0.78" />
+    <PackageReference Include="Dapper.ParameterExtensions" Version="2022.7.7.1" />
+    <PackageReference Include="K4os.Compression.LZ4" Version="1.3.8" />
+    <PackageReference Include="Spectre.Console" Version="0.55.2" />
+    <PackageReference Include="TimeZoneConverter" Version="6.1.0" />
+    <PackageReference Include="GeoTimeZone" Version="5.0.0" />
+    <PackageReference Include="Dapper" Version="2.1.35" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageReference Include="Z.Dapper.Plus" Version="9.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZipPostLookup\ZipPostLookup.csproj" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="Data\us\us_info.json" />
+		<EmbeddedResource Include="Data\ca\ca_info.json" />
+		<EmbeddedResource Include="Data\mx\mx_info.json" />
+		<EmbeddedResource Include="Data\countries.json" />
+		<EmbeddedResource Include="Data\LanguageAbbreviations.json" />
+	</ItemGroup>
+
+  <!-- workdb.json is per-developer and must never be committed -->
+  <ItemGroup>
+    <None Update="workdb.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Export\" />
+    <Folder Include="Properties\" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,35 @@
+﻿{
+  "US": {
+    "ExactCode": "00501",
+    "ExactPlaceName": "Holtsville",
+    "ExactAdmin1Code": "NY",
+    "ExactTimezone": "America/New_York",
+    "RangeProbe": null,
+    "RangeZpCode": null,
+    "RangePlaceName": null,
+    "RangeAdmin1Code": null,
+    "RangeTimezone": null
+  },
+  "CA": {
+    "ExactCode": "A0A0A0",
+    "ExactPlaceName": "Bay Roberts",
+    "ExactAdmin1Code": "NL",
+    "ExactTimezone": "America/St_Johns",
+    "RangeProbe": "A1E3H0",
+    "RangeZpCode": "A1E0**:A1E6**",
+    "RangePlaceName": "St. John\u0027s",
+    "RangeAdmin1Code": "NL",
+    "RangeTimezone": "America/St_Johns"
+  },
+  "MX": {
+    "ExactCode": "01000",
+    "ExactPlaceName": "San \u00C1ngel",
+    "ExactAdmin1Code": "CDMX",
+    "ExactTimezone": "America/Mexico_City",
+    "RangeProbe": null,
+    "RangeZpCode": null,
+    "RangePlaceName": null,
+    "RangeAdmin1Code": null,
+    "RangeTimezone": null
+  }
+}

@@ -1,0 +1,149 @@
+﻿{
+  "Country": "CA",
+  "Languages": [
+    {
+      "Alpha2": "en",
+      "Alpha3": "eng",
+      "Name": "English"
+    },
+    {
+      "Alpha2": "fr",
+      "Alpha3": "fra",
+      "Name": "French"
+    }
+  ],
+  "NameLabel": "Place",
+  "CodeCount": 900686,
+  "CodeRanges": true,
+  "Curated": true,
+  "CurationStatus": "Curated",
+  "LastUpdated": "2026-06-06",
+  "CodeFormat": "A1A 1A1",
+  "CodeRegex": "^[A-Z]\\d[A-Z] \\d[A-Z]\\d$",
+  "Description": "Canadian provinces and territories with postal abbreviations and capitals.",
+  "Source": "Canada Post / ISO 3166-2:CA",
+  "AdminLevels": [
+    {
+      "Level": 1,
+      "Name": "Province",
+      "Aliases": [
+        "Territory",
+        "Territoire",
+        "Province ou Territoire"
+      ],
+      "LocalName": "Province",
+      "CodeType": "canada_post",
+      "OfficialLanguages": [],
+      "MinorityLanguages": []
+    }
+  ],
+  "Divisions": [
+    {
+      "Type": "province",
+      "Name": "Ontario",
+      "Code": "ON",
+      "Capital": "Toronto",
+      "ZipCount": 298725,
+      "NameCount": 304427
+    },
+    {
+      "Type": "province",
+      "Name": "Quebec",
+      "LocalName": "Qu\u00E9bec",
+      "Code": "QC",
+      "Capital": "Quebec City",
+      "CapitalLocal": "Qu\u00E9bec",
+      "ZipCount": 226781,
+      "NameCount": 229771
+    },
+    {
+      "Type": "province",
+      "Name": "Nova Scotia",
+      "Code": "NS",
+      "Capital": "Halifax",
+      "ZipCount": 30038,
+      "NameCount": 31240
+    },
+    {
+      "Type": "province",
+      "Name": "New Brunswick",
+      "LocalName": "Nouveau-Brunswick",
+      "Code": "NB",
+      "Capital": "Fredericton",
+      "ZipCount": 61076,
+      "NameCount": 61741
+    },
+    {
+      "Type": "province",
+      "Name": "Manitoba",
+      "Code": "MB",
+      "Capital": "Winnipeg",
+      "ZipCount": 27054,
+      "NameCount": 27054
+    },
+    {
+      "Type": "province",
+      "Name": "British Columbia",
+      "Code": "BC",
+      "Capital": "Victoria",
+      "ZipCount": 122490,
+      "NameCount": 122490
+    },
+    {
+      "Type": "province",
+      "Name": "Prince Edward Island",
+      "Code": "PE",
+      "Capital": "Charlottetown",
+      "ZipCount": 4328,
+      "NameCount": 4396
+    },
+    {
+      "Type": "province",
+      "Name": "Saskatchewan",
+      "Code": "SK",
+      "Capital": "Regina",
+      "ZipCount": 23794,
+      "NameCount": 23794
+    },
+    {
+      "Type": "province",
+      "Name": "Alberta",
+      "Code": "AB",
+      "Capital": "Edmonton",
+      "ZipCount": 92737,
+      "NameCount": 92737
+    },
+    {
+      "Type": "province",
+      "Name": "Newfoundland and Labrador",
+      "Code": "NL",
+      "Capital": "St. John\u0027s",
+      "ZipCount": 11978,
+      "NameCount": 12416
+    },
+    {
+      "Type": "territory",
+      "Name": "Northwest Territories",
+      "Code": "NT",
+      "Capital": "Yellowknife",
+      "ZipCount": 626,
+      "NameCount": 626
+    },
+    {
+      "Type": "territory",
+      "Name": "Yukon",
+      "Code": "YT",
+      "Capital": "Whitehorse",
+      "ZipCount": 1056,
+      "NameCount": 1056
+    },
+    {
+      "Type": "territory",
+      "Name": "Nunavut",
+      "Code": "NU",
+      "Capital": "Iqaluit",
+      "ZipCount": 0,
+      "NameCount": 0
+    }
+  ]
+}

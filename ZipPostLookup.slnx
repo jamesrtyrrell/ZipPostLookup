@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".github/workflows/publish.yml" />
+    <File Path="README.MD" />
+    <File Path="ZipPostvsZip2CityBenchmark.MD" />
+    <File Path="ZpiVsCsvBenchmark.MD" />
+  </Folder>
+  <Project Path="ZipPostLookup.Benchmarks/ZipPostLookup.Benchmarks.csproj" />
+  <Project Path="ZipPostLookup.CountryDataTools/ZipPostLookup.CountryDataTools.csproj" />
+  <Project Path="ZipPostLookup.Tests/ZipPostLookup.Tests.csproj" />
+  <Project Path="ZipPostLookup/ZipPostLookup.csproj" />
+</Solution>

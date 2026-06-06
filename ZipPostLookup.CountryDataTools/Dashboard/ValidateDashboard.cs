@@ -1,0 +1,51 @@
+using Spectre.Console;
+using ZipPostLookup.CountryDataTools.Commands;
+
+namespace ZipPostLookup.CountryDataTools.Dashboard;
+
+internal static class ValidateDashboard
+{
+    public static async Task<int> RunAsync()
+    {
+        while (true)
+        {
+            AnsiConsole.Clear();
+            AnsiConsole.Write(new Rule("[bold cyan]Validate[/]").LeftJustified());
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("  Validates a candidate CSV and guides you through fix/extract steps.");
+            AnsiConsole.WriteLine();
+
+            var file = AnsiConsole.Prompt(
+                new TextPrompt<string>("  Candidate CSV path [grey](or blank to go back)[/]:")
+                    .AllowEmpty());
+
+            if (string.IsNullOrWhiteSpace(file)) break;
+
+            var country = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("  Country:")
+                    .AddChoices("US", "CA", "MX"));
+
+            var noPrompts = AnsiConsole.Confirm("  --no-prompts (apply fix + extract automatically)?", false);
+
+            var args = new List<string> { file, "--country", country };
+            if (noPrompts) args.Add("--no-prompts");
+
+            AnsiConsole.Clear();
+            AnsiConsole.Write(new Rule("[bold cyan]validate[/]").LeftJustified());
+            AnsiConsole.WriteLine();
+
+            var exitCode = await ValidateCommand.RunAsync([.. args]);
+
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine(exitCode == 0
+                ? "[green]  ✓ Done[/]"
+                : $"[red]  ✗ Exited with code {exitCode}[/]");
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+            Console.ReadKey(intercept: true);
+        }
+
+        return 0;
+    }
+}

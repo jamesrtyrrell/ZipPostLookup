@@ -1,0 +1,568 @@
+﻿{
+  "Country": "US",
+  "Iso3": "USA",
+  "Continent": "Americas",
+  "Region": "Northern America",
+  "Languages": [
+    {
+      "Alpha2": "en",
+      "Alpha3": "eng",
+      "Name": "English"
+    }
+  ],
+  "NameLabel": "City",
+  "CodeCount": 43178,
+  "CodeRanges": false,
+  "Curated": true,
+  "CurationStatus": "Curated",
+  "LastUpdated": "2026-06-06",
+  "CodeFormat": "12345",
+  "CodeRegex": "^\\d{5}([- ]\\d{4})?$",
+  "Description": "US states, territories and associated areas. USPS codes are the authoritative postal codes used in data.reference. ANSI codes are the numeric FIPS codes per ANSI INCITS 38:2009. UM (U.S. Minor Outlying Islands) covers multiple individual islands listed under the \u0027islands\u0027 property.",
+  "Source": "USPS / ANSI INCITS 38:2009",
+  "AdminLevels": [
+    {
+      "Level": 1,
+      "Name": "State",
+      "Aliases": [
+        "Territory",
+        "District"
+      ],
+      "LocalName": "State",
+      "CodeType": "usps",
+      "OfficialLanguages": [],
+      "MinorityLanguages": []
+    },
+    {
+      "Level": 2,
+      "Name": "County",
+      "Aliases": [
+        "Parish",
+        "Borough",
+        "Census Area"
+      ],
+      "LocalName": "County",
+      "CodeType": "fips",
+      "OfficialLanguages": [],
+      "MinorityLanguages": []
+    }
+  ],
+  "Divisions": [
+    {
+      "Name": "Alabama",
+      "Code": "AL",
+      "Ansi": "1",
+      "ZipCount": 840,
+      "NameCount": 1068
+    },
+    {
+      "Name": "Alaska",
+      "Code": "AK",
+      "Ansi": "2",
+      "ZipCount": 275,
+      "NameCount": 384
+    },
+    {
+      "Name": "Arizona",
+      "Code": "AZ",
+      "Ansi": "4",
+      "ZipCount": 572,
+      "NameCount": 726
+    },
+    {
+      "Name": "Arkansas",
+      "Code": "AR",
+      "Ansi": "5",
+      "ZipCount": 715,
+      "NameCount": 868
+    },
+    {
+      "Name": "California",
+      "Code": "CA",
+      "Ansi": "6",
+      "ZipCount": 2673,
+      "NameCount": 3643
+    },
+    {
+      "Name": "Colorado",
+      "Code": "CO",
+      "Ansi": "8",
+      "ZipCount": 661,
+      "NameCount": 1011
+    },
+    {
+      "Name": "Connecticut",
+      "Code": "CT",
+      "Ansi": "9",
+      "ZipCount": 445,
+      "NameCount": 564
+    },
+    {
+      "Name": "Delaware",
+      "Code": "DE",
+      "Ansi": "10",
+      "ZipCount": 99,
+      "NameCount": 132
+    },
+    {
+      "Name": "District of Columbia",
+      "Code": "DC",
+      "Ansi": "11",
+      "ZipCount": 309,
+      "NameCount": 352
+    },
+    {
+      "Name": "Florida",
+      "Code": "FL",
+      "Ansi": "12",
+      "ZipCount": 1520,
+      "NameCount": 2669
+    },
+    {
+      "Name": "Georgia",
+      "Code": "GA",
+      "Ansi": "13",
+      "ZipCount": 981,
+      "NameCount": 1201
+    },
+    {
+      "Name": "Hawaii",
+      "Code": "HI",
+      "Ansi": "15",
+      "ZipCount": 140,
+      "NameCount": 157
+    },
+    {
+      "Name": "Idaho",
+      "Code": "ID",
+      "Ansi": "16",
+      "ZipCount": 328,
+      "NameCount": 428
+    },
+    {
+      "Name": "Illinois",
+      "Code": "IL",
+      "Ansi": "17",
+      "ZipCount": 1599,
+      "NameCount": 2173
+    },
+    {
+      "Name": "Indiana",
+      "Code": "IN",
+      "Ansi": "18",
+      "ZipCount": 995,
+      "NameCount": 1214
+    },
+    {
+      "Name": "Iowa",
+      "Code": "IA",
+      "Ansi": "19",
+      "ZipCount": 1065,
+      "NameCount": 1211
+    },
+    {
+      "Name": "Kansas",
+      "Code": "KS",
+      "Ansi": "20",
+      "ZipCount": 759,
+      "NameCount": 1015
+    },
+    {
+      "Name": "Kentucky",
+      "Code": "KY",
+      "Ansi": "21",
+      "ZipCount": 971,
+      "NameCount": 1723
+    },
+    {
+      "Name": "Louisiana",
+      "Code": "LA",
+      "Ansi": "22",
+      "ZipCount": 725,
+      "NameCount": 846
+    },
+    {
+      "Name": "Maine",
+      "Code": "ME",
+      "Ansi": "23",
+      "ZipCount": 491,
+      "NameCount": 884
+    },
+    {
+      "Name": "Maryland",
+      "Code": "MD",
+      "Ansi": "24",
+      "ZipCount": 626,
+      "NameCount": 950
+    },
+    {
+      "Name": "Massachusetts",
+      "Code": "MA",
+      "Ansi": "25",
+      "ZipCount": 736,
+      "NameCount": 984
+    },
+    {
+      "Name": "Michigan",
+      "Code": "MI",
+      "Ansi": "26",
+      "ZipCount": 1187,
+      "NameCount": 1733
+    },
+    {
+      "Name": "Minnesota",
+      "Code": "MN",
+      "Ansi": "27",
+      "ZipCount": 1036,
+      "NameCount": 1453
+    },
+    {
+      "Name": "Mississippi",
+      "Code": "MS",
+      "Ansi": "28",
+      "ZipCount": 541,
+      "NameCount": 640
+    },
+    {
+      "Name": "Missouri",
+      "Code": "MO",
+      "Ansi": "29",
+      "ZipCount": 1183,
+      "NameCount": 1518
+    },
+    {
+      "Name": "Montana",
+      "Code": "MT",
+      "Ansi": "30",
+      "ZipCount": 404,
+      "NameCount": 459
+    },
+    {
+      "Name": "Nebraska",
+      "Code": "NE",
+      "Ansi": "31",
+      "ZipCount": 622,
+      "NameCount": 695
+    },
+    {
+      "Name": "Nevada",
+      "Code": "NV",
+      "Ansi": "32",
+      "ZipCount": 251,
+      "NameCount": 327
+    },
+    {
+      "Name": "New Hampshire",
+      "Code": "NH",
+      "Ansi": "33",
+      "ZipCount": 291,
+      "NameCount": 375
+    },
+    {
+      "Name": "New Jersey",
+      "Code": "NJ",
+      "Ansi": "34",
+      "ZipCount": 748,
+      "NameCount": 1096
+    },
+    {
+      "Name": "New Mexico",
+      "Code": "NM",
+      "Ansi": "35",
+      "ZipCount": 425,
+      "NameCount": 580
+    },
+    {
+      "Name": "New York",
+      "Code": "NY",
+      "Ansi": "36",
+      "ZipCount": 2225,
+      "NameCount": 3261
+    },
+    {
+      "Name": "North Carolina",
+      "Code": "NC",
+      "Ansi": "37",
+      "ZipCount": 1111,
+      "NameCount": 1337
+    },
+    {
+      "Name": "North Dakota",
+      "Code": "ND",
+      "Ansi": "38",
+      "ZipCount": 409,
+      "NameCount": 591
+    },
+    {
+      "Name": "Ohio",
+      "Code": "OH",
+      "Ansi": "39",
+      "ZipCount": 1459,
+      "NameCount": 2137
+    },
+    {
+      "Name": "Oklahoma",
+      "Code": "OK",
+      "Ansi": "40",
+      "ZipCount": 777,
+      "NameCount": 922
+    },
+    {
+      "Name": "Oregon",
+      "Code": "OR",
+      "Ansi": "41",
+      "ZipCount": 491,
+      "NameCount": 601
+    },
+    {
+      "Name": "Pennsylvania",
+      "Code": "PA",
+      "Ansi": "42",
+      "ZipCount": 2228,
+      "NameCount": 3352
+    },
+    {
+      "Name": "Rhode Island",
+      "Code": "RI",
+      "Ansi": "44",
+      "ZipCount": 93,
+      "NameCount": 130
+    },
+    {
+      "Name": "South Carolina",
+      "Code": "SC",
+      "Ansi": "45",
+      "ZipCount": 545,
+      "NameCount": 683
+    },
+    {
+      "Name": "South Dakota",
+      "Code": "SD",
+      "Ansi": "46",
+      "ZipCount": 398,
+      "NameCount": 502
+    },
+    {
+      "Name": "Tennessee",
+      "Code": "TN",
+      "Ansi": "47",
+      "ZipCount": 797,
+      "NameCount": 955
+    },
+    {
+      "Name": "Texas",
+      "Code": "TX",
+      "Ansi": "48",
+      "ZipCount": 2671,
+      "NameCount": 3413
+    },
+    {
+      "Name": "Utah",
+      "Code": "UT",
+      "Ansi": "49",
+      "ZipCount": 350,
+      "NameCount": 686
+    },
+    {
+      "Name": "Vermont",
+      "Code": "VT",
+      "Ansi": "50",
+      "ZipCount": 312,
+      "NameCount": 475
+    },
+    {
+      "Name": "Virginia",
+      "Code": "VA",
+      "Ansi": "51",
+      "ZipCount": 1250,
+      "NameCount": 1693
+    },
+    {
+      "Name": "Washington",
+      "Code": "WA",
+      "Ansi": "53",
+      "ZipCount": 736,
+      "NameCount": 937
+    },
+    {
+      "Name": "West Virginia",
+      "Code": "WV",
+      "Ansi": "54",
+      "ZipCount": 857,
+      "NameCount": 1283
+    },
+    {
+      "Name": "Wisconsin",
+      "Code": "WI",
+      "Ansi": "55",
+      "ZipCount": 910,
+      "NameCount": 1228
+    },
+    {
+      "Name": "Wyoming",
+      "Code": "WY",
+      "Ansi": "56",
+      "ZipCount": 196,
+      "NameCount": 312
+    },
+    {
+      "Name": "American Samoa",
+      "Code": "AS",
+      "Ansi": "60",
+      "ZipCount": 1,
+      "NameCount": 1
+    },
+    {
+      "Name": "Guam",
+      "Code": "GU",
+      "Ansi": "66",
+      "ZipCount": 13,
+      "NameCount": 33
+    },
+    {
+      "Name": "Northern Mariana Islands",
+      "Code": "MP",
+      "Ansi": "69",
+      "ZipCount": 3,
+      "NameCount": 3
+    },
+    {
+      "Name": "Puerto Rico",
+      "Code": "PR",
+      "Ansi": "72",
+      "ZipCount": 175,
+      "NameCount": 254
+    },
+    {
+      "Name": "U.S. Virgin Islands",
+      "Code": "VI",
+      "Ansi": "78",
+      "ZipCount": 16,
+      "NameCount": 29
+    },
+    {
+      "Name": "U.S. Minor Outlying Islands",
+      "Code": "UM",
+      "Ansi": "74",
+      "ZipCount": 0,
+      "NameCount": 0,
+      "Islands": [
+        {
+          "Name": "Baker Island",
+          "Ansi": "81"
+        },
+        {
+          "Name": "Howland Island",
+          "Ansi": "84"
+        },
+        {
+          "Name": "Jarvis Island",
+          "Ansi": "86"
+        },
+        {
+          "Name": "Johnston Atoll",
+          "Ansi": "67"
+        },
+        {
+          "Name": "Kingman Reef",
+          "Ansi": "89"
+        },
+        {
+          "Name": "Midway Atoll",
+          "Ansi": "71"
+        },
+        {
+          "Name": "Navassa Island",
+          "Ansi": "76"
+        },
+        {
+          "Name": "Palmyra Atoll",
+          "Ansi": "95"
+        },
+        {
+          "Name": "Wake Island",
+          "Ansi": "79"
+        }
+      ]
+    },
+    {
+      "Name": "Marshall Islands",
+      "Code": "MH",
+      "Ansi": "68",
+      "ZipCount": 2,
+      "NameCount": 3
+    },
+    {
+      "Name": "Micronesia",
+      "Code": "FM",
+      "Ansi": "64",
+      "ZipCount": 4,
+      "NameCount": 4
+    },
+    {
+      "Name": "Palau",
+      "Code": "PW",
+      "Ansi": "70",
+      "ZipCount": 2,
+      "NameCount": 3
+    },
+    {
+      "Name": "U.S. Armed Forces - Americas",
+      "Code": "AA",
+      "ZipCount": 64,
+      "NameCount": 64,
+      "Notes": "APO/FPO/DPO routing code for US Armed Forces Americas. No geographic location - timezone assigned as America/New_York (Eastern)."
+    },
+    {
+      "Name": "U.S. Armed Forces - Europe",
+      "Code": "AE",
+      "ZipCount": 521,
+      "NameCount": 521,
+      "Notes": "APO/FPO/DPO routing code for US Armed Forces Europe. No geographic location - timezone assigned as Europe/London."
+    },
+    {
+      "Name": "U.S. Armed Forces - Pacific",
+      "Code": "AP",
+      "ZipCount": 206,
+      "NameCount": 208,
+      "Notes": "APO/FPO/DPO routing code for US Armed Forces Pacific. No geographic location - timezone assigned as Pacific/Honolulu."
+    },
+    {
+      "Name": "Nebraska",
+      "Code": "NB",
+      "ZipCount": 0,
+      "NameCount": 0
+    },
+    {
+      "Name": "Northern Mariana Islands",
+      "Code": "CM",
+      "ZipCount": 0,
+      "NameCount": 0
+    },
+    {
+      "Name": "Panama Canal Zone",
+      "Code": "CZ",
+      "ZipCount": 0,
+      "NameCount": 0
+    },
+    {
+      "Name": "Philippine Islands",
+      "Code": "PI",
+      "ZipCount": 0,
+      "NameCount": 0
+    },
+    {
+      "Name": "Trust Territory of the Pacific Islands",
+      "Code": "TT",
+      "ZipCount": 0,
+      "NameCount": 0
+    },
+    {
+      "Name": "Parcel Return Service",
+      "Code": "PRS",
+      "ZipCount": 0,
+      "NameCount": 0,
+      "Notes": "Not a geographic state or territory. PRS zip codes (56xxx range) are used for USPS Parcel Return Service processing facilities routed through Washington DC. Timezone: America/New_York."
+    }
+  ]
+}

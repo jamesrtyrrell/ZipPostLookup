@@ -1,0 +1,2397 @@
+﻿[
+  {
+    "CountryId": "AD",
+    "CountryName": "Andorra",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z]\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Each parish now has its own post code."
+  },
+  {
+    "CountryId": "AE",
+    "CountryName": "United Arab Emirates",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "UAE does not use a postal code system; instead, they use a post office system to send and receive parcels."
+  },
+  {
+    "CountryId": "AF",
+    "CountryName": "Afghanistan",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "ConstrainedRegex": "^(1[0-9]|2[0-9]|3[0-9]|4[0-3])\\d\\d$",
+    "ConstraintNotes": "First two digits 10-43 (province)",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The first two digits (ranging from 10 to 43) correspond to the province, while the last two digits correspond either to the city/delivery zone (range 01-50) or to the district/delivery zone (range 51-99)."
+  },
+  {
+    "CountryId": "AG",
+    "CountryName": "Antigua and Barbuda",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "AI",
+    "CountryName": "Anguilla",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^AI\\-2640$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Single code used for all addresses."
+  },
+  {
+    "CountryId": "AL",
+    "CountryName": "Albania",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Introduced in 2006, gradually implemented throughout 2007."
+  },
+  {
+    "CountryId": "AM",
+    "CountryName": "Armenia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Previously used NNNNNN system inherited from former Soviet Union. | Previously: NNNNNN (Soviet inherited system)"
+  },
+  {
+    "CountryId": "AO",
+    "CountryName": "Angola",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "AQ",
+    "CountryName": "British Antarctic Territory",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^BIQQ 1ZZ$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "One code for all addresses (AAAA NAA). UK territory, but not UK postcode."
+  },
+  {
+    "CountryId": "AR",
+    "CountryName": "Argentina",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d|[A-Z]\\d\\d\\d\\d|[A-Z]\\d\\d\\d\\d[A-Z][A-Z][A-Z])$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "1974-1998 NNNN, and from 1999 ANNNNAAA. Codigo Postal Argentino (CPA), where the first A is the province code as in ISO 3166-2:AR, the four numbers are the old postal codes, the three last letters indicate a side of the block. Previously NNNN which is the minimum requirement as of 2006, but ANNNNAAA is not mandatory. | Previously: NNNN (Used 1974-1998)"
+  },
+  {
+    "CountryId": "AS",
+    "CountryName": "American Samoa",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d\\d|\\d\\d\\d\\d\\d-\\d\\d\\d\\d)$",
+    "ConstrainedRegex": "^96799(-\\d{4})?$",
+    "ConstraintNotes": "Range 96799 only",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "U.S. ZIP codes (range 96799)"
+  },
+  {
+    "CountryId": "AT",
+    "CountryName": "Austria",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The first digit denotes regions, which are partly identical to one of the nine provinces-4called Bundesl\u00E4nder; the last the nearest post office in the area."
+  },
+  {
+    "CountryId": "AU",
+    "CountryName": "Australia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "In general, the first digit identifies the state or territory."
+  },
+  {
+    "CountryId": "AW",
+    "CountryName": "Aruba",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "AX",
+    "CountryName": "\u00C5land",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d\\d|[A-Z][A-Z]-\\d\\d\\d\\d\\d)$",
+    "ConstrainedRegex": "^(22\\d\\d\\d|[A-Z][A-Z]-22\\d\\d\\d)$",
+    "ConstraintNotes": "First two digits always 22 (Finland/\u00C5land)",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "With Finland, first two numbers are 22. CC-NNNNN used from abroad."
+  },
+  {
+    "CountryId": "AZ",
+    "CountryName": "Azerbaijan",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z] \\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Previously used NNNNNN system inherited from former Soviet Union. | Previously: NNNNNN (Soviet inherited system)"
+  },
+  {
+    "CountryId": "BA",
+    "CountryName": "Bosnia and Herzegovina",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "BB",
+    "CountryName": "Barbados",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z]\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "5 digit postal code preceded by BB"
+  },
+  {
+    "CountryId": "BD",
+    "CountryName": "Bangladesh",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "BE",
+    "CountryName": "Belgium",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "In general, the first digit gives the province."
+  },
+  {
+    "CountryId": "BF",
+    "CountryName": "Burkina Faso",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "BG",
+    "CountryName": "Bulgaria",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "BH",
+    "CountryName": "Bahrain",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d|\\d\\d\\d\\d)$",
+    "ConstrainedRegex": "^(1[0-9]{2}|[2-9]\\d{2}|1[01]\\d\\d|12[01]\\d|1216)$",
+    "ConstraintNotes": "Range 101-1216 with undocumented gaps",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Valid post code numbers are 101 to 1216 with gaps in the range. Known as block number (Arabic: ??? ??????) formally. The first digit in NNN format and the first two digits in NNNN format refer to one of the 12 municipalities of the country. PO Box address does not need a block number or city name, just the PO Box number followed by the name of the country, Bahrain."
+  },
+  {
+    "CountryId": "BI",
+    "CountryName": "Burundi",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "BJ",
+    "CountryName": "Benin",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "BL",
+    "CountryName": "Saint Barth\u00E9lemy",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^97133$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Overseas Collectivity of France. French codes used, still within the same range used for Guadeloupe"
+  },
+  {
+    "CountryId": "BM",
+    "CountryName": "Bermuda",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^([A-Z]{2} \\d\\d|[A-Z]{2} [A-Z]{2})$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Street addresses use AA NN format (e.g. FL 07). PO Box addresses use AA AA format (e.g. HM GX). First two letters indicate the parish."
+  },
+  {
+    "CountryId": "BN",
+    "CountryName": "Brunei",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z]\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "BO",
+    "CountryName": "Bolivia",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "BQ",
+    "CountryName": "Bonaire, Sint Eustatius and Saba",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "BR",
+    "CountryName": "Brazil",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d\\d|\\d\\d\\d\\d\\d-\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "NNNNN only from 1971 to 1992. C\u00F3digo de Endere\u00E7amento Postal (CEP): -000 to -899 are used for streets, roads, avenues, boulevards; -900 to -959 are used for buildings with a high postal use; -960 to -969 are for promotional use; -970 to -989 are post offices and regular P.O. boxes; and -990 to -998 are used for community P.O. boxes. -999 is used for special services. | Previously: NNNNN (Used 1971-1992)"
+  },
+  {
+    "CountryId": "BS",
+    "CountryName": "Bahamas",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Bahamas used Post Office system instead of Postal Code [1]"
+  },
+  {
+    "CountryId": "BT",
+    "CountryName": "Bhutan",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Written Behind the village name. Digits: postal region (Dzongdey), district (Dzongkhag), sub district (Dungkhag), delivery area (two digits)."
+  },
+  {
+    "CountryId": "BV",
+    "CountryName": "Bouvet Island",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Uninhabited Norwegian territory. No postal system."
+  },
+  {
+    "CountryId": "BW",
+    "CountryName": "Botswana",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "BY",
+    "CountryName": "Belarus",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Retained system inherited from former Soviet Union."
+  },
+  {
+    "CountryId": "BZ",
+    "CountryName": "Belize",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "CA",
+    "CountryName": "Canada",
+    "HasPostalCodes": true,
+    "CodeRegex": "^[A-Z]\\d[A-Z] \\d[A-Z]\\d$",
+    "ConstrainedRegex": "^[ABCEGHJ-NPR-TV-Z]\\d[ABCEGHJ-NPR-TV-Z] \\d[ABCEGHJ-NPR-TV-Z]\\d$",
+    "ConstraintNotes": "Letters D, F, I, O, Q, U not used",
+    "DataCurated": true,
+    "CurationStatus": "Curated",
+    "Notes": "The Forward Sortation Area (FSA) \u002B Local Delivery Unit (LDU) system. Gradually introduced from April 1971. The letters D, F, I, O, Q, and U are excluded to avoid visual confusion. 899,780 entries across 13 provinces and territories. Each FSA maps to exactly one place name. Timezones derived from province/territory code via IANA lookup. All timezone and name fields fully verified. Source: GeoNames (download.geonames.org/export/zip/)."
+  },
+  {
+    "CountryId": "CC",
+    "CountryName": "Cocos (Keeling) Island",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Part of the Australian postal code system."
+  },
+  {
+    "CountryId": "CD",
+    "CountryName": "Congo, Democratic Republic",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "CF",
+    "CountryName": "Central African Republic",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "CG",
+    "CountryName": "Congo (Brazzaville)",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "CH",
+    "CountryName": "Switzerland",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "With Liechtenstein, ordered from west to east. In Geneva and other big cities, like Basel, Bern, Z\u00FCrich, there may be one or two digits after the name of the city when the generic City code (1211) is used instead of the area-specific code (1201, 1202...), e.g.: 1211 Geneva 13. The digit identifies the post office. This addressing is generally used for P.O. box deliveries. B\u00FCsingen am Hochrhein (Germany) also has a Swiss postal code."
+  },
+  {
+    "CountryId": "CI",
+    "CountryName": "C\u00F4te d\u0027Ivoire (Ivory Coast)",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "CK",
+    "CountryName": "Cook Islands",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "CL",
+    "CountryName": "Chile",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d\\d\\d\\d|\\d\\d\\d-\\d\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "May only be required for bulk mail."
+  },
+  {
+    "CountryId": "CM",
+    "CountryName": "Cameroon",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "CN",
+    "CountryName": "China",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "A postal code or y\u00F3u bi?n (??) in a subordinate division will have the same first two digits as its governing one (see Political divisions of China. The postal services in Macau or Hong Kong Special Administrative Regions remain separate from Mainland China, with no post code system currently used."
+  },
+  {
+    "CountryId": "CO",
+    "CountryName": "Colombia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "First NN = 32 departments"
+  },
+  {
+    "CountryId": "CR",
+    "CountryName": "Costa Rica",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Was NNNN until 2007. First codes the provinces, next two the canton, last two the district."
+  },
+  {
+    "CountryId": "CU",
+    "CountryName": "Cuba",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "May only be required for bulk mail. The letters CP are frequently used before the postal code. This is not a country code, but an abbreviation for \u0027codigo postal\u0027 or postal code."
+  },
+  {
+    "CountryId": "CV",
+    "CountryName": "Cape Verde",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The first digit indicates the island."
+  },
+  {
+    "CountryId": "CW",
+    "CountryName": "Cura\u00E7ao",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "CX",
+    "CountryName": "Christmas Island",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Part of the Australian postal code system."
+  },
+  {
+    "CountryId": "CY",
+    "CountryName": "Cyprus",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The postal code system covers the whole island, but is not used on mail to Northern Cyprus. Northern Cyprus uses a 5-digit code commencing 99, introduced in 2013. For mail sent there from abroad, the line \u0027Mersin 10\u0027 is written on the line above that containing the postal code, and the country name used is \u0027Turkey\u0027."
+  },
+  {
+    "CountryId": "CZ",
+    "CountryName": "Czech Republic",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d \\d\\d$",
+    "ConstrainedRegex": "^[1-7]\\d\\d \\d\\d$",
+    "ConstraintNotes": "First digit 1-7",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "With Slovak Republic, Po\u0161tovn\u00ED sm?rovac\u00ED ?\u00EDslo (PS?) - postal routing number. The first digit is from the range 1-7."
+  },
+  {
+    "CountryId": "DE",
+    "CountryName": "Germany",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d|\\d\\d\\d\\d|\\d\\d\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Postleitzahl (PLZ)"
+  },
+  {
+    "CountryId": "DJ",
+    "CountryName": "Djibouti",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "DK",
+    "CountryName": "Denmark",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Numbering follows the dispatch of postal trains from Copenhagen. Also used by Greenland, e.g.: DK-3900 Nuuk."
+  },
+  {
+    "CountryId": "DM",
+    "CountryName": "Dominica",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "DO",
+    "CountryName": "Dominican Republic",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "DZ",
+    "CountryName": "Algeria",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "First two as in ISO 3166-2:DZ"
+  },
+  {
+    "CountryId": "EC",
+    "CountryName": "Ecuador",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "EE",
+    "CountryName": "Estonia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "EG",
+    "CountryName": "Egypt",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "EH",
+    "CountryName": "Western Sahara",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Disputed territory. No postal system in operation."
+  },
+  {
+    "CountryId": "ER",
+    "CountryName": "Eritrea",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "ES",
+    "CountryName": "Spain",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "ConstrainedRegex": "^(0[1-9]|[1-4]\\d|5[0-2])\\d\\d\\d$",
+    "ConstraintNotes": "First two digits 01-52 (province)",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "First two indicate the province, range 01-52"
+  },
+  {
+    "CountryId": "ET",
+    "CountryName": "Ethiopia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The code is only used on a trial basis for Addis Ababa addresses."
+  },
+  {
+    "CountryId": "FI",
+    "CountryName": "Finland",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "A lower first digit indicates a place in south (for example 00100 Helsinki), a higher indicates a place further to north (99800 in Ivalo). The last digit is usually 0, except for postal codes for PO Box number ranges, in which case it is 1. Country code for Finland: \u0027FI\u0027. In \u00C5land, the postal code is prefixed with \u0027AX\u0027, not \u0027FI\u0027. Some postal codes for rural settlements may end with 5, and there are some unique postal codes for large companies and institutions, e.g. 00014 HELSINGIN YLIOPISTO (university), 00102 EDUSKUNTA (parliament), 00020 NORDEA (a major Scandinavian bank)."
+  },
+  {
+    "CountryId": "FJ",
+    "CountryName": "Fiji",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "FK",
+    "CountryName": "Falkland Islands",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^FIQQ 1ZZ$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Single code (AAAA NAA). UK territory, but not UK postcode"
+  },
+  {
+    "CountryId": "FM",
+    "CountryName": "Micronesia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d\\d|\\d\\d\\d\\d\\d-\\d\\d\\d\\d)$",
+    "ConstrainedRegex": "^9694[1-4](-\\d{4})?$",
+    "ConstraintNotes": "Range 96941-96944",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "U.S. ZIP codes. Range 96941-96944."
+  },
+  {
+    "CountryId": "FO",
+    "CountryName": "Faroe Islands",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z]-\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "3-digit postal code preceded by FO. Self-governing territory within the Kingdom of Denmark, but does not use Danish postal codes, and is addressed internationally as Faroe Islands, not Denmark."
+  },
+  {
+    "CountryId": "FR",
+    "CountryName": "France",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The first two digits give the d\u00E9partement number, while in Paris, Lyon and Marseille, the last two digits of the postal code indicate the arrondissement. Both of the 2 Corsican d\u00E9partements use \u002720\u0027 as the first two digits. Also used by French overseas departments and territories. Monaco is also part of the French postal code system, but the country code MC- is used for Monegasque addresses."
+  },
+  {
+    "CountryId": "GA",
+    "CountryName": "Gabon",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "GB",
+    "CountryName": "United Kingdom",
+    "HasPostalCodes": true,
+    "CodeRegex": "^(GIR 0AA|[A-Z]{1,2}[0-9][0-9A-Z]? [0-9][ABD-HJLNP-UW-Z]{2})$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The outward postcode identifies the postal area and district; the inward postcode (NAA) identifies a small group of delivery points (~12). The inward code never contains C, I, K, M, O, or V. British Forces Post Office (BFPO) postcodes use the format BFN NAA since 2012. No reference data has been loaded yet."
+  },
+  {
+    "CountryId": "GD",
+    "CountryName": "Grenada",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "GE",
+    "CountryName": "Georgia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "GF",
+    "CountryName": "French Guiana",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^973\\d\\d$",
+    "ConstrainedRegex": "^973[0-9]\\d$",
+    "ConstraintNotes": "Range 97300-97390",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Overseas Department of France. French codes used. Range 97300 - 97390."
+  },
+  {
+    "CountryId": "GG",
+    "CountryName": "Guernsey",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^([A-Z][A-Z]\\d \\d[A-Z][A-Z]|[A-Z][A-Z]\\d\\d \\d[A-Z][A-Z])$",
+    "ConstrainedRegex": "^GY\\d{1,2} \\d[A-Z]{2}$",
+    "ConstraintNotes": "First two letters always GY",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "UK-format postcode (first two letters are always GY)"
+  },
+  {
+    "CountryId": "GH",
+    "CountryName": "Ghana",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^([A-Z][A-Z0-9]\\d\\d\\d|[A-Z][A-Z0-9]\\d\\d\\d\\d|[A-Z][A-Z0-9]\\d\\d\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Ghana uses a digital address system. A digital address is made up of two main components: a postcode (e.g. EN-200) and a unique address (e.g. 1987). The first letter in the postcode represents a region (E for Eastern Region in this case), the second letter/digit (N) represents the district (N for New Juaben). The next batch of numbers (200) represent the area code. The regional, district and area codes come together to form the postcode. The last batch of numbers (1987) represent the unique address of the location. A combination of the postcode and the unique address make up the digital address."
+  },
+  {
+    "CountryId": "GI",
+    "CountryName": "Gibraltar",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^GX11 1[A-Z][A-Z]$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Single code used for all addresses."
+  },
+  {
+    "CountryId": "GL",
+    "CountryName": "Greenland",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Part of the Danish postal code system."
+  },
+  {
+    "CountryId": "GM",
+    "CountryName": "Gambia",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "GN",
+    "CountryName": "Guinea",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "GP",
+    "CountryName": "Guadeloupe",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^971\\d\\d$",
+    "ConstrainedRegex": "^971[0-9]\\d$",
+    "ConstraintNotes": "Range 97100-97190",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Overseas Department of France. French codes used. Range 97100 - 97190, which still includes the distinctive postal codes for Saint Martin and Saint Barth\u00E9lemy."
+  },
+  {
+    "CountryId": "GQ",
+    "CountryName": "Equatorial Guinea",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "GR",
+    "CountryName": "Greece",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d \\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "GS",
+    "CountryName": "South Georgia and the South Sandwich Islands",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^SIQQ 1ZZ$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "One code for all addresses."
+  },
+  {
+    "CountryId": "GT",
+    "CountryName": "Guatemala",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The first two numbers identify the department, the third number the route and the last two the office."
+  },
+  {
+    "CountryId": "GU",
+    "CountryName": "Guam",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d\\d|\\d\\d\\d\\d\\d-\\d\\d\\d\\d)$",
+    "ConstrainedRegex": "^969(1[0-9]|2[0-9]|3[0-2])(-\\d{4})?$",
+    "ConstraintNotes": "Range 96910-96932",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "U.S. ZIP codes. Range 96910-96932."
+  },
+  {
+    "CountryId": "GW",
+    "CountryName": "Guinea-Bissau",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "GY",
+    "CountryName": "Guyana",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "HK",
+    "CountryName": "Hong Kong",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "HM",
+    "CountryName": "Heard and McDonald Islands",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "HN",
+    "CountryName": "Honduras",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^([A-Z][A-Z]\\d\\d\\d\\d|\\d\\d\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "NNNNN is still being used"
+  },
+  {
+    "CountryId": "HR",
+    "CountryName": "Croatia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "HT",
+    "CountryName": "Haiti",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "HU",
+    "CountryName": "Hungary",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The code defines an area, usually one code per settlement except the six largest towns. One code can identify more (usually) small settlements as well."
+  },
+  {
+    "CountryId": "ID",
+    "CountryName": "Indonesia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": ""
+  },
+  {
+    "CountryId": "IE",
+    "CountryName": "Ireland",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z]\\d\\d$",
+    "ConstrainedRegex": "^[AC-FHKNPRTV-Y]\\d\\d$",
+    "ConstraintNotes": "Routing key only; full Eircode is A12 A1BC (7 chars)",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Note: A valid postcode never contains the letters: B, G, I, J, L, M, O, Q, S, U, Z. Ireland\u0027s postcode system (called Eircode) refers to individual properties - not to streets/areas. It is presented in the format A12 A1BC The first 3 characters are a routing key referring to a postal district, and the second 4 characters are a unique, pseudorandom identifier for individual properties. The codes are only used in full 7-character format. See: www.eircode.ie for more information. See also Republic of Ireland postal addresses."
+  },
+  {
+    "CountryId": "IL",
+    "CountryName": "Israel",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "In 2013, after the introduction of the 7 digit codes, 5 digit codes were still being used widely."
+  },
+  {
+    "CountryId": "IM",
+    "CountryName": "Isle of Man",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^([A-Z][A-Z]\\d \\d[A-Z][A-Z]|[A-Z][A-Z]\\d\\d \\d[A-Z][A-Z])$",
+    "ConstrainedRegex": "^IM\\d{1,2} \\d[A-Z]{2}$",
+    "ConstraintNotes": "First two letters always IM",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "UK-format postcode. The first two letters are always IM."
+  },
+  {
+    "CountryId": "IN",
+    "CountryName": "India",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d\\d\\d|\\d\\d\\d \\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Postal Index Number (PIN) consists of six digits: first digit for region, second digit for subregion, third digit for revenue/sorting office and last three digits representing the post office of the area."
+  },
+  {
+    "CountryId": "IO",
+    "CountryName": "British Indian Ocean Territory",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^BBND 1ZZ$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "One code for all addresses (AAAA NAA). UK territory, but not UK postcode."
+  },
+  {
+    "CountryId": "IQ",
+    "CountryName": "Iraq",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "IR",
+    "CountryName": "Iran",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d-\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "(Persian: ?? ????)"
+  },
+  {
+    "CountryId": "IS",
+    "CountryName": "Iceland",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "First digit ordered clockwise around the country from Reykjav\u00EDk."
+  },
+  {
+    "CountryId": "IT",
+    "CountryName": "Italy",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Codice di avviamento postale (CAP). Also used by San Marino (prefix SM) and Vatican City (prefix VA). First two digits identify province with some exceptions, because there are more than 100 provinces."
+  },
+  {
+    "CountryId": "JE",
+    "CountryName": "Jersey",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^([A-Z][A-Z]\\d \\d[A-Z][A-Z]|[A-Z][A-Z]\\d\\d \\d[A-Z][A-Z])$",
+    "ConstrainedRegex": "^JE\\d{1,2} \\d[A-Z]{2}$",
+    "ConstraintNotes": "First two letters always JE",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "UK-format postcode. The first two letters are always JE."
+  },
+  {
+    "CountryId": "JM",
+    "CountryName": "Jamaica",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Before suspension: CCAAANN. Jamaica currently has no national postal code system, except for Kingston and Lower St. Andrew, which are divided into postal districts numbered 1-20 Before the 2007 suspension, the first two letters of a national post code were always \u0027JM\u0027 (for Jamaica) while the third was for one of the four zones (A-D) into which the island was divided. The last two letters were for the parish, while the two digits were for the local post office. | Previously: CCAAANN (National system suspended 2007)"
+  },
+  {
+    "CountryId": "JO",
+    "CountryName": "Jordan",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Deliveries to PO Boxes only."
+  },
+  {
+    "CountryId": "JP",
+    "CountryName": "Japan",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d-\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "See also Japanese addressing system."
+  },
+  {
+    "CountryId": "KE",
+    "CountryName": "Kenya",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Deliveries to PO Boxes only. The postal code refers to the post office at which the receiver\u0027s P. O. Box is located."
+  },
+  {
+    "CountryId": "KG",
+    "CountryName": "Kyrgyzstan",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "KH",
+    "CountryName": "Cambodia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Cambodia Post [EMS]"
+  },
+  {
+    "CountryId": "KI",
+    "CountryName": "Kiribati",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "KM",
+    "CountryName": "Comoros",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "KN",
+    "CountryName": "Saint Kitts and Nevis",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z]\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "KP",
+    "CountryName": "Korea, North",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "KR",
+    "CountryName": "Korea, South",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Previously NNN-NNN (1988~2015), NNN or NNN-NN (1970~1988) | Previously: NNN-NNN (Used 1988-2015) | Previously: NNN / NNN-NN (Used 1970-1988)"
+  },
+  {
+    "CountryId": "KW",
+    "CountryName": "Kuwait",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The first two digits represent the sector and the last three digits represents the post office."
+  },
+  {
+    "CountryId": "KY",
+    "CountryName": "Cayman Islands",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z]\\d-\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "KZ",
+    "CountryName": "Kazakhstan",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": ""
+  },
+  {
+    "CountryId": "LA",
+    "CountryName": "Laos",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "LB",
+    "CountryName": "Lebanon",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d|\\d\\d\\d\\d \\d\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": ""
+  },
+  {
+    "CountryId": "LC",
+    "CountryName": "Saint Lucia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z]\\d\\d \\d\\d\\d$",
+    "ConstrainedRegex": "^LC\\d\\d \\d\\d\\d$",
+    "ConstraintNotes": "First two letters always LC",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The first two letters are always LC. There are two spaces between the second and third digits."
+  },
+  {
+    "CountryId": "LI",
+    "CountryName": "Liechtenstein",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "ConstrainedRegex": "^9(4(8[5-9]|9[0-8]))$",
+    "ConstraintNotes": "Range 9485-9498",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "With Switzerland, ordered from west to east. Range 9485-9498."
+  },
+  {
+    "CountryId": "LK",
+    "CountryName": "Sri Lanka",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Incorporates Colombo postal districts, e.g.: Colombo 1 is \u002700100\u0027. You can search for specific postal codes here \u0027Department of Posts\u0027. Retrieved 2024-03-03."
+  },
+  {
+    "CountryId": "LR",
+    "CountryName": "Liberia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Two digit postal zone after city name."
+  },
+  {
+    "CountryId": "LS",
+    "CountryName": "Lesotho",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "LT",
+    "CountryName": "Lithuania",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z]-\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Previously 9999 which was actually the old Soviet 999999 format code with the first 2 digits dropped. | Previously: NNNN (Soviet 6-digit with first 2 dropped)"
+  },
+  {
+    "CountryId": "LU",
+    "CountryName": "Luxembourg",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "4Digit postal code, 1st digit represent the Region"
+  },
+  {
+    "CountryId": "LV",
+    "CountryName": "Latvia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z]-\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "LY",
+    "CountryName": "Libya",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "MA",
+    "CountryName": "Morocco",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "MC",
+    "CountryName": "Monaco",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^980\\d\\d$",
+    "ConstrainedRegex": "^980[0-9]\\d$",
+    "ConstraintNotes": "Range 98000-98099",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Uses the French Postal System, but with an \u0027MC\u0027 Prefix for Monaco. Code range 98000-98099"
+  },
+  {
+    "CountryId": "MD",
+    "CountryName": "Moldova",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^([A-Z][A-Z]\\d\\d\\d\\d|[A-Z][A-Z]-\\d\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "ME",
+    "CountryName": "Montenegro",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "MF",
+    "CountryName": "Saint Martin",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^97150$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Overseas Collectivity of France. French codes used, still within the same range used for Guadeloupe"
+  },
+  {
+    "CountryId": "MG",
+    "CountryName": "Madagascar",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "MH",
+    "CountryName": "Marshall Islands",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d\\d|\\d\\d\\d\\d\\d-\\d\\d\\d\\d)$",
+    "ConstrainedRegex": "^9696\\d(-\\d{4})?$",
+    "ConstraintNotes": "Range 96960-96970",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "U.S. ZIP codes. Range 96960-96970."
+  },
+  {
+    "CountryId": "MK",
+    "CountryName": "North Macedonia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "ML",
+    "CountryName": "Mali",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "MM",
+    "CountryName": "Myanmar",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The first two digits correspond to States and Regions, the later 2 digits identify the Townships, while the rest 3 digits indicate the Quarter and Village Tracts."
+  },
+  {
+    "CountryId": "MN",
+    "CountryName": "Mongolia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "First digit: region / zone, Second digit: province / district, Last three digits: locality / delivery block."
+  },
+  {
+    "CountryId": "MO",
+    "CountryName": "Macau",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "999078 is the dummy code used in China to represent Macau, but it is not used. Use an alternate dummy instead (e.g. 00000)."
+  },
+  {
+    "CountryId": "MP",
+    "CountryName": "Northern Mariana Islands",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d\\d|\\d\\d\\d\\d\\d-\\d\\d\\d\\d)$",
+    "ConstrainedRegex": "^9695[0-2](-\\d{4})?$",
+    "ConstraintNotes": "Range 96950-96952",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "U.S. ZIP codes. Range 96950-96952."
+  },
+  {
+    "CountryId": "MQ",
+    "CountryName": "Martinique",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^972\\d\\d$",
+    "ConstrainedRegex": "^972[0-9]\\d$",
+    "ConstraintNotes": "Range 97200-97290",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Overseas Department of France. French codes used. Range 97200-97290."
+  },
+  {
+    "CountryId": "MR",
+    "CountryName": "Mauritania",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "MS",
+    "CountryName": "Montserrat",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^MSR \\d\\d\\d\\d$",
+    "ConstrainedRegex": "^MSR (1[1-2]\\d\\d|13[0-4]\\d|1350)$",
+    "ConstraintNotes": "Range 1110-1350",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Range 1110-1350"
+  },
+  {
+    "CountryId": "MT",
+    "CountryName": "Malta",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z][A-Z] \\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Kodi?i Postali"
+  },
+  {
+    "CountryId": "MU",
+    "CountryName": "Mauritius",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d\\d|R\\d\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Rodrigues Island uses RNNNN, for example R5135"
+  },
+  {
+    "CountryId": "MV",
+    "CountryName": "Maldives",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "MW",
+    "CountryName": "Malawi",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": ""
+  },
+  {
+    "CountryId": "MX",
+    "CountryName": "Mexico",
+    "HasPostalCodes": true,
+    "CodeRegex": "^\\d{5}$",
+    "DataCurated": true,
+    "CurationStatus": "Curated",
+    "Notes": "SEPOMEX 5-digit C\u00F3digo Postal system. The first two digits broadly identify the state. Code 00000 is not valid. 152,600 entries across 32 estados. Each zip may map to multiple place names (colonias, barrios, rancher\u00EDas). Timezones regionalised -4 states with non-Mexico_City zones (Baja California, Chihuahua, Sonora, Nayarit, Sinaloa, Durango, Nuevo Le\u00F3n, Tamaulipas, Quintana Roo, Campeche, M\u00E9rida) carry their correct IANA zone. All timezone and name fields fully verified. Source: GeoNames (download.geonames.org/export/zip/)."
+  },
+  {
+    "CountryId": "MY",
+    "CountryName": "Malaysia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "MZ",
+    "CountryName": "Mozambique",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "NA",
+    "CountryName": "Namibia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Formerly used South African postal code ranges from 9000-9299. Withdrawn from use after independence in 1990.Namibia has introduced a 5-digit postal code in 2018 | Previously: NNNN (South African ranges 9000-9299, withdrawn 1990)"
+  },
+  {
+    "CountryId": "NC",
+    "CountryName": "New Caledonia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^988\\d\\d$",
+    "ConstrainedRegex": "^988[0-8]\\d$",
+    "ConstraintNotes": "Range 98800-98890",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Overseas Collectivity of France. French codes used. Range 98800-98890."
+  },
+  {
+    "CountryId": "NE",
+    "CountryName": "Niger",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "NF",
+    "CountryName": "Norfolk Island",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Part of the Australian postal code system."
+  },
+  {
+    "CountryId": "NG",
+    "CountryName": "Nigeria",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "NI",
+    "CountryName": "Nicaragua",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "NL",
+    "CountryName": "Netherlands",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The combination of the postal code and the house number gives a unique identifier of the address. The four numbers indicate an area, the two letters indicate a group of some 25 habitations, offices, factories, or post office boxes."
+  },
+  {
+    "CountryId": "NO",
+    "CountryName": "Norway",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d|[A-Z][A-Z]-\\d\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "From south to northNO- prefix is used recommended, but not mandatory to be used for international mail to Norway"
+  },
+  {
+    "CountryId": "NP",
+    "CountryName": "Nepal",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "NR",
+    "CountryName": "Nauru",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "NU",
+    "CountryName": "Niue",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "NZ",
+    "CountryName": "New Zealand",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Postcodes were originally intended for bulk mailing and were not needed for addressing individual items. However, new post codes for general use were phased in from June 2006 and came into force by July 2008."
+  },
+  {
+    "CountryId": "OM",
+    "CountryName": "Oman",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Deliveries to P.O. Boxes only."
+  },
+  {
+    "CountryId": "PA",
+    "CountryName": "Panama",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "PE",
+    "CountryName": "Peru",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d\\d|[A-Z][A-Z] \\d\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "PF",
+    "CountryName": "French Polynesia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^987\\d\\d$",
+    "ConstrainedRegex": "^987[0-8]\\d$",
+    "ConstraintNotes": "Range 98700-98790",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Overseas Collectivity of France. French codes used. Range 98700-98790."
+  },
+  {
+    "CountryId": "PG",
+    "CountryName": "Papua New Guinea",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "PH",
+    "CountryName": "Philippines",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "PK",
+    "CountryName": "Pakistan",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "PL",
+    "CountryName": "Poland",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d-\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "(PNA) Pocztowy Numer Adresowy"
+  },
+  {
+    "CountryId": "PM",
+    "CountryName": "Saint Pierre and Miquelon",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^97500$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Overseas Collectivity of France. French codes used."
+  },
+  {
+    "CountryId": "PN",
+    "CountryName": "Pitcairn Islands",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^PCRN 1ZZ$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Single code used(AAAA NAA). UK territory, but not UK postcode"
+  },
+  {
+    "CountryId": "PR",
+    "CountryName": "Puerto Rico",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "U.S. ZIP codes. ZIP codes 006XX for NW PR, 007XX for SE PR, in which XX designates the town or post office and 009XX for the San Juan Metropolitan Area, in which XX designates the area or borough of San Juan. The last four digits identify an area within the post office. For example, 00716-2604: 00716-for the east section of the city of Ponce and 2604 for Aceitillo St. in the neighborhood of Los Caobos. US Post office is changing the PR address format to the American one: 1234 No Name Avenue, San Juan, PR 00901."
+  },
+  {
+    "CountryId": "PS",
+    "CountryName": "Palestine",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "not yet implemented in practice. Codes 100-899 are in the Westbank, 900-999 in the Gaza Strip"
+  },
+  {
+    "CountryId": "PT",
+    "CountryName": "Portugal",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d|\\d\\d\\d\\d-\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "PW",
+    "CountryName": "Palau",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d\\d|\\d\\d\\d\\d\\d-\\d\\d\\d\\d)$",
+    "ConstrainedRegex": "^9694[0-9](-\\d{4})?$",
+    "ConstraintNotes": "Only 96939 and 96940 documented",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "U.S. ZIP codes. All locations 96939 or 96940."
+  },
+  {
+    "CountryId": "PY",
+    "CountryName": "Paraguay",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d|\\d\\d\\d\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "QA",
+    "CountryName": "Qatar",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "RE",
+    "CountryName": "R\u00E9union",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^974\\d\\d$",
+    "ConstrainedRegex": "^974[0-9]\\d$",
+    "ConstraintNotes": "Range 97400-97490",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Overseas Department of France. French codes used. Range 97400-97490."
+  },
+  {
+    "CountryId": "RO",
+    "CountryName": "Romania",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Previously 99999 in Bucharest and 9999 in rest of country. | Previously: NNNN / NNNNN (NNNNN Bucharest, NNNN rest of country)"
+  },
+  {
+    "CountryId": "RS",
+    "CountryName": "Serbia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Po\u0161tanski adresni kod (PAK)"
+  },
+  {
+    "CountryId": "RU",
+    "CountryName": "Russia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Placed on a line of its own."
+  },
+  {
+    "CountryId": "RW",
+    "CountryName": "Rwanda",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "SA",
+    "CountryName": "Saudi Arabia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d\\d-\\d\\d\\d\\d|\\d\\d\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "NNNNN for PO Boxes. NNNNN-NNNN for home delivery. A complete 13-digit code has 5-digit number representing region, sector, city, and zone; 4-digit X between 2000 and 5999; 4-digit Y between 6000 and 9999. Digits of 5-digit code may represent postal region, sector, branch, section, and block respectively."
+  },
+  {
+    "CountryId": "SB",
+    "CountryName": "Solomon Islands",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "SC",
+    "CountryName": "Seychelles",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "SD",
+    "CountryName": "Sudan",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "SE",
+    "CountryName": "Sweden",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d \\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The lowest number is 100 12 and the highest number is 984 99."
+  },
+  {
+    "CountryId": "SG",
+    "CountryName": "Singapore",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d|\\d\\d\\d\\d|\\d\\d\\d\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "SH",
+    "CountryName": "Saint Helena, Ascension and Tristan da Cunha",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z][A-Z][A-Z] 1ZZ$",
+    "ConstrainedRegex": "^(STHL|ASCN|TDCU) 1ZZ$",
+    "ConstraintNotes": "Three specific codes: STHL 1ZZ, ASCN 1ZZ, TDCU 1ZZ",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Part of UK system (AAAA NAA). Saint Helena uses one code STHL 1ZZ, Ascension uses one code ASCN 1ZZ, Tristan da Cunha uses one code TDCU 1ZZ."
+  },
+  {
+    "CountryId": "SI",
+    "CountryName": "Slovenia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d|[A-Z][A-Z]-\\d\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "before 1996 all postcodes were 6NNNN (part of the former Yugoslav system), in 1996 they removed the \u00276\u0027"
+  },
+  {
+    "CountryId": "SJ",
+    "CountryName": "Svalbard and Jan Mayen",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Norway postal codes"
+  },
+  {
+    "CountryId": "SK",
+    "CountryName": "Slovakia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d \\d\\d$",
+    "ConstrainedRegex": "^[089]\\d\\d \\d\\d$",
+    "ConstraintNotes": "First digit is 0, 8 or 9",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "with Czech Republic from west to east, Po\u0161tov\u00E9 smerovacie ?\u00EDslo (PS?) - postal routing number. The first digit is from 8, 9, 0."
+  },
+  {
+    "CountryId": "SL",
+    "CountryName": "Sierra Leone",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "SM",
+    "CountryName": "San Marino",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^4789\\d$",
+    "ConstrainedRegex": "^4789[0-9]$",
+    "ConstraintNotes": "Range 47890-47899",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "With Italy, uses a five-digit numeric CAP of Emilia-Romagna. Range 47890 and 47899"
+  },
+  {
+    "CountryId": "SN",
+    "CountryName": "Senegal",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The letters CP or C.P. are often written in front of the postcode. This is not a country code, but simply an abbreviation for \u0027code postal\u0027."
+  },
+  {
+    "CountryId": "SO",
+    "CountryName": "Somalia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z] \\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Two letter postal codes for each of the nation\u0027s 18 administrative regions (e.g. AW for Awdal, BN for Banaadir, BR for Bari and SL for Sool)."
+  },
+  {
+    "CountryId": "SR",
+    "CountryName": "Suriname",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "SS",
+    "CountryName": "South Sudan",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "ST",
+    "CountryName": "S\u00E3o Tom\u00E9 and Pr\u00EDncipe",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "SV",
+    "CountryName": "El Salvador",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "SX",
+    "CountryName": "Sint Maarten",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "SY",
+    "CountryName": "Syria",
+    "HasPostalCodes": false,
+    "Status": "Planned",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "A 4-digit system has been announced. Status unknown."
+  },
+  {
+    "CountryId": "SZ",
+    "CountryName": "Eswatini",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z]\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The letter identifies one of the country\u0027s four districts, either H, M, S or L. The four district regions are Hhohho region (H), Manzini region (M), Shiselweni region (S), and Lumombo region (L)."
+  },
+  {
+    "CountryId": "TC",
+    "CountryName": "Turks and Caicos Islands",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^TKCA 1ZZ$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Single code used for all addresses."
+  },
+  {
+    "CountryId": "TD",
+    "CountryName": "Chad",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "TF",
+    "CountryName": "French Southern and Antarctic Territories",
+    "HasPostalCodes": false,
+    "Status": "Planned",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "French codes in the 98400 range have been reserved."
+  },
+  {
+    "CountryId": "TG",
+    "CountryName": "Togo",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "TH",
+    "CountryName": "Thailand",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The first two specify the province, numbers as in ISO 3166-2:TH, the third and fourth digits specify a district (amphoe)"
+  },
+  {
+    "CountryId": "TJ",
+    "CountryName": "Tajikistan",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Retained system from former Soviet Union. First two numbers: Republic and Province, Second two numbers: District, last two numbers: Post Office."
+  },
+  {
+    "CountryId": "TK",
+    "CountryName": "Tokelau",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "TL",
+    "CountryName": "East Timor",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "No postal code system in use since Indonesian withdrawal in 1999."
+  },
+  {
+    "CountryId": "TM",
+    "CountryName": "Turkmenistan",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Retained system from former Soviet Union."
+  },
+  {
+    "CountryId": "TN",
+    "CountryName": "Tunisia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "TO",
+    "CountryName": "Tonga",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "TR",
+    "CountryName": "Turkey",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "First two digits are the city numbers."
+  },
+  {
+    "CountryId": "TT",
+    "CountryName": "Trinidad and Tobago",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "First two digits specify a postal district (one of 72), next two digits a carrier route, last two digits a building or zone along that route"
+  },
+  {
+    "CountryId": "TV",
+    "CountryName": "Tuvalu",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "TW",
+    "CountryName": "Taiwan",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d|\\d\\d\\d-\\d\\d|\\d\\d\\d-\\d\\d\\d)$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "The first three digits of the postal code are required; the last two or three digits are optional. Codes are known as y\u00F3u d\u00EC q? h\u00E0o (????), and are also assigned to Senkaku Islands (Diaoyutai), though Japanese-administered, Pratas Island and the Spratly Islands. NNN-NNN 3\u002B3 digit codes were launched on March 3, 2020. See List of postal codes in Taiwan."
+  },
+  {
+    "CountryId": "TZ",
+    "CountryName": "Tanzania",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "UA",
+    "CountryName": "Ukraine",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "UG",
+    "CountryName": "Uganda",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "UM",
+    "CountryName": "United States Minor Outlying Islands",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^96898$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Mostly uninhabited. There is only one postal code in use, 96898 Wake Island."
+  },
+  {
+    "CountryId": "US",
+    "CountryName": "United States",
+    "HasPostalCodes": true,
+    "CodeRegex": "^\\d{5}([- ]\\d{4})?$",
+    "DataCurated": true,
+    "CurationStatus": "Curated",
+    "Notes": "Known as the ZIP Code (5 digits) or ZIP\u002B4 (9 digits, normalised to 5 on lookup). Also used by US territories including Puerto Rico (PR), Guam (GU), American Samoa (AS), the US Virgin Islands (VI), and the Northern Mariana Islands (MP). Armed Forces postal codes (APO/FPO/DPO) use state codes AA (Americas), AE (Europe), and AP (Pacific) -4 timezones assigned by theatre. Parcel Return Service (PRS) zips use DC as the state code. 57,400 entries across 69 admin1 divisions (50 states \u002B DC \u002B territories). All timezone and name fields fully verified via GeoTimeZone coordinates, Zippopotam.us, and manual review."
+  },
+  {
+    "CountryId": "UY",
+    "CountryName": "Uruguay",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "UZ",
+    "CountryName": "Uzbekistan",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": ""
+  },
+  {
+    "CountryId": "VA",
+    "CountryName": "Vatican",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^120$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Single code used for all addresses. Part of the Italian postal code system."
+  },
+  {
+    "CountryId": "VC",
+    "CountryName": "Saint Vincent and the Grenadines",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z]\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "VE",
+    "CountryName": "Venezuela",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d|\\d\\d\\d\\d-[A-Z])$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "VG",
+    "CountryName": "British Virgin Islands",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z]\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Specifically, VG1110 through VG1160"
+  },
+  {
+    "CountryId": "VI",
+    "CountryName": "U.S. Virgin Islands",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^(\\d\\d\\d\\d\\d|\\d\\d\\d\\d\\d-\\d\\d\\d\\d)$",
+    "ConstrainedRegex": "^008(0[1-9]|[1-4]\\d|5[01])(-\\d{4})?$",
+    "ConstraintNotes": "Range 00801-00851",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "U.S. ZIP codes. Range 00801-00851."
+  },
+  {
+    "CountryId": "VN",
+    "CountryName": "Vietnam",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "First two indicate a province."
+  },
+  {
+    "CountryId": "VU",
+    "CountryName": "Vanuatu",
+    "HasPostalCodes": false,
+    "Status": "NoCodes",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "WF",
+    "CountryName": "Wallis and Futuna",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^986\\d\\d$",
+    "ConstrainedRegex": "^986[0-9]\\d$",
+    "ConstraintNotes": "Range 98600-98690",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Overseas Collectivity of France. French codes used. Range 98600-98690."
+  },
+  {
+    "CountryId": "WS",
+    "CountryName": "Samoa",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^[A-Z][A-Z]\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "XK",
+    "CountryName": "Kosovo",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "A separate postal code for Kosovo was introduced by the UNMIK postal administration in 2004. Serbian postcodes are still widely used in the Serbian enclaves. No country code has been assigned."
+  },
+  {
+    "CountryId": "YE",
+    "CountryName": "Yemen",
+    "HasPostalCodes": false,
+    "Status": "Uncertain",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "System for Sana\u0027a Governorate using geocoding \u0027??????\u0027 based on th OpenPostcode algorithm is inaugurated in 2014."
+  },
+  {
+    "CountryId": "YT",
+    "CountryName": "Mayotte",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^976\\d\\d$",
+    "ConstrainedRegex": "^976[0-9]\\d$",
+    "ConstraintNotes": "Range 97600-97690",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Overseas Department of France. French codes used. Range 97600-97690."
+  },
+  {
+    "CountryId": "ZA",
+    "CountryName": "South Africa",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "Postal codes are allocated to individual Post Office branches, some have two codes to differentiate between P.O. Boxes and street delivery addresses. Included Namibia (ranges 9000-9299) until 1992, no longer used."
+  },
+  {
+    "CountryId": "ZM",
+    "CountryName": "Zambia",
+    "HasPostalCodes": true,
+    "Status": "Active",
+    "CodeRegex": "^\\d\\d\\d\\d\\d$",
+    "DataCurated": false,
+    "CurationStatus": "NoData"
+  },
+  {
+    "CountryId": "ZW",
+    "CountryName": "Zimbabwe",
+    "HasPostalCodes": false,
+    "Status": "Planned",
+    "DataCurated": false,
+    "CurationStatus": "NoData",
+    "Notes": "System is being planned."
+  }
+]

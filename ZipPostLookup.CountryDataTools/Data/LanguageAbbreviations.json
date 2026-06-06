@@ -1,0 +1,49 @@
+{
+  "English": {
+    "Mount": [ "Mt", "Mnt" ],
+    "Saint": [ "St" ],
+    "Fort":  [ "Ft" ],
+    "Point": [ "Pt" ],
+    "Island": [ "Is", "Isl" ],
+    "Lake": [ "Lk" ],
+    "Creek": [ "Ck", "Crk" ],
+    "Valley": [ "Vly", "Val" ],
+    "North": [ "N" ],
+    "South": [ "S" ],
+    "East":  [ "E" ],
+    "West":  [ "W" ],
+    "Northeast": [ "NE" ],
+    "Northwest": [ "NW" ],
+    "Southeast": [ "SE" ],
+    "Southwest": [ "SW" ]
+  },
+  "French": {
+    "Saint":   [ "St" ],
+    "Sainte":  [ "Ste" ],
+    "Mont":    [ "Mte" ],
+    "Lac":     [ "L" ],
+    "Nord":    [ "N" ],
+    "Sud":     [ "S" ],
+    "Est":     [ "E" ],
+    "Ouest":   [ "O" ],
+    "Grande":  [ "Gde" ],
+    "Grand":   [ "Gd" ],
+    "Nouveau": [ "Nv", "Nouv" ],
+    "Nouvelle": [ "Nve" ]
+  },
+  "Spanish": {
+    "Santa":  [ "Sta" ],
+    "Santo":  [ "Sto" ],
+    "Monte":  [ "Mte" ],
+    "Sierra": [ "Sa", "Srra" ],
+    "Valle":  [ "Vlle" ],
+    "Norte":  [ "N" ],
+    "Sur":    [ "S" ],
+    "Este":   [ "E" ],
+    "Oeste":  [ "O" ],
+    "Puerto": [ "Pto" ],
+    "Nueva":  [ "Nva" ],
+    "Nuevo":  [ "Nvo" ],
+    "Ciudad": [ "Cdad", "Cd" ]
+  }
+}

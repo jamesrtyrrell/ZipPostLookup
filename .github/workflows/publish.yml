@@ -1,0 +1,65 @@
+name: Publish to NuGet
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version (e.g. 0.5.1-beta, 1.0.0-rc.1, 1.0.0)'
+        required: true
+        default: '0.5.1-beta'
+
+permissions:
+  contents: write   # push the git tag
+  id-token: write   # NuGet Trusted Publishing (OIDC — no API key needed)
+
+jobs:
+  publish:
+    name: Build, test and publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore ZipPostLookup/ZipPostLookup.csproj
+
+      - name: Build
+        run: dotnet build ZipPostLookup/ZipPostLookup.csproj --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test ZipPostLookup.Tests/ZipPostLookup.Tests.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Pack
+        run: >
+          dotnet pack ZipPostLookup/ZipPostLookup.csproj
+          --configuration Release
+          --no-build
+          --output ./nupkg
+          /p:Version=${{ github.event.inputs.version }}
+
+      - name: Push to NuGet (Trusted Publishing)
+        run: >
+          dotnet nuget push ./nupkg/*.nupkg
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      - name: Push symbols to NuGet
+        run: >
+          dotnet nuget push ./nupkg/*.snupkg
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      - name: Tag release
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag v${{ github.event.inputs.version }}
+          git push origin v${{ github.event.inputs.version }}
