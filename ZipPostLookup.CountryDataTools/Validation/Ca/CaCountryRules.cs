@@ -20,6 +20,9 @@ public sealed class CaCountryRules : ICountryRules
     public string GetApiLookupCode(string code) =>
         code.Length >= 3 ? code[..3] : code;
 
+    /// CA ZpCodes are FSA format: letter-digit-letter (e.g. M5V, A1A).
+    public string ZpCodeLikePattern => "[A-Z][0-9][A-Z]%";
+
     public IReadOnlyList<string> PlaceNameLanguages => ["English", "French"];
 
     // ── Province/territory name → ISO 3166-2:CA code ──────────────────────────

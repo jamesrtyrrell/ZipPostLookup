@@ -89,7 +89,22 @@ internal static class ZpCodeEditorDashboard
 
             if (country == "← Back") break;
 
-            await BrowseCodesAsync(country);
+            DashboardRenderer.RenderHeader("ZpCode Editor");
+
+            var mode = MenuPrompt.Show(
+                ["Edit Uncurated", "Edit Flagged", "← Back"],
+                s => s switch
+                {
+                    "← Back"       => "[grey]← Back[/]",
+                    "Edit Flagged" => $"[bold red]{"Edit Flagged",-18}[/]  [grey]Browse and manage flagged (bad-actor) codes[/]",
+                    _              => $"[bold cyan]{"Edit Uncurated",-18}[/]  [grey]Browse and curate uncurated reference codes[/]",
+                },
+                escapeReturns: "← Back",
+                title: $"Mode — {country}:");
+
+            if (mode == "← Back") continue;
+
+            await BrowseCodesAsync(country, flaggedMode: mode == "Edit Flagged");
         }
 
         return 0;
@@ -97,8 +112,11 @@ internal static class ZpCodeEditorDashboard
 
     // ── Browse (ZpCode Editor › {CC}) ─────────────────────────────────────────
 
-    private static async Task BrowseCodesAsync(string country)
+    private static async Task BrowseCodesAsync(string country, bool flaggedMode = false)
     {
+        var modeLabel = flaggedMode ? "Flagged" : country;
+        var header    = flaggedMode ? $"ZpCode Editor › {country} › Flagged" : $"ZpCode Editor › {country}";
+
         IWorkDbConnectionFactory factory;
         try
         {
@@ -107,7 +125,7 @@ internal static class ZpCodeEditorDashboard
         }
         catch (Exception ex)
         {
-            DashboardRenderer.RenderHeader($"ZpCode Editor › {country}");
+            DashboardRenderer.RenderHeader(header);
             AnsiConsole.MarkupLine($"[red]  ✗ {Markup.Escape(ex.Message)}[/]");
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
@@ -118,17 +136,17 @@ internal static class ZpCodeEditorDashboard
         var offset        = 0;
         var selectedIndex = 0;
 
-        var (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset);
+        var (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
 
         while (true)
         {
             if (totalCount == 0)
             {
-                DashboardRenderer.RenderHeader($"ZpCode Editor › {country}");
+                DashboardRenderer.RenderHeader(header);
                 AnsiConsole.Write(BuildCurrentCountryStatsTable(stats, country));
                 AnsiConsole.WriteLine();
 
-                if (stats?.OrphanAltNames > 0)
+                if (!flaggedMode && stats?.OrphanAltNames > 0)
                 {
                     AnsiConsole.MarkupLine(
                         $"  [yellow]⚠  {stats.OrphanAltNames:N0} alt-name row(s) still uncurated[/]  " +
@@ -141,11 +159,18 @@ internal static class ZpCodeEditorDashboard
                     if (k == ConsoleKey.O)
                     {
                         await RunOrphanFixAsync(factory, country);
-                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, 0);
+                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, 0, flaggedMode);
                         offset = 0;
                         selectedIndex = 0;
                         continue;
                     }
+                }
+                else if (flaggedMode)
+                {
+                    AnsiConsole.MarkupLine("[green]  ✓ No flagged codes.[/]");
+                    AnsiConsole.WriteLine();
+                    AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+                    Console.ReadKey(intercept: true);
                 }
                 else
                 {
@@ -157,7 +182,7 @@ internal static class ZpCodeEditorDashboard
                 return;
             }
 
-            RenderBrowsePage(country, page, selectedIndex, offset, totalCount, stats);
+            RenderBrowsePage(country, page, selectedIndex, offset, totalCount, stats, flaggedMode);
 
             var key = Console.ReadKey(intercept: true).Key;
 
@@ -169,7 +194,7 @@ internal static class ZpCodeEditorDashboard
                     else if (offset > 0)
                     {
                         offset -= PageSize;
-                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset);
+                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
                         selectedIndex = page.Count - 1;
                     }
                     break;
@@ -180,7 +205,7 @@ internal static class ZpCodeEditorDashboard
                     else if (offset + PageSize < totalCount)
                     {
                         offset += PageSize;
-                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset);
+                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
                         selectedIndex = 0;
                     }
                     break;
@@ -189,7 +214,7 @@ internal static class ZpCodeEditorDashboard
                     if (offset > 0)
                     {
                         offset = Math.Max(0, offset - PageSize);
-                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset);
+                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
                         selectedIndex = 0;
                     }
                     break;
@@ -198,25 +223,25 @@ internal static class ZpCodeEditorDashboard
                     if (offset + PageSize < totalCount)
                     {
                         offset += PageSize;
-                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset);
+                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
                         selectedIndex = 0;
                     }
                     break;
 
-                case ConsoleKey.O when stats?.OrphanAltNames > 0:
+                case ConsoleKey.O when !flaggedMode && stats?.OrphanAltNames > 0:
                     await RunOrphanFixAsync(factory, country);
-                    (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset);
+                    (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
                     selectedIndex = Math.Min(selectedIndex, Math.Max(0, page.Count - 1));
                     break;
 
                 case ConsoleKey.Enter when page.Count > 0:
                     await ViewCodeAsync(factory, country, page[selectedIndex].ZpCode);
-                    (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset);
+                    (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
                     var maxOffset = totalCount == 0 ? 0 : ((totalCount - 1) / PageSize) * PageSize;
                     if (offset > maxOffset)
                     {
                         offset = maxOffset;
-                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset);
+                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
                     }
                     selectedIndex = Math.Min(selectedIndex, Math.Max(0, page.Count - 1));
                     break;
@@ -561,16 +586,20 @@ internal static class ZpCodeEditorDashboard
         int selectedIndex,
         int offset,
         int totalCount,
-        CurationStats? stats)
+        CurationStats? stats,
+        bool flaggedMode = false)
     {
-        DashboardRenderer.RenderHeader($"ZpCode Editor › {country}");
+        var header = flaggedMode
+            ? $"ZpCode Editor › {country} › Flagged"
+            : $"ZpCode Editor › {country}";
+        DashboardRenderer.RenderHeader(header);
 
-        var browseTable  = BuildBrowseTable(page, selectedIndex, offset, totalCount, stats);
+        var browseTable  = BuildBrowseTable(page, selectedIndex, offset, totalCount, stats, flaggedMode);
         var countryPanel = BuildCurrentCountryStatsTable(stats, country);
 
         AnsiConsole.Write(new Columns(browseTable, countryPanel));
 
-        var hint = stats?.OrphanAltNames > 0
+        var hint = (!flaggedMode && stats?.OrphanAltNames > 0)
             ? "  [grey]↑↓ move   PgUp/PgDn page   Enter view   [/][bold]O[/][grey] fix orphans   Esc back[/]"
             : "  [grey]↑↓ move   PgUp/PgDn page   Enter view   Esc back[/]";
         AnsiConsole.MarkupLine(hint);
@@ -581,17 +610,21 @@ internal static class ZpCodeEditorDashboard
         int selectedIndex,
         int offset,
         int totalCount,
-        CurationStats? stats)
+        CurationStats? stats,
+        bool flaggedMode = false)
     {
         var totalPages  = totalCount == 0 ? 1 : (int)Math.Ceiling(totalCount / (double)PageSize);
         var currentPage = offset / PageSize + 1;
-        var orphanNote  = stats?.OrphanAltNames > 0
+        var orphanNote  = (!flaggedMode && stats?.OrphanAltNames > 0)
             ? $"  [yellow]orphans: {stats.OrphanAltNames:N0}[/]"
             : "";
+        var caption = flaggedMode
+            ? $"[grey]{totalCount:N0} flagged — page {currentPage}/{totalPages}[/]"
+            : $"[grey]{totalCount:N0} uncurated — page {currentPage}/{totalPages}[/]{orphanNote}";
 
         var table = new Table()
             .Border(TableBorder.Square)
-            .Caption($"[grey]{totalCount:N0} uncurated — page {currentPage}/{totalPages}[/]{orphanNote}")
+            .Caption(caption)
             .AddColumn(new TableColumn("").Padding(0, 0, 0, 0))
             .AddColumn(new TableColumn("[grey]Code[/]"))
             .AddColumn(new TableColumn("[grey]D[/]").Centered())
@@ -760,7 +793,7 @@ internal static class ZpCodeEditorDashboard
     // ── Data loading ──────────────────────────────────────────────────────────
 
     private static async Task<(List<BrowseRow> page, int totalCount, CurationStats? stats)>
-        LoadBrowsePageAsync(IWorkDbConnectionFactory factory, string country, int offset)
+        LoadBrowsePageAsync(IWorkDbConnectionFactory factory, string country, int offset, bool flaggedMode = false)
     {
         try
         {
@@ -771,15 +804,15 @@ internal static class ZpCodeEditorDashboard
                 new { CountryId = country });
 
             var totalCount = await conn.ExecuteScalarAsync<int>(
-                CommonQueries.GetBrowseRowCount,
+                flaggedMode ? CommonQueries.GetFlaggedBrowseRowCount : CommonQueries.GetBrowseRowCount,
                 new { CountryId = country });
 
-            var orphanCount = await conn.ExecuteScalarAsync<int>(
+            var orphanCount = flaggedMode ? 0 : await conn.ExecuteScalarAsync<int>(
                 CommonQueries.GetOrphanAltNameCount,
                 new { CountryId = country });
 
             var page = (await conn.QueryAsync<BrowseRow>(
-                CommonQueries.GetBrowseRowsPage,
+                flaggedMode ? CommonQueries.GetFlaggedBrowseRowsPage : CommonQueries.GetBrowseRowsPage,
                 new { CountryId = country, Offset = offset, PageSize })).ToList();
 
             if (stats is not null)

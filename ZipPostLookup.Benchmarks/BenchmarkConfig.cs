@@ -1,5 +1,6 @@
 ﻿using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Exporters.Csv;
 using BenchmarkDotNet.Loggers;
 
@@ -9,10 +10,12 @@ public class BenchmarkConfig : ManualConfig
 {
     public BenchmarkConfig()
     {
-        // AddExporter(MarkdownExporter.GitHub);  // GitHub.md only — no default.md
-        AddExporter(CsvExporter.Default);      // keep .csv for archive
+        // Output to DataAnalysis/ alongside integrity and analysis reports.
+        ArtifactsPath = Path.Combine(Directory.GetCurrentDirectory(), "DataAnalysis");
+
+        AddExporter(MarkdownExporter.GitHub);  // *-report-github.md
+        AddExporter(CsvExporter.Default);      // *-report.csv
         AddLogger(ConsoleLogger.Default);
         AddColumnProvider(DefaultColumnProviders.Instance);
-        // No HtmlExporter — no .html
     }
 }

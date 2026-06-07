@@ -20,21 +20,19 @@ public interface IZipPostLookup
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Returns the default entry for the given postal code, or <c>null</c> if not found.
+    /// Returns the default entry for the given postal code, or <c>null</c> if not found or <paramref name="code"/> is <c>null</c>.
     /// </summary>
-    /// <param name="code">The postal code to look up (case-insensitive).</param>
+    /// <param name="code">The postal code to look up (case-insensitive). <c>null</c> returns <c>null</c>.</param>
     /// <returns>The default <see cref="CodeEntry"/>, or <c>null</c> if not found.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="code"/> is <c>null</c>.</exception>
-    CodeEntry? GetByCode(string code);
+    CodeEntry? GetByCode(string? code);
 
     /// <summary>
     /// Attempts to retrieve the default entry for the given postal code.
     /// </summary>
-    /// <param name="code">The postal code to look up (case-insensitive).</param>
+    /// <param name="code">The postal code to look up (case-insensitive). <c>null</c> returns <c>false</c>.</param>
     /// <param name="entry">The matched entry, or <c>null</c> if not found.</param>
     /// <returns><c>true</c> if found; otherwise <c>false</c>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="code"/> is <c>null</c>.</exception>
-    bool TryGetByCode(string code, out CodeEntry? entry);
+    bool TryGetByCode(string? code, out CodeEntry? entry);
 
     /// <summary>
     /// Returns all entries for the given postal code (some codes map to multiple place names).

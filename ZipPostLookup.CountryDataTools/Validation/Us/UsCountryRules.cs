@@ -672,7 +672,9 @@ public sealed class UsCountryRules : ICountryRules
     public (string Code, string Name)? ResolveAdmin1(string zpCode)
     {
         if (zpCode.Length < 3) return null;
-        return _prefixMap.TryGetValue(zpCode[..3], out var v) ? v : null;
+        return _prefixMap.TryGetValue(zpCode[..3], out var v)
+            ? v
+            : ("NonGeographic", "Non-Geographic");
     }
 
     // ── Armed Forces territory enrichment ──────────────────────────────────────

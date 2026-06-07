@@ -4,6 +4,7 @@ using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
 using ZipPostLookup.CountryDataTools.Utilities;
+using ZipPostLookup.CountryDataTools.Validation;
 using ZipPostLookup.CountryDataTools.Validation.Export;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
@@ -52,9 +53,10 @@ public static class WorkDbCommand
             "test" => await RunTestAsync(args[1..]),
             "clear" => await RunClearAsync(args[1..]),
             "reset" => await RunResetAsync(args[1..]),
-            "normalize-tz"    => await RunNormalizeTzAsync(),
-            "normalize-names" => await RunNormalizeNamesAsync(args[1..]),
-            "purge-oob-us"    => await RunPurgeOutOfRangeUsAsync(),
+            "normalize-tz"     => await RunNormalizeTzAsync(),
+            "normalize-names"  => await RunNormalizeNamesAsync(args[1..]),
+            "normalize-admins" => await RunNormalizeAdminsAsync(args[1..]),
+            "purge-oob-us"     => await RunPurgeOutOfRangeUsAsync(),
             _ => UnknownSubcommand(args[0]),
         };
     }
@@ -475,6 +477,144 @@ public static class WorkDbCommand
     }
 
     // -------------------------------------------------------------------------
+    // workdb normalize-admins
+    // -------------------------------------------------------------------------
+
+    private static async Task<int> RunNormalizeAdminsAsync(string[] args)
+    {
+        var all     = args.Any(a => a.Equals("--all", StringComparison.OrdinalIgnoreCase));
+        var country = ParseCountry(args);
+
+        if (!all && string.IsNullOrWhiteSpace(country))
+        {
+            await Console.Error.WriteLineAsync(
+                "Usage: countrydatatools workdb normalize-admins --country XX\n" +
+                "    or countrydatatools workdb normalize-admins --all");
+            return 2;
+        }
+
+        var db = await LoadDbAsync();
+        if (db == null) return 1;
+
+        var countries = all
+            ? new[] { "US", "CA", "MX" }
+            : new[] { country.ToUpperInvariant() };
+
+        var exitCode = 0;
+
+        foreach (var cc in countries)
+        {
+            if (all)
+            {
+                Console.WriteLine();
+                AnsiConsole.Write(new Rule($"[bold]{cc}[/]").LeftJustified());
+            }
+
+            var rules = CountryRulesFactory.For(cc);
+            using var conn = db.GetFactory().CreateConnection();
+
+            // Get the admin level 1 ID for this country.
+            var adminLevelId = await conn.ExecuteScalarAsync<long?>(
+                CommonQueries.GetAdminLevelIdForLevel,
+                new { CountryId = cc, LevelNumber = 1 });
+
+            if (adminLevelId == null)
+            {
+                AnsiConsole.MarkupLine($"  [yellow]⚠ No admin level 1 defined for {cc} — skipping.[/]");
+                continue;
+            }
+
+            // Fetch all rows missing admin1.
+            var rows = (await conn.QueryAsync<(long ReferenceId, string ZpCode)>(
+                CommonQueries.GetReferencesMissingAdmin1,
+                new { CountryId = cc })).ToList();
+
+            if (rows.Count > 0)
+            {
+                Console.WriteLine($"  {cc}: {rows.Count:N0} row(s) missing admin1 — resolving from ZIP prefix...");
+
+                int resolved = 0, skipped = 0;
+
+                foreach (var (referenceId, zpCode) in rows)
+                {
+                    var admin1 = rules.ResolveAdmin1(zpCode);
+                    if (admin1 == null) { skipped++; continue; }
+
+                    try
+                    {
+                        await conn.ExecuteAsync(CommonQueries.UpsertReferenceAdmin, new
+                        {
+                            ReferenceId  = referenceId,
+                            AdminLevelId = adminLevelId.Value,
+                            Value        = admin1.Value.Name,
+                            Code         = admin1.Value.Code,
+                        });
+                        resolved++;
+                    }
+                    catch (Exception ex)
+                    {
+                        await Console.Error.WriteLineAsync(
+                            $"  ✗ Failed to upsert admin for {zpCode} (ReferenceId={referenceId}): {ex.Message}");
+                        exitCode = 1;
+                    }
+                }
+
+                AnsiConsole.MarkupLine($"  [green]✓ {cc}: {resolved:N0} resolved, {skipped:N0} skipped (no rule match).[/]");
+            }
+
+            // Reconcile pass: for countries where ResolveAdmin1 is deterministic,
+            // also fix rows that have a wrong-but-alphabetic code (e.g. CDMX→CMX, CA→MA).
+            // The "missing" pass above only catches NULL/blank/---/all-numeric codes.
+            var hasOverride = rules.GetType()
+                .GetMethod(nameof(ICountryRules.ResolveAdmin1))
+                ?.DeclaringType != typeof(ICountryRules);
+
+            if (hasOverride)
+            {
+                var existingRows = (await conn.QueryAsync<(long ReferenceId, string ZpCode, string StoredCode)>(
+                    CommonQueries.GetExistingAdmin1ForReconcile,
+                    new { CountryId = cc })).ToList();
+
+                int reconciled = 0;
+                foreach (var (referenceId, zpCode, storedCode) in existingRows)
+                {
+                    var expected = rules.ResolveAdmin1(zpCode);
+                    if (expected == null || string.Equals(expected.Value.Code, storedCode,
+                            StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    try
+                    {
+                        await conn.ExecuteAsync(CommonQueries.UpsertReferenceAdmin, new
+                        {
+                            ReferenceId  = referenceId,
+                            AdminLevelId = adminLevelId!.Value,
+                            Value        = expected.Value.Name,
+                            Code         = expected.Value.Code,
+                        });
+                        reconciled++;
+                    }
+                    catch (Exception ex)
+                    {
+                        await Console.Error.WriteLineAsync(
+                            $"  ✗ Failed to reconcile admin for {zpCode} (ReferenceId={referenceId}): {ex.Message}");
+                        exitCode = 1;
+                    }
+                }
+
+                if (reconciled > 0)
+                    AnsiConsole.MarkupLine($"  [yellow]⚠ {cc}: {reconciled:N0} admin1 code(s) corrected (wrong → expected).[/]");
+                else
+                    AnsiConsole.MarkupLine($"  [green]✓ {cc}: all existing admin1 codes are correct.[/]");
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("  Re-export --target ref and --target main for affected countries.");
+        return exitCode;
+    }
+
+    // -------------------------------------------------------------------------
     // db purge-oob-us
     // -------------------------------------------------------------------------
 
@@ -564,7 +704,15 @@ public static class WorkDbCommand
                           Idempotent. Re-export affected countries after running.
               normalize-names --country XX
               normalize-names --all
-                          Detect place-name abbreviation alternates (e.g. "St. Martin"
+                          Detect place-name abbreviation alternates
+              normalize-admins --country XX
+              normalize-admins --all
+                          Backfill missing admin1 (state/estado) data from the ZIP
+                          code itself using built-in range rules (US prefix map,
+                          MX two-digit range). Upserts into data.ReferenceAdmins
+                          for every row whose admin1 is absent or '---'. Skips
+                          codes where no rule match exists. Idempotent.
+                          Re-export affected countries after running. (e.g. "St. Martin"
                           / "Saint Martin") for the same code and lat/lon, and set
                           AltNameOf on the abbreviated row to link it to the canonical
                           name. Safe to re-run; skips already-linked rows.

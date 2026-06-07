@@ -15,7 +15,7 @@ public static class ZipPostLookup
 {
 
     /// <summary>Returns the default entry for the given postal code, or <c>null</c> if not found.</summary>
-    public static CodeEntry? GetByCode(string code) =>
+    public static CodeEntry? GetByCode(string? code) =>
         ZipPostRegistry.Default.GetByCode(code);
 
     /// <summary>Attempts to retrieve the default entry for the given postal code.</summary>

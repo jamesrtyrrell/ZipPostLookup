@@ -29,7 +29,7 @@ internal static class TestCodes
     {
         public const string ExactCode       = "01000";
         public const string ExactPlaceName  = "San Ángel";
-        public const string ExactAdmin1Code = "CDMX";
+        public const string ExactAdmin1Code = "CMX";
         public const string ExactTimezone   = "America/Mexico_City";
     }
 

@@ -61,6 +61,7 @@ public static class CommonQueries
     // Returns one row per distinct ZpCode that is not yet curated (TimezoneChecked=0 OR NameChecked=0).
     // Admin1Code is taken from the level-1 admin of the first reference row for that code.
     // AltNameOf rows are excluded — they share curation state with their canonical row.
+    // Flagged codes are excluded — they are not valid and should not be enriched.
     public static readonly string GetUncuratedReferenceCodes =
         @"SELECT r.ZpCode,
                  MAX(ISNULL(ra.Code, '')) AS Admin1Code
@@ -72,6 +73,7 @@ public static class CommonQueries
           WHERE  r.CountryId = @CountryId
             AND  r.Curated   = 0
             AND  r.AltNameOf IS NULL
+            AND  r.Flagged   = 0
           GROUP  BY r.ZpCode
           ORDER  BY r.ZpCode";
 
@@ -95,6 +97,7 @@ public static class CommonQueries
               CAST(SUM(CAST(Curated AS INT)) * 100.0 / NULLIF(COUNT(*), 0)
                    AS DECIMAL(5,2))                                                  AS PctComplete
           FROM data.Reference
+          WHERE flagged = 0 
           GROUP BY CountryId
           ORDER BY CountryId";
 
@@ -112,11 +115,11 @@ public static class CommonQueries
           FROM data.Reference
           WHERE CountryId = @CountryId";
 
-    // Count of distinct uncurated codes (for paginator denominator).
+    // Count of distinct uncurated, non-flagged codes (for paginator denominator).
     public static readonly string GetUncuratedCodeCount =
         @"SELECT COUNT(DISTINCT ZpCode)
           FROM   data.Reference
-          WHERE  CountryId = @CountryId AND Curated = 0 AND AltNameOf IS NULL";
+          WHERE  CountryId = @CountryId AND Curated = 0 AND AltNameOf IS NULL AND Flagged = 0";
 
     // One row per uncurated ZpCode with the default entry's name/timezone and aggregate curation flags.
     // MIN(TimezoneChecked) = 1 iff ALL rows for that code are TZ-checked (same for NameChecked).
@@ -233,14 +236,42 @@ public static class CommonQueries
                                      WHERE CountryId = r.CountryId AND LevelNumber = 1)
           WHERE r.CountryId = @CountryId
             AND r.Curated   = 0
+            AND r.Flagged   = 0
           ORDER BY r.ZpCode, r.IsDefault DESC, r.PlaceName
           OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
 
-    // Row count for browse pagination (all uncurated rows including AltNameOf).
+    // Row count for browse pagination (uncurated, non-flagged rows).
     public static readonly string GetBrowseRowCount =
         @"SELECT COUNT(*)
           FROM   data.Reference
-          WHERE  CountryId = @CountryId AND Curated = 0";
+          WHERE  CountryId = @CountryId AND Curated = 0 AND Flagged = 0";
+
+    // Flagged browse — mirrors the above pair but filtered to Flagged = 1.
+    public static readonly string GetFlaggedBrowseRowsPage =
+        @"SELECT r.ZpCode, r.PlaceName, r.Timezone,
+                 CAST(r.IsDefault       AS BIT) AS IsDefault,
+                 ISNULL(r.Lat,  '---')          AS Lat,
+                 ISNULL(r.Lng,  '---')          AS Lng,
+                 r.AltNameOf,
+                 ISNULL(ra.Value, '---')         AS Admin1,
+                 ISNULL(ra.Code,  '---')         AS Admin1Code,
+                 CAST(r.TimezoneChecked AS BIT)  AS TimezoneChecked,
+                 CAST(r.NameChecked     AS BIT)  AS NameChecked,
+                 CAST(r.Flagged         AS BIT)  AS Flagged
+          FROM data.Reference r
+          LEFT JOIN data.ReferenceAdmins ra
+              ON  ra.ReferenceId  = r.ReferenceId
+              AND ra.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
+                                     WHERE CountryId = r.CountryId AND LevelNumber = 1)
+          WHERE r.CountryId = @CountryId
+            AND r.Flagged   = 1
+          ORDER BY r.ZpCode, r.IsDefault DESC, r.PlaceName
+          OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
+
+    public static readonly string GetFlaggedBrowseRowCount =
+        @"SELECT COUNT(*)
+          FROM   data.Reference
+          WHERE  CountryId = @CountryId AND Flagged = 1";
 
     // Flag / unflag all rows for a ZpCode — flagged codes are excluded from exports.
     public static readonly string FlagCode =
@@ -286,7 +317,38 @@ public static class CommonQueries
                  UpdatedAt = SYSUTCDATETIME()
           WHERE  ReferenceId = @ReferenceId";
 
-    // Insert or update a single admin level row for a reference entry.
+    // Reference rows that have no admin level 1 entry, a blank/placeholder entry,
+    // or an all-numeric entry (INEGI-format codes like "19" that should be SEPOMEX
+    // abbreviations like "NLE"). All-numeric codes are treated as wrong-format and
+    // will be overwritten by normalize-admins with the correct abbreviation.
+    public static readonly string GetReferencesMissingAdmin1 =
+        @"SELECT r.ReferenceId, r.ZpCode
+          FROM   data.Reference r
+          LEFT JOIN data.ReferenceAdmins ra
+                 ON  ra.ReferenceId  = r.ReferenceId
+                 AND ra.AdminLevelId = (SELECT TOP 1 AdminLevelId FROM data.AdminLevels
+                                        WHERE CountryId = r.CountryId AND LevelNumber = 1)
+          WHERE  r.CountryId = @CountryId
+            AND (   ra.ReferenceId IS NULL
+                 OR ra.Code = '---'
+                 OR ra.Code = ''
+                 OR ra.Code NOT LIKE '%[^0-9]%')";
+
+    // Rows that already have an alphabetic admin1 code set — used by the reconcile
+    // pass in normalize-admins to correct codes that are wrong but not "missing".
+    public static readonly string GetExistingAdmin1ForReconcile =
+        @"SELECT r.ReferenceId, r.ZpCode, ra.Code AS StoredCode
+          FROM   data.Reference r
+          JOIN   data.ReferenceAdmins ra
+                 ON  ra.ReferenceId  = r.ReferenceId
+                 AND ra.AdminLevelId = (SELECT TOP 1 AdminLevelId FROM data.AdminLevels
+                                        WHERE CountryId = r.CountryId AND LevelNumber = 1)
+          WHERE  r.CountryId = @CountryId
+            AND  ra.Code IS NOT NULL
+            AND  ra.Code != ''
+            AND  ra.Code != '---'
+            AND  ra.Code LIKE '%[^0-9]%'";
+
     public static readonly string UpsertReferenceAdmin =
         @"MERGE data.ReferenceAdmins AS t
           USING (SELECT @ReferenceId AS ReferenceId, @AdminLevelId AS AdminLevelId) AS s
@@ -1009,4 +1071,81 @@ public static class CommonQueries
                 AND  r.IsDefault = 0
                 AND  r.AltNameOf IS NULL
               ORDER  BY NEWID()";
+
+    // =========================================================================
+    // CDT DB Integrity queries
+    // =========================================================================
+
+    // One admin code per curated ZpCode (default rows only) for correctness checking.
+    public static readonly string GetCuratedDefaultAdminCodes =
+        @"SELECT DISTINCT r.ZpCode, ISNULL(ra.Code, '---') AS Admin1Code
+          FROM   data.Reference r
+          LEFT JOIN data.ReferenceAdmins ra
+                 ON  ra.ReferenceId  = r.ReferenceId
+                 AND ra.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
+                                        WHERE CountryId = r.CountryId AND LevelNumber = 1)
+          WHERE  r.CountryId = @CountryId
+            AND  r.Curated   = 1
+            AND  r.IsDefault = 1
+            AND  r.AltNameOf IS NULL
+          ORDER  BY r.ZpCode";
+
+    // AltNameOf rows where the canonical name (AltNameOf value) does not exist
+    // as a non-AltNameOf row for the same ZpCode.
+    public static readonly string GetOrphanAltNamesDetailed =
+        @"SELECT r.ZpCode, r.PlaceName, r.AltNameOf
+          FROM   data.Reference r
+          WHERE  r.CountryId  = @CountryId
+            AND  r.AltNameOf IS NOT NULL
+            AND  NOT EXISTS (
+                     SELECT 1 FROM data.Reference r2
+                     WHERE  r2.CountryId = r.CountryId
+                       AND  r2.ZpCode    = r.ZpCode
+                       AND  r2.PlaceName = r.AltNameOf
+                       AND  r2.AltNameOf IS NULL)
+          ORDER  BY r.ZpCode, r.PlaceName";
+
+    // ZpCodes with more than one IsDefault=1 non-AltNameOf curated row.
+    public static readonly string GetDuplicateIsDefaultCodes =
+        @"SELECT r.ZpCode, COUNT(*) AS DefaultCount
+          FROM   data.Reference r
+          WHERE  r.CountryId = @CountryId
+            AND  r.Curated   = 1
+            AND  r.IsDefault = 1
+            AND  r.AltNameOf IS NULL
+          GROUP  BY r.ZpCode
+          HAVING COUNT(*) > 1
+          ORDER  BY COUNT(*) DESC, r.ZpCode";
+
+    // Count of curated ZpCodes with missing, blank, or wrong-format admin1.
+    public static readonly string GetCuratedMissingAdmin1Count =
+        @"SELECT COUNT(DISTINCT r.ZpCode)
+          FROM   data.Reference r
+          LEFT JOIN data.ReferenceAdmins ra
+                 ON  ra.ReferenceId  = r.ReferenceId
+                 AND ra.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
+                                        WHERE CountryId = r.CountryId AND LevelNumber = 1)
+          WHERE  r.CountryId = @CountryId
+            AND  r.Curated   = 1
+            AND  r.AltNameOf IS NULL
+            AND (ra.ReferenceId IS NULL
+              OR ra.Code = '---'
+              OR ra.Code = ''
+              OR ra.Code NOT LIKE '%[^0-9]%')";
+
+    // Latest update timestamp for curated rows — used for the stale-data check.
+    public static readonly string GetLastCuratedUpdateTime =
+        @"SELECT MAX(UpdatedAt)
+          FROM   data.Reference
+          WHERE  CountryId = @CountryId AND Curated = 1";
+
+    // Rows whose ZpCode doesn't match the country's expected format.
+    // Pass @ValidPattern as a SQL LIKE pattern: '[0-9][0-9][0-9][0-9][0-9]' for US/MX,
+    // '[A-Z][0-9][A-Z]%' for CA.
+    public static readonly string GetInvalidZpCodes =
+        @"SELECT r.ReferenceId, r.ZpCode, r.PlaceName
+          FROM   data.Reference r
+          WHERE  r.CountryId = @CountryId
+            AND  r.ZpCode NOT LIKE @ValidPattern
+          ORDER  BY r.ZpCode";
 }

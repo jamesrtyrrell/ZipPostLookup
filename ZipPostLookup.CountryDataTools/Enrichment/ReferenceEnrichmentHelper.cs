@@ -110,13 +110,11 @@ internal static class ReferenceEnrichmentHelper
             }
         }
 
-        // Propagate NameChecked=1 to all timezone-verified rows for this zip.
-        if (!string.IsNullOrEmpty(result.PlaceName))
-        {
-            await conn.ExecuteAsync(
-                CommonQueries.UpdateReferenceNameChecked,
-                new { CountryId = countryUpper, ZpCode = zip }, tx);
-        }
+        // Mark all rows for this zip as fully curated. The API confirmed the code
+        // is valid; timezone and place names from the source CSV are trustworthy.
+        await conn.ExecuteAsync(
+            CommonQueries.MarkCodeAsCurated,
+            new { CountryId = countryUpper, ZpCode = zip }, tx);
 
         return newNameInserted;
     }

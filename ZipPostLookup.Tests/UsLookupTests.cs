@@ -59,9 +59,9 @@ public sealed class UsLookupTests : IClassFixture<UsRegistryFixture>
     }
 
     [Fact]
-    public void GetByZip_NullCode_Throws()
+    public void GetByZip_NullCode_ReturnsNull()
     {
-        Assert.Throws<ArgumentNullException>(() => _postRegistry.GetByZip(null!));
+        Assert.Null(_postRegistry.GetByZip(null!));
     }
 
     // --- TryGetByZip ---
@@ -99,9 +99,11 @@ public sealed class UsLookupTests : IClassFixture<UsRegistryFixture>
     }
 
     [Fact]
-    public void TryGetByZip_NullCode_Throws()
+    public void TryGetByZip_NullCode_ReturnsFalse()
     {
-        Assert.Throws<ArgumentNullException>(() => _postRegistry.TryGetByZip(null!, out _));
+        var found = _postRegistry.TryGetByZip(null!, out var entry);
+        Assert.False(found);
+        Assert.Null(entry);
     }
 
     // --- PostalCode aliases ---

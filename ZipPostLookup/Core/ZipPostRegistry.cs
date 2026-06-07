@@ -352,15 +352,15 @@ public sealed class ZipPostRegistry : IZipPostLookup
     // =========================================================================
 
     /// <inheritdoc/>
-    public CodeEntry? GetByCode(string code)
+    public CodeEntry? GetByCode(string? code)
     {
-        if (code == null) { throw new ArgumentNullException(nameof(code)); }
+        if (code == null) { return null; }
 
         return NormalizeAndLookup(code)?[0];
     }
 
     /// <inheritdoc/>
-    public bool TryGetByCode(string code, out CodeEntry? entry)
+    public bool TryGetByCode(string? code, out CodeEntry? entry)
     {
         entry = GetByCode(code);
         return entry is not null;

@@ -13,7 +13,7 @@
     }
   ],
   "NameLabel": "Place",
-  "CodeCount": 900688,
+  "CodeCount": 900686,
   "CodeRanges": true,
   "Curated": true,
   "CurationStatus": "Curated",
@@ -94,8 +94,8 @@
       "Name": "Prince Edward Island",
       "Code": "PE",
       "Capital": "Charlottetown",
-      "ZipCount": 4328,
-      "NameCount": 4396
+      "ZipCount": 4327,
+      "NameCount": 4395
     },
     {
       "Type": "province",

@@ -5,7 +5,7 @@ namespace ZipPostLookup.CountryDataTools.Dashboard;
 
 internal static class DashboardRenderer
 {
-    private const string AppTitle = "ZipPostLookup";
+    private const string AppTitle = "ZipPostLookup CDT v0.1.0 ";
 
     public static void RenderHeader(string pageTitle)
     {

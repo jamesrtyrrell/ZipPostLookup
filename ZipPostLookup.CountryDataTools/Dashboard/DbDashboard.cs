@@ -14,8 +14,9 @@ internal static class DbDashboard
         new("init",            "init",             "Create or replace workdb.json"),
         new("newrun",          "newrun",           "Create a new pipeline run and set activeRunId"),
         new("normalize-tz",    "normalize-tz",     "Normalise timezone aliases and resolve from coordinates"),
-        new("normalize-names", "normalize-names",  "Detect and link place-name abbreviation alternates"),
-        new("purge-oob-us",    "purge-oob-us",     "Remove US ZIP codes outside 00501–99950",  Destructive: true),
+        new("normalize-names",   "normalize-names",   "Detect and link place-name abbreviation alternates"),
+        new("normalize-admins",  "normalize-admins",  "Backfill missing admin1 from ZIP prefix rules"),
+        new("purge-oob-us",      "purge-oob-us",      "Remove US ZIP codes outside 00501–99950",  Destructive: true),
         new("clear",           "clear",            "Clear pipeline working data for a country", Destructive: true),
         new("reset",           "reset",            "Full wipe — removes reference data too",   Destructive: true),
     ];
@@ -48,8 +49,9 @@ internal static class DbDashboard
                 "normalize-tz"    => await RunSimpleAsync("normalize-tz",   []),
                 "init"            => await RunInitAsync(),
                 "newrun"          => await RunNewRunAsync(),
-                "normalize-names" => await RunNormalizeNamesAsync(),
-                "purge-oob-us"    => await RunSimpleAsync("purge-oob-us",   []),
+                "normalize-names"   => await RunNormalizeNamesAsync(),
+                "normalize-admins"  => await RunNormalizeAdminsAsync(),
+                "purge-oob-us"      => await RunSimpleAsync("purge-oob-us",   []),
                 "clear"           => await RunWithCountryAsync("clear",     needsConfirm: false),
                 "reset"           => await RunWithCountryAsync("reset",     needsConfirm: false),
                 _                 => 0,
@@ -175,6 +177,32 @@ internal static class DbDashboard
             : ["--country", choice];
 
         return await RunSimpleAsync("normalize-names", extra);
+    }
+
+    // ── normalize-admins: country or all ─────────────────────────────────────
+
+    private static async Task<int> RunNormalizeAdminsAsync()
+    {
+        DashboardRenderer.RenderHeader("DB › normalize-admins");
+
+        var choice = MenuPrompt.Show(
+            ["US", "MX", "All (US + MX)", "← Cancel"],
+            s => s switch
+            {
+                "← Cancel"      => "[grey]← Cancel[/]",
+                "All (US + MX)" => $"[bold cyan]{"All",-10}[/]  [grey]US + MX in sequence[/]",
+                _               => $"[bold cyan]{s}[/]",
+            },
+            escapeReturns: "← Cancel",
+            title: "Country:");
+
+        if (choice == "← Cancel") return 0;
+
+        string[] extra = choice.StartsWith("All")
+            ? ["--all"]
+            : ["--country", choice];
+
+        return await RunSimpleAsync("normalize-admins", extra);
     }
 
     // ── clear / reset: country picker, then let handler do the confirmation ───

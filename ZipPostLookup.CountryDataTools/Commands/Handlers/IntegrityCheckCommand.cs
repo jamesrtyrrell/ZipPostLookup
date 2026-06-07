@@ -73,7 +73,7 @@ public static class IntegrityCheckCommand
         if (all)
             return await RunAllAsync(db, testCount);
 
-        return await RunForCountryAsync(db, country.ToUpperInvariant(), testCount, output);
+        return (await RunForCountryAsync(db, country.ToUpperInvariant(), testCount, output)).ExitCode;
     }
 
     private static async Task<int> RunAllAsync(WorkDbContext db, int testCount)
@@ -83,13 +83,13 @@ public static class IntegrityCheckCommand
         {
             Console.WriteLine();
             AnsiConsole.Write(new Rule($"[bold]{cc}[/]").LeftJustified());
-            var result = await RunForCountryAsync(db, cc, testCount, null);
-            if (result != 0) exitCode = result;
+            var r = await RunForCountryAsync(db, cc, testCount, null);
+            if (r.ExitCode != 0) exitCode = r.ExitCode;
         }
         return exitCode;
     }
 
-    private static async Task<int> RunForCountryAsync(
+    public static async Task<(int ExitCode, IntegrityCheckSummary? Summary, string? ReportPath)> RunForCountryAsync(
         WorkDbContext db, string cc, int testCount, string? output)
     {
         using var conn = db.GetFactory().CreateConnection();
@@ -103,7 +103,7 @@ public static class IntegrityCheckCommand
         {
             await Console.Error.WriteLineAsync(
                 $"  ✗ Country '{cc}' not found in data.country_info.");
-            return 1;
+            return (1, null, null);
         }
 
         if (!countryInfo.DataCurated)
@@ -111,7 +111,7 @@ public static class IntegrityCheckCommand
             await Console.Error.WriteLineAsync(
                 $"  ✗ {cc} is not fully curated (data_curated = 0). " +
                 $"Run the curation pipeline before running an integrity check.");
-            return 1;
+            return (1, null, null);
         }
 
         // ── Load the ZipPostLookup registry for this country ──────────────────
@@ -125,7 +125,7 @@ public static class IntegrityCheckCommand
         {
             await Console.Error.WriteLineAsync(
                 $"  ✗ Failed to load ZipPostLookup registry for {cc}: {ex.Message}");
-            return 1;
+            return (1, null, null);
         }
 
         // ── Fetch count of distinct zip codes ─────────────────────────────────
@@ -143,7 +143,7 @@ public static class IntegrityCheckCommand
         {
             await Console.Error.WriteLineAsync(
                 $"  ✗ No curated rows found in data.reference for {cc}.");
-            return 1;
+            return (1, null, null);
         }
 
         var actualTestCount = Math.Min(testCount, totalDistinctZips);
@@ -162,7 +162,7 @@ public static class IntegrityCheckCommand
         if (defaultRows.Count == 0)
         {
             await Console.Error.WriteLineAsync("  ✗ Default-row sampling returned 0 rows.");
-            return 1;
+            return (1, null, null);
         }
 
         // ── Sample non-default rows ───────────────────────────────────────────
@@ -225,7 +225,7 @@ public static class IntegrityCheckCommand
         Console.WriteLine($"  ✓ Report written to: {output}");
         Console.WriteLine();
 
-        return results.HasFailures ? 1 : 0;
+        return (results.HasFailures ? 1 : 0, summary, output);
     }
 
     // =========================================================================

@@ -43,11 +43,10 @@ var binDir     = new DirectoryInfo(AppContext.BaseDirectory);
 var projectDir = binDir.Parent?.Parent?.Parent?.FullName ?? Directory.GetCurrentDirectory();
 var historyDir = Path.Combine(projectDir, "History");
 
-// BenchmarkDotNet writes CSVs relative to the working directory (typically solution root).
-var artifactsDir = Path.Combine(Directory.GetCurrentDirectory(),
-                                "BenchmarkDotNet.Artifacts", "results");
+// BenchmarkDotNet writes results to DataAnalysis/results/ (configured in BenchmarkConfig).
+var artifactsDir = Path.Combine(Directory.GetCurrentDirectory(), "DataAnalysis", "results");
 if (!Directory.Exists(artifactsDir))
-    artifactsDir = Path.Combine(projectDir, "BenchmarkDotNet.Artifacts", "results");
+    artifactsDir = Path.Combine(projectDir, "DataAnalysis", "results");
 
 var freshReports = HistoryArchiver.FindFreshReports(artifactsDir, runStarted);
 

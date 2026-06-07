@@ -1,11 +1,19 @@
 using Spectre.Console;
-using ZipPostLookup.CountryDataTools.Commands;
+using ZipPostLookup.CountryDataTools.Commands.Display;
+using ZipPostLookup.CountryDataTools.Commands.Handlers;
+using ZipPostLookup.CountryDataTools.Database.WorkDb;
+using ZipPostLookup.CountryDataTools.Models.Commands;
+using ZplIntegrity    = ZipPostLookup.CountryDataTools.Commands.Handlers.IntegrityCheckCommand;
+using CdtDbIntegrity  = ZipPostLookup.CountryDataTools.Commands.Handlers.CdtDbIntegrityCommand;
 
 namespace ZipPostLookup.CountryDataTools.Dashboard;
 
 internal static class IntegrityDashboard
 {
-    private sealed record ReportPage(string Country, string? ReportPath, int ExitCode);
+    private sealed record ReportPage(
+        string Country, string Mode, string? ReportPath, int ExitCode,
+        CdtDbIntegrity.DbCheckResults? CheckResults = null,
+        IntegrityCheckSummary? ZplSummary = null);
 
     public static async Task<int> RunAsync()
     {
@@ -13,67 +21,95 @@ internal static class IntegrityDashboard
         {
             DashboardRenderer.RenderHeader("Integrity");
 
-            var choice = MenuPrompt.Show(
+            var mode = MenuPrompt.Show(
+                ["ZPL Data", "CDT DB", "← Back"],
+                s => s switch
+                {
+                    "← Back" => "[grey]← Back[/]",
+                    "ZPL Data" => $"[bold cyan]{"ZPL Data",-14}[/]  [grey]Compare library vs DB — detects stale exports[/]",
+                    "CDT DB"   => $"[bold cyan]{"CDT DB",-14}[/]  [grey]Scan DB for admin errors, orphans, duplicates[/]",
+                    _          => s,
+                },
+                escapeReturns: "← Back",
+                title: "Integrity mode:");
+
+            if (mode == "← Back") break;
+
+            DashboardRenderer.RenderHeader($"Integrity › {mode}");
+
+            var country = MenuPrompt.Show(
                 ["US", "CA", "MX", "All (US + CA + MX)", "← Back"],
                 s => s switch
                 {
                     "← Back"             => "[grey]← Back[/]",
-                    "All (US + CA + MX)" => $"[bold cyan]{"All",-14}[/]  [grey]Run all three, then browse results with ← →[/]",
+                    "All (US + CA + MX)" => $"[bold cyan]{"All",-14}[/]  [grey]Run all three, browse results with ← →[/]",
                     _                    => $"[bold cyan]{s,-14}[/]",
                 },
                 escapeReturns: "← Back",
-                title: "Select country to check:");
+                title: "Select country:");
 
-            if (choice == "← Back")
-                break;
+            if (country == "← Back") continue;
 
-            DashboardRenderer.RenderHeader($"Integrity › {(choice.StartsWith("All") ? "All" : choice)}");
-
-            var tests = AnsiConsole.Prompt(
-                new TextPrompt<int>("  Tests [grey](default 1000)[/]:")
-                    .DefaultValue(1000)
-                    .Validate(n => n > 0
-                        ? ValidationResult.Success()
-                        : ValidationResult.Error("[red]Enter a positive number[/]")));
-
-            AnsiConsole.WriteLine();
-
-            if (choice.StartsWith("All"))
-            {
-                await RunAllAndBrowseAsync(["US", "CA", "MX"], tests);
-            }
+            if (mode == "ZPL Data")
+                await RunZplModeAsync(country);
             else
-            {
-                DashboardRenderer.RenderHeader($"Integrity › {choice}");
-                await IntegrityCheckCommand.RunAsync(["--country", choice, "--tests", tests.ToString()]);
-                AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
-                Console.ReadKey(intercept: true);
-            }
+                await RunCdtDbModeAsync(country);
         }
 
         return 0;
     }
 
-    private static async Task RunAllAndBrowseAsync(string[] countries, int tests)
+    // ── ZPL Data mode (existing integrity check) ───────────────────────────────
+
+    private static async Task RunZplModeAsync(string country)
     {
-        var pages    = new List<ReportPage>();
-        var baseDir  = Path.Combine(Directory.GetCurrentDirectory(), "DataAnalysis");
-        var datestamp = DateTime.UtcNow.ToString("yyyyMMdd");
+        WorkDbContext? db = null;
+        try { db = await WorkDbContext.LoadAsync(Directory.GetCurrentDirectory()); }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]  ✗ DB connection failed: {Markup.Escape(ex.Message)}[/]");
+            AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+            Console.ReadKey(intercept: true);
+            return;
+        }
+
+        var tests = PromptTests();
+        AnsiConsole.WriteLine();
+
+        if (country.StartsWith("All"))
+        {
+            DashboardRenderer.RenderHeader("Integrity › ZPL Data › All");
+            await RunZplAllAndBrowseAsync(db, ["US", "CA", "MX"], tests);
+        }
+        else
+        {
+            DashboardRenderer.RenderHeader($"Integrity › ZPL Data › {country}");
+
+            var (exitCode, summary, reportPath) =
+                await ZplIntegrity.RunForCountryAsync(db, country.ToUpperInvariant(), tests, null);
+
+            AnsiConsole.WriteLine();
+            ShowResultBanner(exitCode);
+            if (reportPath is not null) ShowReportPath(reportPath);
+            AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+            Console.ReadKey(intercept: true);
+        }
+    }
+
+    private static async Task RunZplAllAndBrowseAsync(WorkDbContext db, string[] countries, int tests)
+    {
+        var pages = new List<ReportPage>();
 
         foreach (var cc in countries)
         {
-            DashboardRenderer.RenderHeader($"Integrity › {cc}");
+            DashboardRenderer.RenderHeader($"Integrity › ZPL Data › {cc}");
 
-            // Mirror the path the handler will write to (handler uses DateTime.UtcNow at time of
-            // write, so computing it right before the run keeps dates in sync for normal runs).
-            var reportPath = Path.Combine(baseDir,
-                $"{cc.ToLowerInvariant()}-integrity-{datestamp}.md");
+            var (exitCode, summary, reportPath) =
+                await ZplIntegrity.RunForCountryAsync(db, cc.ToUpperInvariant(), tests, null);
 
-            var exitCode = await IntegrityCheckCommand.RunAsync(
-                ["--country", cc, "--tests", tests.ToString()]);
-
-            pages.Add(new ReportPage(cc, File.Exists(reportPath) ? reportPath : null, exitCode));
+            pages.Add(new ReportPage(cc, "ZPL Data",
+                reportPath is not null && File.Exists(reportPath) ? reportPath : null,
+                exitCode, ZplSummary: summary));
 
             if (cc != countries[^1])
             {
@@ -86,6 +122,69 @@ internal static class IntegrityDashboard
         BrowseReports(pages);
     }
 
+    // ── CDT DB mode (new DB quality scan) ─────────────────────────────────────
+
+    private static async Task RunCdtDbModeAsync(string country)
+    {
+        WorkDbContext? db = null;
+        try
+        {
+            db = await WorkDbContext.LoadAsync(Directory.GetCurrentDirectory());
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]  ✗ DB connection failed: {Markup.Escape(ex.Message)}[/]");
+            AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+            Console.ReadKey(intercept: true);
+            return;
+        }
+
+        if (country.StartsWith("All"))
+        {
+            DashboardRenderer.RenderHeader("Integrity › CDT DB › All");
+            AnsiConsole.WriteLine();
+
+            var pages     = new List<ReportPage>();
+            var datestamp = DateTime.UtcNow.ToString("yyyyMMdd");
+            var baseDir   = Path.Combine(Directory.GetCurrentDirectory(), "DataAnalysis");
+
+            foreach (var cc in new[] { "US", "CA", "MX" })
+            {
+                DashboardRenderer.RenderHeader($"Integrity › CDT DB › {cc}");
+
+                var (exitCode, checkResults, reportPath) = await CdtDbIntegrity.RunForCountryAsync(
+                    db, cc.ToUpperInvariant(), null);
+
+                pages.Add(new ReportPage(cc, "CDT DB", File.Exists(reportPath) ? reportPath : null, exitCode, checkResults));
+
+                if (cc != "MX")
+                {
+                    AnsiConsole.WriteLine();
+                    AnsiConsole.MarkupLine("[grey]  Next country in 2 s...[/]");
+                    await Task.Delay(2_000);
+                }
+            }
+
+            BrowseReports(pages);
+        }
+        else
+        {
+            DashboardRenderer.RenderHeader($"Integrity › CDT DB › {country}");
+            AnsiConsole.WriteLine();
+
+            var (exitCode, checkResults, reportPath) = await CdtDbIntegrity.RunForCountryAsync(
+                db, country.ToUpperInvariant(), null);
+
+            AnsiConsole.WriteLine();
+            ShowResultBanner(exitCode);
+            ShowReportPath(reportPath);
+            AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+            Console.ReadKey(intercept: true);
+        }
+    }
+
+    // ── Shared browser (← → navigation over per-country report pages) ─────────
+
     private static void BrowseReports(List<ReportPage> pages)
     {
         var index = 0;
@@ -94,34 +193,66 @@ internal static class IntegrityDashboard
         {
             var page = pages[index];
 
-            var prevLabel = index > 0
-                ? $"[bold]← {pages[index - 1].Country}[/]"
-                : "[grey]←[/]";
-            var nextLabel = index < pages.Count - 1
-                ? $"[bold]{pages[index + 1].Country} →[/]"
-                : "[grey]→[/]";
-            var statusLabel = page.ExitCode == 0
-                ? "[green]✓ passed[/]"
-                : "[red]✗ failures[/]";
+            var prevLabel   = index > 0 ? $"[bold]← {pages[index - 1].Country}[/]" : "[grey]←[/]";
+            var nextLabel   = index < pages.Count - 1 ? $"[bold]{pages[index + 1].Country} →[/]" : "[grey]→[/]";
+            var statusLabel = page.ExitCode == 0 ? "[green]✓ passed[/]" : "[red]✗ issues[/]";
 
-            DashboardRenderer.RenderHeader($"Integrity › {page.Country}  {statusLabel}");
-            AnsiConsole.MarkupLine($"  {prevLabel}    ({index + 1}/{pages.Count})    {nextLabel}    [grey]Esc: back[/]");
+            DashboardRenderer.RenderHeader(
+                $"Integrity › {page.Mode} › {page.Country}  {statusLabel}");
+
+            AnsiConsole.MarkupLine(
+                $"  {prevLabel}    ({index + 1}/{pages.Count})    {nextLabel}    [grey]Esc: back[/]");
             AnsiConsole.WriteLine();
 
-            // ── Report content ────────────────────────────────────────────────
-            if (page.ReportPath is not null)
-                Console.Write(File.ReadAllText(page.ReportPath));
+            if (page.CheckResults is not null)
+            {
+                CdtDbIntegrity.PrintSummaryTable(page.Country, page.CheckResults);
+                if (page.ReportPath is not null)
+                    AnsiConsole.MarkupLine($"  [grey]Full report: {Markup.Escape(page.ReportPath)}[/]");
+            }
+            else if (page.ZplSummary is not null)
+            {
+                IntegrityDisplay.PrintSummary(page.Country, page.ZplSummary);
+                if (page.ReportPath is not null)
+                    AnsiConsole.MarkupLine($"  [grey]Full report: {Markup.Escape(page.ReportPath)}[/]");
+            }
             else
-                AnsiConsole.MarkupLine("[grey]  No report file found for this country.[/]");
+            {
+                AnsiConsole.MarkupLine("[grey]  No results available.[/]");
+            }
 
-            // ── Key input ─────────────────────────────────────────────────────
             var key = Console.ReadKey(intercept: true).Key;
             switch (key)
             {
-                case ConsoleKey.LeftArrow  when index > 0:                  index--; break;
-                case ConsoleKey.RightArrow when index < pages.Count - 1:    index++; break;
-                case ConsoleKey.Escape:                                      return;
+                case ConsoleKey.LeftArrow  when index > 0:               index--; break;
+                case ConsoleKey.RightArrow when index < pages.Count - 1: index++; break;
+                case ConsoleKey.Escape:                                   return;
             }
         }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private static int PromptTests() =>
+        AnsiConsole.Prompt(
+            new TextPrompt<int>("  Tests [grey](default 1000)[/]:")
+                .DefaultValue(1000)
+                .Validate(n => n > 0
+                    ? ValidationResult.Success()
+                    : ValidationResult.Error("[red]Enter a positive number[/]")));
+
+    private static void ShowResultBanner(int exitCode)
+    {
+        AnsiConsole.MarkupLine(exitCode == 0
+            ? "[green]  ✓ No issues found.[/]"
+            : "[red]  ✗ Issues detected — see report for details.[/]");
+        AnsiConsole.WriteLine();
+    }
+
+    private static void ShowReportPath(string path)
+    {
+        if (File.Exists(path))
+            AnsiConsole.MarkupLine($"  [grey]Report: {Markup.Escape(path)}[/]");
+        AnsiConsole.WriteLine();
     }
 }

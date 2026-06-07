@@ -146,9 +146,9 @@ public sealed class ZpImageLookup : IZipPostLookup
     // =========================================================================
 
     /// <inheritdoc/>
-    public CodeEntry? GetByCode(string code)
+    public CodeEntry? GetByCode(string? code)
     {
-        if (code == null) { throw new ArgumentNullException(nameof(code)); }
+        if (code == null) { return null;}
 
         var hit = _reader.GetByCodeExact(code);
         if (hit != null) { return hit; }
@@ -168,7 +168,7 @@ public sealed class ZpImageLookup : IZipPostLookup
     }
 
     /// <inheritdoc/>
-    public bool TryGetByCode(string code, out CodeEntry? entry)
+    public bool TryGetByCode(string? code, out CodeEntry? entry)
     {
         entry = GetByCode(code);
         return entry is not null;

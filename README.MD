@@ -1,9 +1,9 @@
-# ZipPostLookup
+﻿# ZipPostLookup
 
 Fast, extensible in-memory postal code lookup for .NET.  
-Built-in data for the **United States** (<!-- zpl:us:codes -->43,265<!-- /zpl:us:codes --> ZIP codes), **Canada** (~<!-- zpl:ca:codes -->900,688<!-- /zpl:ca:codes --> postal codes, <!-- zpl:ca:entries -->431k<!-- /zpl:ca:entries --> compressed entries via FSA range compression), and **Mexico** (<!-- zpl:mx:codes -->32,652<!-- /zpl:mx:codes --> postal codes). All three countries are fully curated ✅.
+Built-in data for the **United States** (<!-- zpl:us:codes -->43,498<!-- /zpl:us:codes --> ZIP codes), **Canada** (~<!-- zpl:ca:codes -->900,686<!-- /zpl:ca:codes --> postal codes, <!-- zpl:ca:entries -->431k<!-- /zpl:ca:entries --> compressed entries via FSA range compression), and **Mexico** (<!-- zpl:mx:codes -->32,669<!-- /zpl:mx:codes --> postal codes). All three countries are fully curated ✅.
 
-Code Counts and status, last updated on: **(<!-- zp:updated -->2026-06-05<!-- /zp:updated -->)**
+Code Counts and status, last updated on: **(<!-- zpl:updated -->2026-06-07 22:09:36<!-- /zpl:updated -->)**
 
 ---
 
@@ -12,7 +12,12 @@ Code Counts and status, last updated on: **(<!-- zp:updated -->2026-06-05<!-- /z
 ```bash
 dotnet add package ZipPostLookup
 ```
+### Legacy Systems 
+For netstandard2.0: Covering .NET Framework 4.6.1+ / .NET Core 2+ / .NET 5–7 
 
+```bash
+dotnet add package ZipPostLookup.Legacy
+```
 ---
 
 ## Quick Start
@@ -248,13 +253,13 @@ On .NET 8+, all indexes use `FrozenDictionary`. The `.zpi.br` frozen image loads
 
 | Country |                                        Distinct Codes* | Admin Levels |                Timezones                | Status     |
 |---------|-------------------------------------------------------:|:------------:|:---------------------------------------:|------------|
-| US      |  **<!-- zpl:us:codes -->43,265<!-- /zpl:us:codes -->** |    State     | <!-- zpl:us:tz -->53<!-- /zpl:us:tz --> | ✅ Curated  |
-| CA      | **<!-- zpl:ca:codes -->900,688<!-- /zpl:ca:codes -->** |   Province   | <!-- zpl:ca:tz -->21<!-- /zpl:ca:tz --> | ✅ Curated  |
-| MX      |  **<!-- zpl:mx:codes -->32,652<!-- /zpl:mx:codes -->** |    Estado    | <!-- zpl:mx:tz -->10<!-- /zpl:mx:tz --> | ✅ Curated  |
+| US      |  **<!-- zpl:us:codes -->43,498<!-- /zpl:us:codes -->** |    State     | <!-- zpl:us:tz -->53<!-- /zpl:us:tz --> | ✅ Curated  |
+| CA      | **<!-- zpl:ca:codes -->900,686<!-- /zpl:ca:codes -->** |   Province   | <!-- zpl:ca:tz -->20<!-- /zpl:ca:tz --> | ✅ Curated  |
+| MX      |  **<!-- zpl:mx:codes -->32,669<!-- /zpl:mx:codes -->** |    Estado    | <!-- zpl:mx:tz -->10<!-- /zpl:mx:tz --> | ✅ Curated  |
 
 \* Distinct codes are the number of unique Zip/Postal codes in the country's set.
 
-Code Counts and status, last updated on: **(<!-- zpl:updated -->2026-06-07 00:02:38<!-- /zpl:updated -->)**
+Code Counts and status, last updated on: **(<!-- zpl:updated -->2026-06-07 22:09:36<!-- /zpl:updated -->)**
 
 ---
 

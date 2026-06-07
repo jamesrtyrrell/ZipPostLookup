@@ -100,4 +100,12 @@ public interface ICountryRules
     /// Default: English only.
     /// </summary>
     IReadOnlyList<string> PlaceNameLanguages => ["English"];
+
+    /// <summary>
+    /// SQL Server LIKE pattern that a valid ZpCode must match for this country.
+    /// Used by integrity checks to detect malformed or placeholder rows in the
+    /// working database (e.g. ZpCode = "ZIP"). Default: exactly 5 digits (US/MX).
+    /// Override in country rules where the format differs (e.g. CA FSA format).
+    /// </summary>
+    string ZpCodeLikePattern => "[0-9][0-9][0-9][0-9][0-9]";
 }
