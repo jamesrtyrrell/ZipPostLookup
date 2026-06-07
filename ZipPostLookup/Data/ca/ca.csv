@@ -164008,6 +164008,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "H1L4C8","Montreal",14,true,11,11
 "H1L4C9","Montreal",14,true,11,11
 "H1L4E1","Montreal",14,true,11,11
+"H1L4E2","Montreal",14,true,12,12
+"H1L4E2","Mercier North",14,false,11,11
 "H1L4E3","Montreal",14,true,11,11
 "H1L4E4","Montreal",14,true,11,11
 "H1L4E5","Montreal",14,true,11,11
@@ -164136,8 +164138,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "H1L4X4","Montreal",14,true,11,11
 "H1L4X5","Montreal",14,true,11,11
 "H1L4X6","Montreal",14,true,11,11
-"H1L4X7","Montreal",14,true,11,11
 "H1L4X7","Mercier North",14,false,11,11
+"H1L4X7","Montreal",14,true,11,11
 "H1L4X8","Montreal",14,true,11,11
 "H1L4X9","Montreal",14,true,11,11
 "H1L4Y1","Montreal",14,true,11,11
@@ -164190,6 +164192,7 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "H1L5E3","Montreal",14,true,11,11
 "H1L5E4","Montreal",14,true,11,11
 "H1L5E5","Montreal",14,true,11,11
+"H1L5E6","Montreal",14,true,12,12
 "H1L5E7","Montreal",14,true,11,11
 "H1L5E8","Montreal",14,true,11,11
 "H1L5E9","Montreal",14,true,11,11
@@ -164595,8 +164598,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "H1M1S7","Anjou",14,true,11,11
 "H1M1S8","Anjou",14,true,11,11
 "H1M1S9","Anjou",14,true,11,11
-"H1M1T1","Anjou",14,true,11,11
 "H1M1T1","Montreal",14,false,11,11
+"H1M1T1","Anjou",14,true,11,11
 "H1M1T2","Anjou",14,true,11,11
 "H1M1T3","Anjou",14,true,11,11
 "H1M1T4","Anjou",14,true,11,11
@@ -188073,8 +188076,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "H9H1B1","Pierrefonds",14,true,11,11
 "H9H1B2","Pierrefonds",14,true,11,11
 "H9H1B3","Sainte-Genevieve",14,true,11,11
-"H9H1B4","Pierrefonds",14,false,11,11
 "H9H1B4","Sainte-Genevieve",14,true,11,11
+"H9H1B4","Pierrefonds",14,false,11,11
 "H9H1B5","Sainte-Genevieve",14,true,11,11
 "H9H1B6","Sainte-Genevieve",14,true,11,11
 "H9H1B7","Sainte-Genevieve",14,true,11,11
@@ -192261,8 +192264,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0B1A0","Ascot Corner",14,true,11,11
 "J0B1B0","Austin",14,true,11,11
 "J0B1C0","Ayer'S Cliff",14,true,11,11
-"J0B1E0","Stanstead",14,false,11,11
 "J0B1E0","Stanstead",9,true,11,11
+"J0B1E0","Stanstead",14,false,11,11
 "J0B1G0","Bishopton",14,true,11,11
 "J0B1H0","Sherbrooke",14,true,11,11
 "J0B1J0","Bury",14,true,11,11
@@ -192273,10 +192276,10 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0B1M0","Cookshire",14,false,11,11
 "J0B1P0","Dixville",9,true,11,11
 "J0B1P0","Dixville",14,false,11,11
-"J0B1R0","Westbury",14,true,11,11
 "J0B1R0","East Angus",14,false,11,11
-"J0B1S0","East Hereford",9,false,11,11
+"J0B1R0","Westbury",14,true,11,11
 "J0B1S0","Saint-Venant-De-Paquette",14,true,11,11
+"J0B1S0","East Hereford",9,false,11,11
 "J0B1T0","Stanstead",14,true,11,11
 "J0B1T0","Georgeville",14,false,11,11
 "J0B1W0","Sainte-Catherine-De-Hatley",14,true,11,11
@@ -192286,9 +192289,9 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0B2A0","Martinville",14,true,11,11
 "J0B2B0","Ulverton",14,true,11,11
 "J0B2B0","Melbourne",14,false,11,11
-"J0B2C0","Canton-De-Hatley",14,false,11,11
 "J0B2C0","North Hatley",14,false,11,11
 "J0B2C0","Sherbrooke",14,true,11,11
+"J0B2C0","Canton-De-Hatley",14,false,11,11
 "J0B2E0","Notre-Dame-Des-Bois",14,true,11,11
 "J0B2H0","Richmond",14,true,11,11
 "J0B2H0","Cleveland",14,false,11,11
@@ -192312,10 +192315,10 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0B3E0","Stanstead",9,true,11,11
 "J0B3E0","Ogden",9,false,11,11
 "J0B3E0","Ogden",14,false,11,11
-"J0B3E1","Stanstead",9,true,11,11
 "J0B3E1","Stanstead",14,false,11,11
-"J0B3E2","Stanstead",9,false,11,11
+"J0B3E1","Stanstead",9,true,11,11
 "J0B3E2","Stanstead",14,true,11,11
+"J0B3E2","Stanstead",9,false,11,11
 "J0B3E3","Stanstead",9,true,11,11
 "J0B3E3","Ogden",9,false,11,11
 "J0B3E3","Stanstead",14,false,11,11
@@ -192325,8 +192328,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0B3E5","Stanstead",14,false,11,11
 "J0B3G0","Stoke",14,true,11,11
 "J0B3H0","Waterville",14,true,11,11
-"J0B3J0","Weedon",14,true,11,11
 "J0B3J0","Saint-Joseph-De-Ham-Sud",14,false,11,11
+"J0B3J0","Weedon",14,true,11,11
 "J0B3O5","Stanstead (Ville)",9,true,11,11
 "J0B4B0","Hatley",14,true,11,11
 "J0C0A1","Saint-Germain-De-Grantham",14,true,11,11
@@ -192375,8 +192378,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0E0C1","Waterloo",14,true,11,11
 "J0E0C2","Sainte-anne-de-la-rochelle",14,true,11,11
 "J0E1A0","Saint-Paul-D'Abbotsford",14,true,11,11
-"J0E1B0","Abercorn",9,true,11,11
 "J0E1B0","Abercorn",14,false,11,11
+"J0E1B0","Abercorn",9,true,11,11
 "J0E1E0","Ange-Gardien",14,true,11,11
 "J0E1G0","Bolton-Est",14,true,11,11
 "J0E1H0","Bonsecours",14,true,11,11
@@ -192428,8 +192431,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0G1H0","Odanak",14,true,11,11
 "J0G1J0","Saint-Elphege",14,true,11,11
 "J0G1J0","Pierreville",14,false,11,11
-"J0G1K0","Saint-Louis",14,true,11,11
 "J0G1K0","Massueville",14,false,11,11
+"J0G1K0","Saint-Louis",14,true,11,11
 "J0G1K0","Saint-Aime",14,false,11,11
 "J0G1L0","Saint-David",14,true,11,11
 "J0G1M0","Saint-Francois-Du-Lac",14,true,11,11
@@ -192525,8 +192528,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0J1G0","Saint-Paul-De-L'Ile-Aux-Noix",14,true,11,11
 "J0J1J0","Lacolle",14,true,11,11
 "J0J1K0","Mont-Saint-Gregoire",14,true,11,11
-"J0J1L0","Napierville",14,false,11,11
 "J0J1L0","Saint-Cyprien-De-Napierville",14,true,11,11
+"J0J1L0","Napierville",14,false,11,11
 "J0J1M0","Notre-Dame-De-Stanbridge",14,true,11,11
 "J0J1N0","Philipsburg",9,true,11,11
 "J0J1N0","Philipsburg",14,false,11,11
@@ -192601,8 +192604,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0K1V0","Saint-Alexis-Des-Monts",14,true,11,11
 "J0K1W0","Saint-Alphonse-Rodriguez",14,true,11,11
 "J0K1X0","Saint-Barthelemy",14,true,11,11
-"J0K1Y0","Sainte-Beatrix",14,true,11,11
 "J0K1Y0","Saint-Alphonse-Rodriguez",14,false,11,11
+"J0K1Y0","Sainte-Beatrix",14,true,11,11
 "J0K1Z0","Saint-Calixte",14,true,11,11
 "J0K2A0","Saint-Cleophas-De-Brandon",14,true,11,11
 "J0K2B0","Saint-Come",14,true,11,11
@@ -192617,8 +192620,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0K2M0","Saint-Felix-De-Valois",14,true,11,11
 "J0K2N0","Saint-Gabriel-De-Brandon",14,true,11,11
 "J0K2N1","Saint-Damien",14,true,11,11
-"J0K2P0","La Visitation-De-L'Ile-Dupas",14,false,11,11
 "J0K2P0","Saint-Ignace-De-Loyola",14,true,11,11
+"J0K2P0","La Visitation-De-L'Ile-Dupas",14,false,11,11
 "J0K2R0","Saint-Jacques",14,true,11,11
 "J0K2S0","Saint-Jean-De-Matha",14,true,11,11
 "J0K2T0","Sainte-Julienne",14,true,11,11
@@ -192683,8 +192686,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0L2S0","Sainte-Julie",14,true,11,11
 "J0M0A1","Salluit",6,true,11,11
 "J0M0A1","Salluit",14,false,11,11
-"J0M0A2","Wemindji",6,false,11,11
 "J0M0A2","Wemindji",14,true,11,11
+"J0M0A2","Wemindji",6,false,11,11
 "J0M0A3","Umiujaq",6,true,11,11
 "J0M0A3","Umiujaq",14,false,11,11
 "J0M0A4","Kuujjuaq",14,true,11,11
@@ -192693,8 +192696,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0M0A6","Kuujjuarapik",14,false,11,11
 "J0M0A7","Ivujivik",6,true,11,11
 "J0M0A7","Ivujivik",14,false,11,11
-"J0M0A8","Kangiqsujuaq",6,true,11,11
 "J0M0A8","Kangiqsujuaq",14,false,11,11
+"J0M0A8","Kangiqsujuaq",6,true,11,11
 "J0M0A9","Puvirnituq",6,true,11,11
 "J0M0A9","Puvirnituq",14,false,11,11
 "J0M0B1","Kangiqsualujjuaq",14,true,11,11
@@ -192706,8 +192709,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0M0B5","Aupaluk",14,true,11,11
 "J0M0B6","Inukjuak",14,true,11,11
 "J0M0B6","Inukjuak",6,false,11,11
-"J0M0B7","Akulivik",6,true,11,11
 "J0M0B7","Akulivik",14,false,11,11
+"J0M0B7","Akulivik",6,true,11,11
 "J0M0B8","Waskaganish",6,true,11,11
 "J0M0B8","Waskaganish",14,false,11,11
 "J0M0B9","Tasiujaq",14,true,11,11
@@ -192720,11 +192723,11 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0M1J0","Quaqtaq",14,true,11,11
 "J0M1K0","Kangiqsujuaq",14,true,11,11
 "J0M1L0","Wemindji",14,true,11,11
-"J0M1M0","Inukjuak",6,true,11,11
 "J0M1M0","Inukjuak",14,false,11,11
+"J0M1M0","Inukjuak",6,true,11,11
 "J0M1N0","Kangiqsualujjuaq",14,true,11,11
-"J0M1P0","Puvirnituq",14,false,11,11
 "J0M1P0","Puvirnituq",6,true,11,11
+"J0M1P0","Puvirnituq",14,false,11,11
 "J0M1R0","Waskaganish",14,true,11,11
 "J0M1R0","Waskaganish",6,false,11,11
 "J0M1S0","Salluit",6,true,11,11
@@ -192749,8 +192752,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0N1G3","Pointe-Calumet",14,true,11,11
 "J0N1G4","Pointe-Calumet",14,true,11,11
 "J0N1G5","Pointe-Calumet",14,true,11,11
-"J0N1H0","Sainte-Anne-Des-Plaines",14,false,11,11
 "J0N1H0","Terrebonne",14,true,11,11
+"J0N1H0","Sainte-Anne-Des-Plaines",14,false,11,11
 "J0N1L8","Bois-des-Filion",14,true,11,11
 "J0N1M0","Saint-Joseph-Du-Lac",14,true,11,11
 "J0N1P0","Sainte-Marthe-Sur-Le-Lac",14,true,11,11
@@ -192801,8 +192804,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0R1R5","Saint-Sauveur",14,true,11,11
 "J0R1R6","Saint-Sauveur",14,true,11,11
 "J0R1R7","Saint-Sauveur",14,true,11,11
-"J0R1T0","Prevost",14,false,11,11
 "J0R1T0","Saint-Jerome",14,true,11,11
+"J0R1T0","Prevost",14,false,11,11
 "J0S0A1","Sainte-Martine",14,true,11,11
 "J0S0A2","Melocheville",14,true,11,11
 "J0S0A3","Howick",14,true,11,11
@@ -192824,9 +192827,9 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0S1E0","Hinchinbrooke",14,true,11,11
 "J0S1E0","Franklin",14,false,11,11
 "J0S1G0","Howick",14,true,11,11
-"J0S1H0","Huntingdon",14,true,11,11
 "J0S1H0","Godmanchester",14,false,11,11
 "J0S1H0","Hinchinbrooke",14,false,11,11
+"J0S1H0","Huntingdon",14,true,11,11
 "J0S1J0","Melocheville",14,true,11,11
 "J0S1K0","Ormstown",14,true,11,11
 "J0S1L0","Sainte-Agnes-De-Dundee",14,true,11,11
@@ -192841,8 +192844,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0S1V0","Sainte-Martine",14,true,11,11
 "J0S1W0","Saint-Stanislas-De-Kostka",14,true,11,11
 "J0S1Y0","Saint-Urbain-Premier",14,true,11,11
-"J0S2C0","Havelock",14,false,11,11
 "J0S2C0","Havelock",9,true,11,11
+"J0S2C0","Havelock",14,false,11,11
 "J0S2E0","Elgin",14,true,11,11
 "J0T0A1","La Macaza",14,true,11,11
 "J0T0A2","Montcalm",14,true,11,11
@@ -192878,8 +192881,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0T1J1","Saint-Faustin-Lac-Carre",14,true,11,11
 "J0T1J2","Saint-Faustin-Lac-Carre",14,true,11,11
 "J0T1J3","Saint-Faustin-Lac-Carre",14,true,11,11
-"J0T1K0","Saint-Emile-De-Suffolk",14,true,11,11
 "J0T1K0","Lac-Des-Plages",14,false,11,11
+"J0T1K0","Saint-Emile-De-Suffolk",14,true,11,11
 "J0T1L0","Ste-Marguerite-Du-Lac-Masson",14,true,11,11
 "J0T1M0","La Conception",14,true,11,11
 "J0T1P0","Lac-Superieur",14,true,11,11
@@ -192957,8 +192960,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0W0B4","Lac-Des-Ecorces",14,true,11,11
 "J0W0B5","Sainte-Anne-Du-Lac",14,true,11,11
 "J0W1A0","Chute-Saint-Philippe",14,true,11,11
-"J0W1C0","Mont-Laurier",14,true,11,11
 "J0W1C0","Ferme-Neuve",14,false,11,11
+"J0W1C0","Mont-Laurier",14,true,11,11
 "J0W1E0","Grand-Remous",14,true,11,11
 "J0W1G0","Kiamika",14,true,11,11
 "J0W1H0","Lac-Des-Ecorces",14,true,11,11
@@ -193157,8 +193160,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J0Z2B0","Gallichan",14,true,11,11
 "J0Z2E0","Guerin",14,true,11,11
 "J0Z2G0","Saint-Bruno-De-Guigues",14,true,11,11
-"J0Z2H0","Kipawa",14,false,11,11
 "J0Z2H0","Temiscaming",14,true,11,11
+"J0Z2H0","Kipawa",14,false,11,11
 "J0Z2J0","Laforce",14,true,11,11
 "J0Z2K0","Laniel",14,true,11,11
 "J0Z2L0","La Reine",14,true,11,11
@@ -194316,8 +194319,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J1X3V8","Magog",14,true,11,11
 "J1X3V9","Magog",14,true,11,11
 "J1X3W1","Magog",14,true,11,11
-"J1X3W2","Canton Stanstead",14,false,11,11
 "J1X3W2","Magog",14,true,11,11
+"J1X3W2","Canton Stanstead",14,false,11,11
 "J1X3W3","Magog",14,true,11,11
 "J1X3W4","Magog",14,true,11,11
 "J1X3W4","Canton Stanstead",14,false,11,11
@@ -194870,8 +194873,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J1X6X3","Orford",14,true,11,11
 "J1X6X4","Orford",14,true,11,11
 "J1X6X5","Magog",14,true,11,11
-"J1X6X6","Magog",14,false,11,11
 "J1X6X6","Orford",14,true,11,11
+"J1X6X6","Magog",14,false,11,11
 "J1X6X7","Orford",14,true,11,11
 "J1X6X8","Orford",14,true,11,11
 "J1X6X9","Orford",14,true,11,11
@@ -201455,8 +201458,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J2K3G3","Cowansville",14,true,11,11
 "J2K3G4","Cowansville",14,true,11,11
 "J2K3G5","Cowansville",14,true,11,11
-"J2K3G6","Cowansville",14,true,11,11
 "J2K3G6","Brigham",14,false,11,11
+"J2K3G6","Cowansville",14,true,11,11
 "J2K3G7","Cowansville",14,true,11,11
 "J2K3G8","Cowansville",14,true,11,11
 "J2K3G9","Cowansville",14,true,11,11
@@ -202207,9 +202210,9 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J3G2C6","Beloeil",14,true,11,11
 "J3G2C7","Beloeil",14,true,11,11
 "J3G2C8","Beloeil",14,true,11,11
-"J3G2C9","Mcmasterville",14,false,11,11
-"J3G2C9","Beloeil",14,false,11,11
 "J3G2C9","Saint-Mathieu-De-Beloeil",14,true,11,11
+"J3G2C9","Beloeil",14,false,11,11
+"J3G2C9","Mcmasterville",14,false,11,11
 "J3G2E1","Beloeil",14,true,11,11
 "J3G2E2","Beloeil",14,true,11,11
 "J3G2E3","Beloeil",14,true,11,11
@@ -202666,9 +202669,9 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J3G4S4","Beloeil",14,true,11,11
 "J3G4S5","Saint-Mathieu-De-Beloeil",14,true,11,11
 "J3G4S5","Beloeil",14,false,11,11
-"J3G4S6","Otterburn Park",14,true,11,11
-"J3G4S6","Beloeil",14,false,11,11
 "J3G4S6","Mont-Saint-Hilaire",14,false,11,11
+"J3G4S6","Beloeil",14,false,11,11
+"J3G4S6","Otterburn Park",14,true,11,11
 "J3G4S7","Beloeil",14,true,11,11
 "J3G4S8","Beloeil",14,true,11,11
 "J3G4S9","Beloeil",14,true,11,11
@@ -212285,8 +212288,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J5R3X4","Candiac",14,true,11,11
 "J5R3X5","Candiac",14,true,11,11
 "J5R3X6","Candiac",14,true,11,11
-"J5R3X8","Candiac",14,false,11,11
 "J5R3X8","La Prairie",14,true,11,11
+"J5R3X8","Candiac",14,false,11,11
 "J5R3X9","La Prairie",14,true,11,11
 "J5R3Y1","La Prairie",14,true,11,11
 "J5R3Y2","La Prairie",14,true,11,11
@@ -212905,8 +212908,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J5W1A7","L'Assomption",14,true,11,11
 "J5W1A8","L'Assomption",14,true,11,11
 "J5W1A9","L'Assomption",14,true,11,11
-"J5W1B1","L'Assomption",14,false,11,11
 "J5W1B1","Saint-Sulpice",14,true,11,11
+"J5W1B1","L'Assomption",14,false,11,11
 "J5W1B2","L'Assomption",14,true,11,11
 "J5W1B3","L'Assomption",14,true,11,11
 "J5W1B4","L'Assomption",14,true,11,11
@@ -219044,8 +219047,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J7A4Z7","Rosemere",14,true,11,11
 "J7A4Z8","Rosemere",14,true,11,11
 "J7A4Z9","Rosemere",14,true,11,11
-"J7B0A1","Blainville",14,false,11,11
 "J7B0A1","Rosemere",14,true,11,11
+"J7B0A1","Blainville",14,false,11,11
 "J7B0A2","Blainville",14,true,11,11
 "J7B0A3","Blainville",14,true,11,11
 "J7B0A4","Blainville",14,true,11,11
@@ -220902,9 +220905,9 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J7E4H2","Sainte-Therese",14,true,11,11
 "J7E4H3","Sainte-Therese",14,true,11,11
 "J7E4H4","Boisbriand",14,true,11,11
-"J7E4H5","Boisbriand",14,false,11,11
 "J7E4H5","Lorraine",14,true,11,11
 "J7E4H5","Blainville",14,false,11,11
+"J7E4H5","Boisbriand",14,false,11,11
 "J7E4H6","Boisbriand",14,true,11,11
 "J7E4H7","Boisbriand",14,true,11,11
 "J7E4H9","Boisbriand",14,true,11,11
@@ -221715,8 +221718,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J7K3B9","Mascouche",14,true,11,11
 "J7K3C1","Terrebonne",14,true,11,11
 "J7K3C1","Mascouche",14,false,11,11
-"J7K3C2","Terrebonne",14,true,11,11
 "J7K3C2","Mascouche",14,false,11,11
+"J7K3C2","Terrebonne",14,true,11,11
 "J7K3C3","Mascouche",14,true,11,11
 "J7K3C5","Mascouche",14,true,11,11
 "J7K3C6","Mascouche",14,true,11,11
@@ -223085,8 +223088,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J7R7E5","Saint-Eustache",14,true,11,11
 "J7R7E6","Saint-Eustache",14,true,11,11
 "J7R7E7","Saint-Eustache",14,true,11,11
-"J7R7E8","Saint-Eustache",14,true,11,11
 "J7R7E8","Deux-Montagnes",14,false,11,11
+"J7R7E8","Saint-Eustache",14,true,11,11
 "J7R7E9","Deux-Montagnes",14,true,11,11
 "J7R7G1","Deux-Montagnes",14,true,11,11
 "J7R7G2","Saint-Eustache",14,true,11,11
@@ -226526,9 +226529,9 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J8C2Z4","Sainte-Agathe-Des-Monts",14,true,11,11
 "J8C2Z5","Sainte-Agathe-Des-Monts",14,true,11,11
 "J8C2Z6","Sainte-Agathe-Des-Monts",14,true,11,11
-"J8C2Z7","Sainte-Agathe-Des-Monts",14,false,11,11
 "J8C2Z7","Sainte-Agathe-Nord",14,true,11,11
 "J8C2Z7","Ivry-Sur-Le-Lac",14,false,11,11
+"J8C2Z7","Sainte-Agathe-Des-Monts",14,false,11,11
 "J8C2Z8","Sainte-Agathe-Nord",14,true,11,11
 "J8C2Z8","Ivry-Sur-Le-Lac",14,false,11,11
 "J8C2Z8","Sainte-Agathe-Des-Monts",14,false,11,11
@@ -231227,10 +231230,10 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J9V1G8","Ville-Marie",14,true,11,11
 "J9V1G9","Duhamel-Ouest",14,true,11,11
 "J9V1H1","Duhamel-Ouest",14,true,11,11
-"J9V1H2","Ville-Marie",14,true,11,11
 "J9V1H2","Duhamel-Ouest",14,false,11,11
-"J9V1H3","Duhamel-Ouest",14,false,11,11
+"J9V1H2","Ville-Marie",14,true,11,11
 "J9V1H3","Ville-Marie",14,true,11,11
+"J9V1H3","Duhamel-Ouest",14,false,11,11
 "J9V1H4","Duhamel-Ouest",14,true,11,11
 "J9V1H5","Duhamel-Ouest",14,true,11,11
 "J9V1H6","Duhamel-Ouest",14,true,11,11
@@ -232121,9 +232124,9 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "J9X4Z8","Rouyn-Noranda",14,true,11,11
 "J9X5A1","Rouyn-Noranda",14,true,11,11
 "J9X5A2","Rouyn-Noranda",14,true,11,11
-"J9X5A3","Rouyn-Noranda",14,true,11,11
-"J9X5A3","D'Alembert",14,false,11,11
 "J9X5A3","Destor",14,false,11,11
+"J9X5A3","D'Alembert",14,false,11,11
+"J9X5A3","Rouyn-Noranda",14,true,11,11
 "J9X5A5","Rouyn-Noranda",14,true,11,11
 "J9X5A6","Rouyn-Noranda",14,true,11,11
 "J9X5A9","Rouyn-Noranda",14,true,11,11
@@ -232664,8 +232667,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "K0E1L0","Lansdowne",14,true,9,9
 "K0E1M0","Lyn",14,true,9,9
 "K0E1N0","Lyndhurst",14,true,9,9
-"K0E1P0","Maitland",9,false,9,9
 "K0E1P0","Maitland",14,true,9,9
+"K0E1P0","Maitland",9,false,9,9
 "K0E1R0","Mallorytown",14,true,9,9
 "K0E1S0","Mountain",14,true,9,9
 "K0E1T0","Prescott",14,true,9,9
@@ -232795,8 +232798,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "K0J1T0","Eganville",14,true,9,9
 "K0J1V0","Foresters Falls",14,true,9,9
 "K0J1W0","Foymount",14,true,9,9
-"K0J1X0","Pikwakanagan",14,true,9,9
 "K0J1X0","Golden Lake",14,false,9,9
+"K0J1X0","Pikwakanagan",14,true,9,9
 "K0J1Y0","Haley Station",14,true,9,9
 "K0J2A0","Killaloe",14,true,9,9
 "K0J2B0","Mackey",14,true,9,9
@@ -232937,10 +232940,10 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "K0L1E0","Bewdley",14,false,9,9
 "K0L1G0","Boulter",14,true,9,9
 "K0L1H0","Bridgenorth",14,true,9,9
+"K0L1J0","North Kawartha",14,false,9,9
+"K0L1J0","Lakehurst",14,false,9,9
 "K0L1J0","Trent Lakes",14,true,9,9
 "K0L1J0","Buckhorn",14,false,9,9
-"K0L1J0","Lakehurst",14,false,9,9
-"K0L1J0","North Kawartha",14,false,9,9
 "K0L1L0","Campbellford",14,true,9,9
 "K0L1M0","Cardiff",14,true,9,9
 "K0L1M1","Harcourt",14,true,9,9
@@ -232962,9 +232965,9 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "K0L2C0","Juniper Island",14,true,9,9
 "K0L2G0","Keene",14,true,9,9
 "K0L2G0","Indian River",14,false,9,9
+"K0L2H0","North Kawartha",14,false,9,9
 "K0L2H0","Lakefield",14,false,9,9
 "K0L2H0","Indian River",14,false,9,9
-"K0L2H0","North Kawartha",14,false,9,9
 "K0L2H0","Douro-Dummer",14,false,9,9
 "K0L2H0","Selwyn",14,true,9,9
 "K0L2H0","Hbmtwp",14,false,9,9
@@ -232979,9 +232982,9 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "K0L2X0","Reaboro",14,true,9,9
 "K0L2Y0","Tory Hill",14,true,9,9
 "K0L2Z0","Trent River",14,true,9,9
-"K0L3A0","Douro-Dummer",14,false,9,9
-"K0L3A0","Asphodel-Norwood",14,false,9,9
 "K0L3A0","Warsaw",14,true,9,9
+"K0L3A0","Asphodel-Norwood",14,false,9,9
+"K0L3A0","Douro-Dummer",14,false,9,9
 "K0L3B0","Westwood",14,true,9,9
 "K0L3C0","Wilberforce",14,true,9,9
 "K0L3E0","Woodview",14,true,9,9
@@ -241607,8 +241610,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "K1T3Z1","Gloucester",14,true,9,9
 "K1T3Z2","Gloucester",14,true,9,9
 "K1T3Z3","Ottawa",14,true,9,9
-"K1T3Z4","Nepean",14,true,9,9
 "K1T3Z4","Gloucester",14,false,9,9
+"K1T3Z4","Nepean",14,true,9,9
 "K1T3Z5","Ottawa",14,true,9,9
 "K1T3Z6","Ottawa",14,true,9,9
 "K1T3Z7","Ottawa",14,true,9,9
@@ -242938,10 +242941,10 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "K1W1C2","Orleans",14,true,9,9
 "K1W1C2","Gloucester",14,false,9,9
 "K1W1C3","Gloucester",14,true,9,9
-"K1W1C4","Orleans",14,true,9,9
 "K1W1C4","Gloucester",14,false,9,9
-"K1W1C5","Gloucester",14,false,9,9
+"K1W1C4","Orleans",14,true,9,9
 "K1W1C5","Orleans",14,true,9,9
+"K1W1C5","Gloucester",14,false,9,9
 "K1W1C6","Orleans",14,true,9,9
 "K1W1C7","Orleans",14,true,9,9
 "K1W1C7","Gloucester",14,false,9,9
@@ -242949,8 +242952,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "K1W1C9","Orleans",14,true,9,9
 "K1W1C9","Gloucester",14,false,9,9
 "K1W1E1","Orleans",14,true,9,9
-"K1W1E2","Orleans",14,true,9,9
 "K1W1E2","Gloucester",14,false,9,9
+"K1W1E2","Orleans",14,true,9,9
 "K1W1E3","Orleans",14,true,9,9
 "K1W1E4","Orleans",14,true,9,9
 "K1W1E5","Orleans",14,true,9,9
@@ -245098,8 +245101,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "K2C3G9","Nepean",14,true,9,9
 "K2C3H1","Ottawa",14,true,9,9
 "K2C3H1","Nepean",14,false,9,9
-"K2C3H2","Ottawa",14,true,9,9
 "K2C3H2","Nepean",14,false,9,9
+"K2C3H2","Ottawa",14,true,9,9
 "K2C3H3","Nepean",14,true,9,9
 "K2C3H4","Nepean",14,true,9,9
 "K2C3H5","Nepean",14,true,9,9
@@ -252924,8 +252927,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "K6H0H7","Cornwall",9,false,9,9
 "K6H0H8","Cornwall",14,true,9,9
 "K6H0H8","Cornwall",9,false,9,9
-"K6H0H9","Cornwall",14,true,9,9
 "K6H0H9","Cornwall",9,false,9,9
+"K6H0H9","Cornwall",14,true,9,9
 "K6H0J1","Cornwall",14,true,9,9
 "K6H0J2","Cornwall",14,true,9,9
 "K6H0J2","Cornwall",9,false,9,9
@@ -254964,8 +254967,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "K6K0A4","Cornwall",14,true,9,9
 "K6K0A5","Cornwall",14,true,9,9
 "K6K0A6","South Stormont",14,true,9,9
-"K6K0A7","South Glengarry",14,true,9,9
 "K6K0A7","Cornwall",14,false,9,9
+"K6K0A7","South Glengarry",14,true,9,9
 "K6K0A8","Cornwall",14,true,9,9
 "K6K0A9","Cornwall",14,true,9,9
 "K6K0B1","South Stormont",14,true,9,9
@@ -259499,8 +259502,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "K7S0C7","Arnprior",14,true,9,9
 "K7S0C8","Arnprior",14,true,9,9
 "K7S0C9","Arnprior",14,true,9,9
-"K7S0E1","Arnprior",14,false,9,9
 "K7S0E1","Mcnab/Braeside",14,true,9,9
+"K7S0E1","Arnprior",14,false,9,9
 "K7S0E2","Arnprior",14,true,9,9
 "K7S0E3","Arnprior",14,true,9,9
 "K7S0E4","Arnprior",14,true,9,9
@@ -260592,10 +260595,10 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "K7V3Z6","Horton",14,false,9,9
 "K7V3Z7","Renfrew",14,true,9,9
 "K7V3Z8","Renfrew",14,true,9,9
-"K7V3Z9","Mcnab/Braeside",14,false,9,9
-"K7V3Z9","Horton",14,false,9,9
 "K7V3Z9","Renfrew",14,true,9,9
 "K7V3Z9","Greater Madawaska",14,false,9,9
+"K7V3Z9","Horton",14,false,9,9
+"K7V3Z9","Mcnab/Braeside",14,false,9,9
 "K7V4A1","Renfrew",14,true,9,9
 "K7V4A2","Renfrew",14,true,9,9
 "K7V4A3","Renfrew",14,true,9,9
@@ -261789,9 +261792,9 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "K9J6X4","Selwyn",14,true,9,9
 "K9J6X5","Selwyn",14,true,9,9
 "K9J6X6","Peterborough",14,true,9,9
-"K9J6X7","Keene",14,false,9,9
 "K9J6X7","Otonabee",14,false,9,9
 "K9J6X7","Peterborough",14,true,9,9
+"K9J6X7","Keene",14,false,9,9
 "K9J6X8","Otonabee",14,true,9,9
 "K9J6X8","Keene",14,false,9,9
 "K9J6X9","Peterborough",14,true,9,9
@@ -262579,8 +262582,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L0R2A0","Smithville",14,true,9,9
 "L0R2B0","Troy",14,true,9,9
 "L0R2C0","Vineland",14,true,9,9
-"L0R2E0","Vineland Station",14,true,9,9
 "L0R2E0","Vineland",14,false,9,9
+"L0R2E0","Vineland Station",14,true,9,9
 "L0R2H0","Waterdown",14,true,9,9
 "L0R2H1","Waterdown",14,true,9,9
 "L0R2H2","Waterdown",14,true,9,9
@@ -264239,8 +264242,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L1E0K7","Bowmanville",14,true,9,9
 "L1E0K8","Bowmanville",14,true,9,9
 "L1E0L1","Bowmanville",14,true,9,9
-"L1E0L2","Courtice",14,true,9,9
 "L1E0L2","Bowmanville",14,false,9,9
+"L1E0L2","Courtice",14,true,9,9
 "L1E0L3","Bowmanville",14,true,9,9
 "L1E0L4","Bowmanville",14,true,9,9
 "L1E0L5","Bowmanville",14,true,9,9
@@ -264516,8 +264519,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L1E2M8","Courtice",14,true,9,9
 "L1E2M9","Courtice",14,true,9,9
 "L1E2N1","Courtice",14,true,9,9
-"L1E2N2","Courtice",14,true,9,9
 "L1E2N2","Bowmanville",14,false,9,9
+"L1E2N2","Courtice",14,true,9,9
 "L1E2N3","Courtice",14,true,9,9
 "L1E2N4","Courtice",14,true,9,9
 "L1E2N5","Courtice",14,true,9,9
@@ -264686,8 +264689,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L1J0B1","Oshawa",14,true,9,9
 "L1J0B2","Oshawa",14,true,9,9
 "L1J0B3","Oshawa",14,true,9,9
-"L1J0B4","Oshawa",3,true,9,9
 "L1J0B4","Oshawa",14,false,9,9
+"L1J0B4","Oshawa",3,true,9,9
 "L1J0B5","Oshawa",14,true,9,9
 "L1J0B6","Oshawa",14,true,9,9
 "L1J0B7","Oshawa",14,true,9,9
@@ -266467,8 +266470,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L2A0E7","Fort Erie",14,true,9,9
 "L2A0E8","Fort Erie",14,true,9,9
 "L2A0E9","Fort Erie",14,true,9,9
-"L2A0G1","Fort Erie",9,false,9,9
 "L2A0G1","Fort Erie",14,true,9,9
+"L2A0G1","Fort Erie",9,false,9,9
 "L2A0G3","Fort Erie",14,true,9,9
 "L2A1A1","Fort Erie",14,true,9,9
 "L2A1A2","Fort Erie",14,true,9,9
@@ -266718,8 +266721,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L2A2L7","Fort Erie",14,true,9,9
 "L2A2L8","Fort Erie",14,true,9,9
 "L2A2L9","Fort Erie",14,true,9,9
-"L2A2M1","Fort Erie",14,false,9,9
 "L2A2M1","Fort Erie",9,true,9,9
+"L2A2M1","Fort Erie",14,false,9,9
 "L2A2M2","Fort Erie",14,true,9,9
 "L2A2M3","Fort Erie",14,true,9,9
 "L2A2M4","Fort Erie",14,true,9,9
@@ -266731,8 +266734,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L2A2N1","Fort Erie",14,true,9,9
 "L2A2N2","Fort Erie",14,true,9,9
 "L2A2N3","Fort Erie",14,true,9,9
-"L2A2N4","Fort Erie",9,false,9,9
 "L2A2N4","Fort Erie",14,true,9,9
+"L2A2N4","Fort Erie",9,false,9,9
 "L2A2N5","Fort Erie",14,true,9,9
 "L2A2N6","Fort Erie",14,true,9,9
 "L2A2N7","Fort Erie",14,true,9,9
@@ -268509,8 +268512,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L2E7C9","Niagara Falls",14,true,9,9
 "L2E7E1","Niagara Falls",14,true,9,9
 "L2E7E2","Niagara Falls",14,true,9,9
-"L2E7E3","Niagara Falls",9,false,9,9
 "L2E7E3","Niagara Falls",14,true,9,9
+"L2E7E3","Niagara Falls",9,false,9,9
 "L2E7E4","Niagara Falls",14,true,9,9
 "L2E7E5","Niagara Falls",14,true,9,9
 "L2E7E7","Niagara Falls",14,true,9,9
@@ -268732,8 +268735,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L2G0Z6","Niagara Falls",14,true,9,9
 "L2G0Z7","Niagara Falls",14,true,9,9
 "L2G0Z7","Niagara Falls",9,false,9,9
-"L2G0Z9","Niagara Falls",14,true,9,9
 "L2G0Z9","Niagara Falls",9,false,9,9
+"L2G0Z9","Niagara Falls",14,true,9,9
 "L2G1A2","Niagara Falls",14,true,9,9
 "L2G1A3","Niagara Falls",14,true,9,9
 "L2G1A4","Niagara Falls",14,true,9,9
@@ -269695,8 +269698,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L2G6M6","Niagara Falls",14,true,9,9
 "L2G6M7","Niagara Falls",14,true,9,9
 "L2G6M8","Niagara Falls",14,true,9,9
-"L2G6M9","Niagara Falls",14,false,9,9
 "L2G6M9","Niagara Falls",9,true,9,9
+"L2G6M9","Niagara Falls",14,false,9,9
 "L2G6N1","Niagara Falls",14,true,9,9
 "L2G6N2","Niagara Falls",14,true,9,9
 "L2G6N3","Niagara Falls",14,true,9,9
@@ -269802,8 +269805,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L2G7B4","Niagara Falls",14,true,9,9
 "L2G7B5","Niagara Falls",14,true,9,9
 "L2G7B6","Niagara Falls",14,true,9,9
-"L2G7B7","Niagara Falls",9,false,9,9
 "L2G7B7","Niagara Falls",14,true,9,9
+"L2G7B7","Niagara Falls",9,false,9,9
 "L2G7B8","Niagara Falls",14,true,9,9
 "L2G7C1","Niagara Falls",14,true,9,9
 "L2G7C2","Niagara Falls",14,true,9,9
@@ -271984,8 +271987,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L2R5B1","St Catharines",14,true,9,9
 "L2R5B2","St Catharines",14,true,9,9
 "L2R5B4","St Catharines",14,true,9,9
-"L2R5B7","St Catharines",9,true,9,9
 "L2R5B7","St Catharines",14,false,9,9
+"L2R5B7","St Catharines",9,true,9,9
 "L2R5B8","St Catharines",14,true,9,9
 "L2R5B9","St Catharines",14,true,9,9
 "L2R5C1","St Catharines",14,true,9,9
@@ -272157,8 +272160,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L2R6B8","St Catharines",14,true,9,9
 "L2R6B8","St Catharines",9,false,9,9
 "L2R6B9","St Catharines",14,true,9,9
-"L2R6C1","St Catharines",9,true,9,9
 "L2R6C1","St Catharines",14,false,9,9
+"L2R6C1","St Catharines",9,true,9,9
 "L2R6C2","St Catharines",14,true,9,9
 "L2R6C3","St Catharines",14,true,9,9
 "L2R6C4","St Catharines",14,true,9,9
@@ -272170,10 +272173,10 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L2R6E1","St Catharines",14,true,9,9
 "L2R6E2","St Catharines",14,true,9,9
 "L2R6E3","St Catharines",14,true,9,9
-"L2R6E4","St Catharines",9,true,9,9
 "L2R6E4","St Catharines",14,false,9,9
-"L2R6E5","St Catharines",14,false,9,9
+"L2R6E4","St Catharines",9,true,9,9
 "L2R6E5","St Catharines",9,true,9,9
+"L2R6E5","St Catharines",14,false,9,9
 "L2R6E6","St Catharines",14,true,9,9
 "L2R6E7","St Catharines",14,true,9,9
 "L2R6E8","St Catharines",14,true,9,9
@@ -272933,8 +272936,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L2S4C7","St Catharines",14,true,9,9
 "L2S4C8","St Catharines",14,true,9,9
 "L2S4C9","St Catharines",14,true,9,9
-"L2S4E1","St Catharines",9,true,9,9
 "L2S4E1","St Catharines",14,false,9,9
+"L2S4E1","St Catharines",9,true,9,9
 "L2S4E2","St Catharines",14,true,9,9
 "L2S4E3","St Catharines",14,true,9,9
 "L2S4E4","St Catharines",14,true,9,9
@@ -274054,8 +274057,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L3J1S2","Beamsville",14,true,9,9
 "L3J1S3","Lincoln",14,true,9,9
 "L3J1S4","Lincoln",14,true,9,9
-"L3J1S5","Lincoln",14,true,9,9
 "L3J1S5","Beamsville",14,false,9,9
+"L3J1S5","Lincoln",14,true,9,9
 "L3J1S6","Lincoln",14,true,9,9
 "L3J1S7","Lincoln",14,true,9,9
 "L3J1S8","Lincoln",14,true,9,9
@@ -274675,8 +274678,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L3P3H8","Markham",14,true,9,9
 "L3P3H9","Markham",14,true,9,9
 "L3P3J1","Markham",14,true,9,9
-"L3P3J3","Markham",14,false,9,9
 "L3P3J3","Unionville",14,true,9,9
+"L3P3J3","Markham",14,false,9,9
 "L3P3J4","Richmond Hill",14,true,9,9
 "L3P3J5","Markham",14,true,9,9
 "L3P3J7","Markham",14,true,9,9
@@ -275489,8 +275492,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L3R0L7","Markham",14,true,9,9
 "L3R0L8","Markham",14,true,9,9
 "L3R0L9","Markham",14,true,9,9
-"L3R0M1","Unionville",14,true,9,9
 "L3R0M1","Markham",14,false,9,9
+"L3R0M1","Unionville",14,true,9,9
 "L3R0M2","Markham",14,true,9,9
 "L3R0M3","Markham",14,true,9,9
 "L3R0M5","Markham",14,true,9,9
@@ -281087,8 +281090,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L4A2L1","Gormley",14,true,9,9
 "L4A2L2","Gormley",14,true,9,9
 "L4A2L3","Gormley",14,true,9,9
-"L4A2L4","Stouffville",14,true,9,9
 "L4A2L4","Newmarket",14,false,9,9
+"L4A2L4","Stouffville",14,true,9,9
 "L4A2L5","Newmarket",14,true,9,9
 "L4A2L6","Newmarket",14,true,9,9
 "L4A2L7","Newmarket",14,true,9,9
@@ -281274,8 +281277,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L4A3L7","Stouffville",14,true,9,9
 "L4A3L8","Stouffville",14,true,9,9
 "L4A3L9","Stouffville",14,true,9,9
-"L4A3M1","Newmarket",14,false,9,9
 "L4A3M1","Stouffville",14,true,9,9
+"L4A3M1","Newmarket",14,false,9,9
 "L4A3M2","Stouffville",14,true,9,9
 "L4A3M3","Stouffville",14,true,9,9
 "L4A3M4","Stouffville",14,true,9,9
@@ -289823,8 +289826,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L6A0K6","Maple",14,true,9,9
 "L6A0K7","Maple",14,true,9,9
 "L6A0K8","Maple",14,true,9,9
-"L6A0K9","Vaughan",14,true,9,9
 "L6A0K9","Maple",14,false,9,9
+"L6A0K9","Vaughan",14,true,9,9
 "L6A0L1","Maple",14,true,9,9
 "L6A0L2","Maple",14,true,9,9
 "L6A0L3","Maple",14,true,9,9
@@ -289914,8 +289917,8 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L6A0X6","Maple",14,true,9,9
 "L6A0X7","Maple",14,true,9,9
 "L6A0X8","Maple",14,true,9,9
-"L6A0X9","Vaughan",14,true,9,9
 "L6A0X9","Maple",14,false,9,9
+"L6A0X9","Vaughan",14,true,9,9
 "L6A0Y1","Maple",14,true,9,9
 "L6A0Y2","Maple",14,true,9,9
 "L6A0Y3","Vaughan",14,true,9,9
@@ -290467,10 +290470,10 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L6A4A6","Maple",14,true,9,9
 "L6A4A7","Maple",14,true,9,9
 "L6A4A8","Maple",14,true,9,9
-"L6A4A9","Vaughan",14,true,9,9
 "L6A4A9","Maple",14,false,9,9
-"L6A4B1","Maple",14,false,9,9
+"L6A4A9","Vaughan",14,true,9,9
 "L6A4B1","Vaughan",14,true,9,9
+"L6A4B1","Maple",14,false,9,9
 "L6A4B2","Vaughan",14,true,9,9
 "L6A4B2","Maple",14,false,9,9
 "L6A4B3","Maple",14,true,9,9
@@ -290729,9 +290732,9 @@ Code,Name,Timezone,IsDefault,Admin1,Admin1Code
 "L6G1A9","Markham",14,true,9,9
 "L6G1B1","Markham",14,true,9,9
 "L6G1B2","Markham",14,true,9,9
+"L6G1B3","Markham",14,false,9,9
+"L6G1B3","Markham",14,false,9,9
 "L6G1B3","Unionville",14,true,9,9
-"L6G1B3","Markham",14,false,9,9
-"L6G1B3","Markham",14,false,9,9
 "L6G1B4","Unionville",14,true,9,9
 "L6G1B5","Markham",14,true,9,9
 "L6G1B6","Markham",14,true,9,9

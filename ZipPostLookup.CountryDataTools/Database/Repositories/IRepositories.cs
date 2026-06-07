@@ -37,10 +37,10 @@ public interface IRunRepository
 /// <summary>Lightweight summary of a pipeline.runs row.</summary>
 public sealed record RunSummary(
     string RunId,
-    string CountryCode,
+    string CountryId,
     string SourceFilename,
-    DateTime StartedAt,
-    DateTime? CompletedAt,
+    DateTimeOffset StartedAt,
+    DateTimeOffset? CompletedAt,
     string Status,
     string? Notes
 );

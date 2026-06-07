@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using GeoTimeZone;
+using ZipPostLookup.CountryDataTools.Validation;
 
 namespace ZipPostLookup.CountryDataTools.Enrichment.Api;
 
@@ -17,25 +18,7 @@ internal sealed class GeoLocatorApi : IEnrichmentApi
 
     private const string BaseUrl = "https://geolocator.api.geo.ca/";
 
-    // Full English province/territory name → ISO 3166-2:CA code
-    private static readonly Dictionary<string, string> _provinceCode =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Alberta"]                        = "AB",
-            ["British Columbia"]               = "BC",
-            ["Manitoba"]                       = "MB",
-            ["New Brunswick"]                  = "NB",
-            ["Newfoundland and Labrador"]       = "NL",
-            ["Northwest Territories"]           = "NT",
-            ["Nova Scotia"]                    = "NS",
-            ["Nunavut"]                        = "NU",
-            ["Ontario"]                        = "ON",
-            ["Prince Edward Island"]           = "PE",
-            ["Quebec"]                         = "QC",
-            ["Québec"]                         = "QC",
-            ["Saskatchewan"]                   = "SK",
-            ["Yukon"]                          = "YT",
-        };
+    private static readonly ICountryRules _caRules = CountryRulesFactory.For("CA");
 
     private readonly HttpClient _http;
 
@@ -90,7 +73,7 @@ internal sealed class GeoLocatorApi : IEnrichmentApi
             if (string.IsNullOrWhiteSpace(rawProvince))
                 return (null, FetchOutcome.TransientError);
 
-            var admin1Code = _provinceCode.TryGetValue(rawProvince, out var pc) ? pc : rawProvince.ToUpperInvariant();
+            var admin1Code = _caRules.ResolveAdmin1CodeFromName(rawProvince) ?? rawProvince.ToUpperInvariant();
             var admin1Name = rawProvince;
 
             string? iana = null;

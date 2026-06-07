@@ -9,9 +9,7 @@ internal static class ConvertDashboard
     {
         while (true)
         {
-            AnsiConsole.Clear();
-            AnsiConsole.Write(new Rule("[bold cyan]Convert[/]").LeftJustified());
-            AnsiConsole.WriteLine();
+            DashboardRenderer.RenderHeader("Convert");
             AnsiConsole.MarkupLine("  Converts a GeoNames or OpenStreetMap TSV to a candidate CSV.");
             AnsiConsole.MarkupLine("  [grey]Supported: GeoNames postal TSV, OSM streets/addresses/houses TSV.[/]");
             AnsiConsole.WriteLine();
@@ -37,9 +35,7 @@ internal static class ConvertDashboard
             if (!string.IsNullOrWhiteSpace(outputOverride))  args.AddRange(["--output",  outputOverride]);
             if (noPrompts) args.Add("--no-prompts");
 
-            AnsiConsole.Clear();
-            AnsiConsole.Write(new Rule("[bold cyan]convert[/]").LeftJustified());
-            AnsiConsole.WriteLine();
+            DashboardRenderer.RenderHeader("Convert");
 
             var exitCode = await ConvertKnownFormatsCommand.RunAsync([.. args]);
 

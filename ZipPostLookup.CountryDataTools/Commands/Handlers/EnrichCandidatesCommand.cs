@@ -8,7 +8,6 @@ using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Models.Commands;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
 using ZipPostLookup.CountryDataTools.Models.Enums;
-using ZipPostLookup.CountryDataTools.Pipeline;
 using ZipPostLookup.CountryDataTools.Validation;
 using ZipPostLookup.CountryDataTools.Commands.Display;
 using ZipPostLookup.CountryDataTools.Enrichment;
@@ -41,7 +40,7 @@ namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 /// </summary>
 public static class EnrichCandidatesCommand
 {
-    private const int DelayMs = 1_000;
+    private const int DelayMs = 0_500;
 
     public static async Task<int> RunAsync(string[] args)
     {
@@ -186,6 +185,8 @@ public static class EnrichCandidatesCommand
         // Buffer Console.Error for the duration of the Live block — see EnrichDirectCommand for rationale.
         using var deferredError = new DeferredConsoleError();
 
+        bool userCancelled = false;
+
         // Live display — overwrites in place; no Console.Write inside this block.
         await AnsiConsole.Live(
             EnrichCandidatesDisplay.BuildLiveRenderable(0, batch.Count, "[grey]Starting...[/]", counters))
@@ -205,10 +206,11 @@ public static class EnrichCandidatesCommand
                 string statusMarkup;
 
                 // Armed Forces zips have no geographic location — skip API, assign theatre timezone.
-                if (ReferenceEnrichmentHelper.IsArmedForcesState(candidateState))
+                var af = rules.GetArmedForcesEnrichment(candidateState);
+                if (af != null)
                 {
-                    var afResult = ReferenceEnrichmentHelper.GetArmedForcesResult(candidateState);
-                    statusMarkup = $"ZIP {Markup.Escape(code),-10}  [grey]Armed Forces ({Markup.Escape(candidateState ?? "")}) → {afResult.Timezone}[/]";
+                    var afResult = new ApiLookupResult { Admin1Code = af.Value.Code, Admin1Name = af.Value.Name, Timezone = af.Value.Timezone };
+                    statusMarkup = $"ZIP {Markup.Escape(code),-10}  [grey]Armed Forces ({Markup.Escape(candidateState ?? "")}) → {af.Value.Timezone}[/]";
                     checkpoint.Add((code, afResult, "Armed Forces", FetchOutcome.Found));
                     counters.IncrementResolved("Armed Forces");
                 }
@@ -256,8 +258,13 @@ public static class EnrichCandidatesCommand
                 ctx.UpdateTarget(EnrichCandidatesDisplay.BuildLiveRenderable(
                     i + 1, batch.Count, statusMarkup, counters, enrichStopwatch.Elapsed));
 
-                // Flush every 10 actionable results or on the last item.
-                if (checkpoint.Count > 0 && (checkpoint.Count % 10 == 0 || isLast))
+                // Drain any keys pressed during the API call — catch Escape for graceful stop.
+                while (Console.KeyAvailable)
+                    if (Console.ReadKey(intercept: true).Key == ConsoleKey.Escape)
+                        userCancelled = true;
+
+                // Flush every 10 actionable results, on the last item, or when user stops.
+                if (checkpoint.Count > 0 && (checkpoint.Count % 10 == 0 || isLast || userCancelled))
                 {
                     ctx.UpdateTarget(EnrichCandidatesDisplay.BuildLiveRenderable(
                         i + 1, batch.Count,
@@ -277,7 +284,9 @@ public static class EnrichCandidatesCommand
 
                                 if (cpOutcome == FetchOutcome.Found)
                                 {
-                                    var newName = await ReferenceEnrichmentHelper.UpdateReferenceAsync(conn, country, cpZip, cpResult!, tx);
+                                    var newName = await ReferenceEnrichmentHelper.UpdateReferenceAsync(
+                                        conn, country, cpZip, cpResult!, tx,
+                                        rules.ResolveAdmin1(cpZip));
                                     if (newName) counters.NewNamesInserted++;
                                 }
                             }
@@ -296,13 +305,27 @@ public static class EnrichCandidatesCommand
                     checkpoint.Clear();
                 }
 
+                if (userCancelled) break;
+
                 if (!isLast)
-                    await Task.Delay(DelayMs);
+                {
+                    // Interruptible delay — poll every 100 ms so Escape is detected promptly.
+                    for (int ms = 0; ms < DelayMs && !userCancelled; ms += 100)
+                    {
+                        await Task.Delay(Math.Min(100, DelayMs - ms));
+                        while (Console.KeyAvailable)
+                            if (Console.ReadKey(intercept: true).Key == ConsoleKey.Escape)
+                                userCancelled = true;
+                    }
+                }
             }
         });
 
         Console.WriteLine();
-        Console.WriteLine("Enrichment complete:");
+        if (userCancelled)
+            AnsiConsole.MarkupLine("[yellow]  ⚠ Enrichment stopped by user.[/]");
+        else
+            Console.WriteLine("Enrichment complete:");
         EnrichCandidatesDisplay.PrintSummary(counters);
 
         int remaining = zips.Count - batch.Count;

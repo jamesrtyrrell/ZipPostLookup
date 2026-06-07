@@ -6,9 +6,9 @@ namespace ZipPostLookup.Core;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <see cref="CountryInfo"/> is populated from the embedded <c>countries.json</c> resource
-/// and is available via <see cref="ZipPostRegistry"/> or the
-/// <c>ZipPostLookup.GetCountryInfo</c> facade method.
+/// <see cref="CountryInfo"/> is populated from the embedded <c>countries.json</c> resource.
+/// Access it via <c>ZipPostLookup.GetCountryInfo(CountryCode)</c> for a single country,
+/// or <see cref="CountryInfoRegistry.All"/> for the full set.
 /// </para>
 /// <para>
 /// The <see cref="DataCurated"/> flag indicates whether the reference data for this

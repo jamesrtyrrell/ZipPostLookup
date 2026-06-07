@@ -66,6 +66,7 @@ public class DataReference : IDataSchema
     public string Lng { get; set; } = "---";
     public bool TimezoneChecked { get; set; }
     public bool NameChecked { get; set; }
+    public bool Flagged { get; set; }
 
     public string? AltNameOf { get; set; }
 

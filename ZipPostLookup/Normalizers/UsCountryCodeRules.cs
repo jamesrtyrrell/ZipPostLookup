@@ -48,8 +48,19 @@ public sealed class UsCountryCodeRules : ICountryCodeRules
     }
 
     /// <inheritdoc/>
-    public bool Validate(string normalizedInput) =>
-        normalizedInput is { Length: 5 } && IsAllDigits(normalizedInput);
+    /// <remarks>
+    /// In addition to structural format (exactly 5 ASCII digits), valid US ZIP codes
+    /// must fall within the USPS-defined range 00501 (IRS, Holtsville NY) to 99950
+    /// (Ketchikan AK). Values outside this range are not assigned by USPS and are
+    /// rejected even though they are structurally well-formed.
+    /// </remarks>
+    public bool Validate(string normalizedInput)
+    {
+        if (normalizedInput is not { Length: 5 }) return false;
+        if (!IsAllDigits(normalizedInput)) return false;
+        var n = int.Parse(normalizedInput);
+        return n is >= 501 and <= 99950;
+    }
 
     private static bool IsAllDigits(string value)
     {

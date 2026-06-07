@@ -15,6 +15,7 @@ internal static class DbDashboard
         new("newrun",          "newrun",           "Create a new pipeline run and set activeRunId"),
         new("normalize-tz",    "normalize-tz",     "Normalise timezone aliases and resolve from coordinates"),
         new("normalize-names", "normalize-names",  "Detect and link place-name abbreviation alternates"),
+        new("purge-oob-us",    "purge-oob-us",     "Remove US ZIP codes outside 00501–99950",  Destructive: true),
         new("clear",           "clear",            "Clear pipeline working data for a country", Destructive: true),
         new("reset",           "reset",            "Full wipe — removes reference data too",   Destructive: true),
     ];
@@ -23,21 +24,19 @@ internal static class DbDashboard
     {
         while (true)
         {
-            AnsiConsole.Clear();
-            AnsiConsole.Write(new Rule("[bold cyan]DB[/]").LeftJustified());
-            AnsiConsole.WriteLine();
+            DashboardRenderer.RenderHeader("DB");
 
             var back = new Sub("back", "← Back", "");
 
-            var selected = AnsiConsole.Prompt(
-                new SelectionPrompt<Sub>()
-                    .Title("Select subcommand:")
-                    .UseConverter(s => s == back
-                        ? "[grey]← Back[/]"
-                        : s.Destructive
-                            ? $"[bold red]{s.Label,-18}[/]  [grey]{s.Description}[/]"
-                            : $"[bold cyan]{s.Label,-18}[/]  [grey]{s.Description}[/]")
-                    .AddChoices([.. Subs, back]));
+            var selected = MenuPrompt.Show(
+                [.. Subs, back],
+                s => s == back
+                    ? "[grey]← Back[/]"
+                    : s.Destructive
+                        ? $"[bold red]{s.Label,-18}[/]  [grey]{s.Description}[/]"
+                        : $"[bold cyan]{s.Label,-18}[/]  [grey]{s.Description}[/]",
+                escapeReturns: back,
+                title: "Select subcommand:");
 
             if (selected == back)
                 break;
@@ -50,6 +49,7 @@ internal static class DbDashboard
                 "init"            => await RunInitAsync(),
                 "newrun"          => await RunNewRunAsync(),
                 "normalize-names" => await RunNormalizeNamesAsync(),
+                "purge-oob-us"    => await RunSimpleAsync("purge-oob-us",   []),
                 "clear"           => await RunWithCountryAsync("clear",     needsConfirm: false),
                 "reset"           => await RunWithCountryAsync("reset",     needsConfirm: false),
                 _                 => 0,
@@ -65,9 +65,7 @@ internal static class DbDashboard
 
     private static async Task<int> RunSimpleAsync(string sub, string[] extra)
     {
-        AnsiConsole.Clear();
-        AnsiConsole.Write(new Rule($"[bold cyan]db {sub}[/]").LeftJustified());
-        AnsiConsole.WriteLine();
+        DashboardRenderer.RenderHeader($"DB › {sub}");
 
         var exitCode = await DbCommand.RunAsync([sub, .. extra]);
 
@@ -85,17 +83,18 @@ internal static class DbDashboard
 
     private static async Task<int> RunInitAsync()
     {
-        AnsiConsole.Clear();
-        AnsiConsole.Write(new Rule("[bold cyan]db init[/]").LeftJustified());
-        AnsiConsole.WriteLine();
+        DashboardRenderer.RenderHeader("DB › init");
         AnsiConsole.MarkupLine("  Creates [grey]workdb.json[/] in the current directory.");
         AnsiConsole.MarkupLine("  [grey]Tip: add workdb.json to .gitignore — it contains your connection string.[/]");
         AnsiConsole.WriteLine();
 
-        var country = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("  Country:")
-                .AddChoices("US", "CA", "MX"));
+        var country = MenuPrompt.Show(
+            ["US", "CA", "MX", "← Cancel"],
+            s => s == "← Cancel" ? "[grey]← Cancel[/]" : $"[bold cyan]{s}[/]",
+            escapeReturns: "← Cancel",
+            title: "Country:");
+
+        if (country == "← Cancel") return 0;
 
         var connection = AnsiConsole.Prompt(
             new TextPrompt<string>("  Connection string:")
@@ -108,10 +107,7 @@ internal static class DbDashboard
                 .DefaultValue("sqlserver")
                 .AllowEmpty());
 
-        AnsiConsole.WriteLine();
-        AnsiConsole.Clear();
-        AnsiConsole.Write(new Rule("[bold cyan]db init — Running[/]").LeftJustified());
-        AnsiConsole.WriteLine();
+        DashboardRenderer.RenderHeader("DB › init");
 
         var args = new List<string> { "init", "--country", country, "--connection", connection };
         if (!string.IsNullOrWhiteSpace(provider) && provider != "sqlserver")
@@ -133,9 +129,7 @@ internal static class DbDashboard
 
     private static async Task<int> RunNewRunAsync()
     {
-        AnsiConsole.Clear();
-        AnsiConsole.Write(new Rule("[bold cyan]db newrun[/]").LeftJustified());
-        AnsiConsole.WriteLine();
+        DashboardRenderer.RenderHeader("DB › newrun");
 
         var source = AnsiConsole.Prompt(
             new TextPrompt<string>("  Source file path [grey](candidate CSV)[/]:")
@@ -161,19 +155,20 @@ internal static class DbDashboard
 
     private static async Task<int> RunNormalizeNamesAsync()
     {
-        AnsiConsole.Clear();
-        AnsiConsole.Write(new Rule("[bold cyan]db normalize-names[/]").LeftJustified());
-        AnsiConsole.WriteLine();
+        DashboardRenderer.RenderHeader("DB › normalize-names");
 
-        var choice = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("  Country:")
-                .UseConverter(s => s == "All (US + CA + MX)"
-                    ? $"[bold cyan]{"All",-10}[/]  [grey]US + CA + MX in sequence[/]"
-                    : $"[bold cyan]{s}[/]")
-                .AddChoices("US", "CA", "MX", "All (US + CA + MX)"));
+        var choice = MenuPrompt.Show(
+            ["US", "CA", "MX", "All (US + CA + MX)", "← Cancel"],
+            s => s switch
+            {
+                "← Cancel"           => "[grey]← Cancel[/]",
+                "All (US + CA + MX)" => $"[bold cyan]{"All",-10}[/]  [grey]US + CA + MX in sequence[/]",
+                _                    => $"[bold cyan]{s}[/]",
+            },
+            escapeReturns: "← Cancel",
+            title: "Country:");
 
-        AnsiConsole.WriteLine();
+        if (choice == "← Cancel") return 0;
 
         string[] extra = choice.StartsWith("All")
             ? ["--all"]
@@ -186,9 +181,7 @@ internal static class DbDashboard
 
     private static async Task<int> RunWithCountryAsync(string sub, bool needsConfirm)
     {
-        AnsiConsole.Clear();
-        AnsiConsole.Write(new Rule($"[bold red]db {sub}[/]").LeftJustified());
-        AnsiConsole.WriteLine();
+        DashboardRenderer.RenderHeader($"DB › {sub}");
 
         if (sub == "reset")
         {
@@ -203,18 +196,17 @@ internal static class DbDashboard
 
         AnsiConsole.WriteLine();
 
-        var country = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("  Country:")
-                .AddChoices("US", "CA", "MX"));
+        var country = MenuPrompt.Show(
+            ["US", "CA", "MX", "← Cancel"],
+            s => s == "← Cancel" ? "[grey]← Cancel[/]" : $"[bold cyan]{s}[/]",
+            escapeReturns: "← Cancel",
+            title: "Country:");
 
-        AnsiConsole.WriteLine();
+        if (country == "← Cancel") return 0;
 
         // The handler itself contains AnsiConsole.Confirm (clear) or
         // TextPrompt type-to-confirm (reset) — pass through directly.
-        AnsiConsole.Clear();
-        AnsiConsole.Write(new Rule($"[bold red]db {sub} — {country}[/]").LeftJustified());
-        AnsiConsole.WriteLine();
+        DashboardRenderer.RenderHeader($"DB › {sub} › {country}");
 
         var exitCode = await DbCommand.RunAsync([sub, "--country", country]);
 

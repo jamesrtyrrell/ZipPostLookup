@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using GeoTimeZone;
 using ZipPostLookup.CountryDataTools.Pipeline;
+using ZipPostLookup.CountryDataTools.Validation;
 
 namespace ZipPostLookup.CountryDataTools.Enrichment.Api;
 
@@ -22,7 +23,7 @@ internal sealed class ZippopotamusApi : IEnrichmentApi
     public async Task<(ApiLookupResult? Result, FetchOutcome Outcome)> LookupAsync(
         string country, string code, string? stateAbbr, CancellationToken ct = default)
     {
-        var cc = ResolveCountryCode(country, stateAbbr);
+        var cc = CountryRulesFactory.For(country).GetZippopotamusCountryCode(country, stateAbbr);
         var url = $"https://api.zippopotam.us/{cc}/{Uri.EscapeDataString(code)}";
 
         try
@@ -85,18 +86,6 @@ internal sealed class ZippopotamusApi : IEnrichmentApi
             await Console.Error.WriteLineAsync($"[Zippopotam.us] Unexpected error for {code}: {ex.Message}");
             return (null, FetchOutcome.TransientError);
         }
-    }
-
-    private static string ResolveCountryCode(string country, string? stateAbbr)
-    {
-        if (!country.Equals("US", StringComparison.OrdinalIgnoreCase))
-            return country.ToLowerInvariant();
-
-        return (stateAbbr ?? "").ToUpperInvariant() switch
-        {
-            "PR" => "pr", "VI" => "vi", "GU" => "gu", "AS" => "as", "MP" => "mp",
-            _ => "us",
-        };
     }
 
     private static string TitleCase(string input)

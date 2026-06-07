@@ -87,7 +87,8 @@ public static class EnrichCandidatesDisplay
             etaLine = new Markup("");
         }
 
-        return new Rows(statusLine, new Text(""), BuildCountersTable(counters, isDirectMode), new Text(""), etaLine);
+        var hintLine = new Markup("  [grey dim]Esc · stop[/]");
+        return new Rows(statusLine, new Text(""), BuildCountersTable(counters, isDirectMode), new Text(""), etaLine, hintLine);
     }
 
     // ── Final summary ─────────────────────────────────────────────────────────

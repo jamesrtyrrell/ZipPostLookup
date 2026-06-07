@@ -4,7 +4,6 @@ using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
 using ZipPostLookup.CountryDataTools.Utilities;
-using ZipPostLookup.CountryDataTools.Validation;
 using ZipPostLookup.CountryDataTools.Validation.Export;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
@@ -55,6 +54,7 @@ public static class WorkDbCommand
             "reset" => await RunResetAsync(args[1..]),
             "normalize-tz"    => await RunNormalizeTzAsync(),
             "normalize-names" => await RunNormalizeNamesAsync(args[1..]),
+            "purge-oob-us"    => await RunPurgeOutOfRangeUsAsync(),
             _ => UnknownSubcommand(args[0]),
         };
     }
@@ -448,11 +448,84 @@ public static class WorkDbCommand
                 Console.WriteLine("  ✓ No new alternates found — AltNameOf is up to date.");
             else
                 AnsiConsole.MarkupLine($"  [green]✓ {linked} alternate link(s) set.[/]");
+
+            // Propagate curation flags from canonical rows to their alt-name children.
+            // Runs whether or not new links were created — catches pre-existing orphans too.
+            try
+            {
+                var propagated = await conn.ExecuteAsync(
+                    CommonQueries.FixOrphanAltNames,
+                    new { CountryId = cc });
+                if (propagated > 0)
+                    AnsiConsole.MarkupLine(
+                        $"  [green]✓ {propagated} alt-name row(s) marked curated " +
+                        $"(curation propagated from canonical).[/]");
+            }
+            catch (Exception ex)
+            {
+                await Console.Error.WriteLineAsync(
+                    $"  ✗ Orphan curation propagation failed for {cc}: {ex.Message}");
+                exitCode = 1;
+            }
         }
 
         Console.WriteLine();
         Console.WriteLine("  Re-export --target ref for affected countries to include links in the CSV.");
         return exitCode;
+    }
+
+    // -------------------------------------------------------------------------
+    // db purge-oob-us
+    // -------------------------------------------------------------------------
+
+    private static async Task<int> RunPurgeOutOfRangeUsAsync()
+    {
+        var db = await LoadDbAsync();
+        if (db == null) return 1;
+
+        using var conn = db.GetFactory().CreateConnection();
+
+        var count = await Dapper.SqlMapper.ExecuteScalarAsync<int>(
+            conn, CommonQueries.CountOutOfRangeUs);
+
+        if (count == 0)
+        {
+            AnsiConsole.MarkupLine("  [green]✓ No US reference rows outside 00501–99950 — nothing to purge.[/]");
+            return 0;
+        }
+
+        AnsiConsole.MarkupLine($"  [yellow]Found {count:N0} US reference row(s) with ZIP codes outside 00501–99950.[/]");
+        Console.WriteLine("  These codes fall outside the USPS-assigned range and will be permanently deleted.");
+        Console.WriteLine();
+
+        if (!AnsiConsole.Confirm("Delete these rows from data.Reference?"))
+        {
+            Console.WriteLine("  Aborted.");
+            return 0;
+        }
+
+        using var tx = conn.BeginTransaction();
+        try
+        {
+            var adminsDeleted = await Dapper.SqlMapper.ExecuteAsync(
+                conn, CommonQueries.PurgeOutOfRangeUsAdmins, transaction: tx);
+
+            var rowsDeleted = await Dapper.SqlMapper.ExecuteAsync(
+                conn, CommonQueries.PurgeOutOfRangeUs, transaction: tx);
+
+            tx.Commit();
+
+            AnsiConsole.MarkupLine($"  [green]✓ {rowsDeleted:N0} reference row(s) deleted ({adminsDeleted:N0} admin row(s)).[/]");
+            Console.WriteLine("  Re-export US reference data and rebuild the ZPI image.");
+        }
+        catch (Exception ex)
+        {
+            tx.Rollback();
+            AnsiConsole.MarkupLine($"  [red]✗ Purge failed: {Markup.Escape(ex.Message)}[/]");
+            return 1;
+        }
+
+        return 0;
     }
 
     // -------------------------------------------------------------------------
@@ -496,6 +569,11 @@ public static class WorkDbCommand
                           AltNameOf on the abbreviated row to link it to the canonical
                           name. Safe to re-run; skips already-linked rows.
                           --all runs US, CA, MX in sequence.
+              purge-oob-us
+                          Remove US data.Reference rows whose ZIP code falls outside the
+                          USPS-assigned range 00501–99950. Shows a count and asks for
+                          confirmation before deleting. Run once after the initial load
+                          if the source data contained out-of-range codes.
             """);
 
     private static string TruncatePath(string path, int maxLen) =>

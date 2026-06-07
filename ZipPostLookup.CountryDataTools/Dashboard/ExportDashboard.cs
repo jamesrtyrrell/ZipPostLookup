@@ -16,27 +16,32 @@ internal static class ExportDashboard
     {
         while (true)
         {
-            AnsiConsole.Clear();
-            AnsiConsole.Write(new Rule("[bold cyan]Export[/]").LeftJustified());
-            AnsiConsole.WriteLine();
+            DashboardRenderer.RenderHeader("Export");
 
-            var target = AnsiConsole.Prompt(
-                new SelectionPrompt<Target>()
-                    .Title("  Export target:")
-                    .UseConverter(t => t == TargetBack
-                        ? "[grey]← Back[/]"
-                        : $"[bold cyan]{t.Label,-8}[/]  [grey]{t.Desc}[/]")
-                    .AddChoices(TargetRef, TargetMain, TargetZpi, TargetBack));
+            var target = MenuPrompt.Show(
+                [TargetRef, TargetMain, TargetZpi, TargetBack],
+                t => t == TargetBack
+                    ? "[grey]← Back[/]"
+                    : $"[bold cyan]{t.Label,-8}[/]  [grey]{t.Desc}[/]",
+                escapeReturns: TargetBack,
+                title: "Export target:");
 
             if (target == TargetBack) break;
 
-            var countryChoice = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("  Country:")
-                    .UseConverter(s => s == "All (US + CA + MX)"
-                        ? $"[bold cyan]{"All",-10}[/]  [grey]Run all three in sequence[/]"
-                        : $"[bold cyan]{s}[/]")
-                    .AddChoices("US", "CA", "MX", "All (US + CA + MX)"));
+            DashboardRenderer.RenderHeader($"Export › {target.Key}");
+
+            var countryChoice = MenuPrompt.Show(
+                ["US", "CA", "MX", "All (US + CA + MX)", "← Cancel"],
+                s => s switch
+                {
+                    "← Cancel"           => "[grey]← Cancel[/]",
+                    "All (US + CA + MX)" => $"[bold cyan]{"All",-10}[/]  [grey]Run all three in sequence[/]",
+                    _                    => $"[bold cyan]{s}[/]",
+                },
+                escapeReturns: "← Cancel",
+                title: "Country:");
+
+            if (countryChoice == "← Cancel") continue;
 
             var curatedOnly  = AnsiConsole.Confirm("  --curated-only (skip non-curated rows)?", true);
             var uncompressed = target == TargetZpi
@@ -48,9 +53,7 @@ internal static class ExportDashboard
             if (curatedOnly)  args.Add("--curated-only");
             if (uncompressed) args.Add("--uncompressed");
 
-            AnsiConsole.Clear();
-            AnsiConsole.Write(new Rule($"[bold cyan]export --target {target.Key}[/]").LeftJustified());
-            AnsiConsole.WriteLine();
+            DashboardRenderer.RenderHeader($"Export › {target.Key}");
 
             var exitCode = await ExportCommand.RunAsync([.. args]);
 

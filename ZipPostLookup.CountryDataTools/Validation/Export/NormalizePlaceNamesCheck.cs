@@ -1,7 +1,6 @@
 using System.Data;
 using Dapper;
 using Spectre.Console;
-using ZipPostLookup.CountryDataTools.Database.Sql;
 
 namespace ZipPostLookup.CountryDataTools.Validation.Export;
 

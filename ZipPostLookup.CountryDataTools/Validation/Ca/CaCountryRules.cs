@@ -21,4 +21,29 @@ public sealed class CaCountryRules : ICountryRules
         code.Length >= 3 ? code[..3] : code;
 
     public IReadOnlyList<string> PlaceNameLanguages => ["English", "French"];
+
+    // ── Province/territory name → ISO 3166-2:CA code ──────────────────────────
+    // Covers the English names returned by the GeoLocator API.
+
+    private static readonly Dictionary<string, string> _provinceCode =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Alberta"]                   = "AB",
+            ["British Columbia"]          = "BC",
+            ["Manitoba"]                  = "MB",
+            ["New Brunswick"]             = "NB",
+            ["Newfoundland and Labrador"] = "NL",
+            ["Northwest Territories"]     = "NT",
+            ["Nova Scotia"]               = "NS",
+            ["Nunavut"]                   = "NU",
+            ["Ontario"]                   = "ON",
+            ["Prince Edward Island"]      = "PE",
+            ["Quebec"]                    = "QC",
+            ["Québec"]                    = "QC",
+            ["Saskatchewan"]              = "SK",
+            ["Yukon"]                     = "YT",
+        };
+
+    public string? ResolveAdmin1CodeFromName(string admin1Name) =>
+        _provinceCode.TryGetValue(admin1Name, out var code) ? code : null;
 }

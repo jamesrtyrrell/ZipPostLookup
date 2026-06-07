@@ -133,6 +133,13 @@ public static class ZipPostLookup
         new ZipPostRegistry(countries);
 
     /// <summary>
+    /// Returns the <see cref="CountryInfo"/> for the given country code,
+    /// or <c>null</c> if the country is not defined in the embedded data.
+    /// </summary>
+    public static CountryInfo? GetCountryInfo(CountryCode country) =>
+        CountryInfoRegistry.TryGet(country);
+
+    /// <summary>
     /// Creates a registry merging the built-in US data with one or more custom data sources.
     /// </summary>
     /// <example>

@@ -13,31 +13,18 @@ namespace ZipPostLookup.CountryDataTools.Enrichment;
 /// </summary>
 internal static class ReferenceEnrichmentHelper
 {
-    // ── Armed Forces territory routing ────────────────────────────────────────
-
-    private static readonly HashSet<string> _armedForcesStates =
-        new(StringComparer.OrdinalIgnoreCase) { "AA", "AE", "AP" };
-
-    public static bool IsArmedForcesState(string? state) =>
-        !string.IsNullOrWhiteSpace(state) && _armedForcesStates.Contains(state);
-
-    public static ApiLookupResult GetArmedForcesResult(string state) =>
-        state.ToUpperInvariant() switch
-        {
-            "AA" => new ApiLookupResult { Admin1Code = "AA", Admin1Name = "U.S. Armed Forces - Americas", Timezone = "Etc/Unknown" },
-            "AE" => new ApiLookupResult { Admin1Code = "AE", Admin1Name = "U.S. Armed Forces - Europe",   Timezone = "Etc/Unknown" },
-            _    => new ApiLookupResult { Admin1Code = "AP", Admin1Name = "U.S. Armed Forces - Pacific",  Timezone = "Etc/Unknown" },
-        };
-
     // ── Update data.Reference with API result ─────────────────────────────────
 
     /// <summary>
     /// Applies an <see cref="ApiLookupResult"/> to all <c>data.Reference</c> rows for
     /// the given zip code. Sets TimezoneChecked, NameChecked, lat/lng, and admin level 1.
+    /// When <paramref name="adminOverride"/> is provided it takes precedence over the
+    /// API result's admin fields (used for deterministic range-based resolution, e.g. MX estados).
     /// Returns true if a new name row was inserted.
     /// </summary>
     public static async Task<bool> UpdateReferenceAsync(
-        SqlConnection conn, string country, string zip, ApiLookupResult result, SqlTransaction tx)
+        SqlConnection conn, string country, string zip, ApiLookupResult result, SqlTransaction tx,
+        (string Code, string Name)? adminOverride = null)
     {
         var countryUpper = country.ToUpperInvariant();
         var cityChecked  = !string.IsNullOrEmpty(result.PlaceName);
@@ -49,6 +36,9 @@ internal static class ReferenceEnrichmentHelper
         var adminLevelId = await conn.ExecuteScalarAsync<int?>(
             CommonQueries.GetAdminLevelIdByLevel,
             new { CountryId = countryUpper }, tx);
+
+        var admin1Code = adminOverride?.Code ?? result.Admin1Code;
+        var admin1Name = adminOverride?.Name ?? result.Admin1Name;
 
         var existing = await conn.QueryFirstOrDefaultAsync<DataReference>(
             string.IsNullOrEmpty(result.PlaceName)
@@ -81,11 +71,11 @@ internal static class ReferenceEnrichmentHelper
             existing.UpdatedAt  = DateTimeOffset.UtcNow;
             await conn.UpdateAsync(existing, tx);
 
-            if (adminLevelId.HasValue && !string.IsNullOrEmpty(result.Admin1Code))
+            if (adminLevelId.HasValue && !string.IsNullOrEmpty(admin1Code))
             {
                 await UpsertReferenceAdminAsync(
                     conn, existing.ReferenceId, adminLevelId.Value,
-                    result.Admin1Name, result.Admin1Code, tx);
+                    admin1Name, admin1Code, tx);
             }
         }
         else
@@ -112,11 +102,11 @@ internal static class ReferenceEnrichmentHelper
             var newId = (long)await conn.InsertAsync(newRef, tx);
             newNameInserted = true;
 
-            if (adminLevelId.HasValue && !string.IsNullOrEmpty(result.Admin1Code))
+            if (adminLevelId.HasValue && !string.IsNullOrEmpty(admin1Code))
             {
                 await UpsertReferenceAdminAsync(
                     conn, newId, adminLevelId.Value,
-                    result.Admin1Name, result.Admin1Code, tx);
+                    admin1Name, admin1Code, tx);
             }
         }
 

@@ -16,17 +16,15 @@ internal static class IngestDashboard
     {
         while (true)
         {
-            AnsiConsole.Clear();
-            AnsiConsole.Write(new Rule("[bold cyan]Ingest[/]").LeftJustified());
-            AnsiConsole.WriteLine();
+            DashboardRenderer.RenderHeader("Ingest");
 
-            var selected = AnsiConsole.Prompt(
-                new SelectionPrompt<Sub>()
-                    .Title("Select ingest mode:")
-                    .UseConverter(s => s == SubBack
-                        ? "[grey]← Back[/]"
-                        : $"[bold cyan]{s.Label,-14}[/]  [grey]{s.Desc}[/]")
-                    .AddChoices(SubRef, SubCandidate, SubCoords, SubBack));
+            var selected = MenuPrompt.Show(
+                [SubRef, SubCandidate, SubCoords, SubBack],
+                s => s == SubBack
+                    ? "[grey]← Back[/]"
+                    : $"[bold cyan]{s.Label,-14}[/]  [grey]{s.Desc}[/]",
+                escapeReturns: SubBack,
+                title: "Select ingest mode:");
 
             if (selected == SubBack) break;
 
@@ -47,17 +45,20 @@ internal static class IngestDashboard
 
     private static async Task<int> RunRefAsync()
     {
-        AnsiConsole.Clear();
-        AnsiConsole.Write(new Rule("[bold cyan]ingest ref[/]").LeftJustified());
-        AnsiConsole.WriteLine();
+        DashboardRenderer.RenderHeader("Ingest › ref");
 
-        var choice = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("  Country:")
-                .UseConverter(s => s == "All (US + CA + MX)"
-                    ? $"[bold cyan]{"All",-10}[/]  [grey]Import all three in sequence[/]"
-                    : $"[bold cyan]{s}[/]")
-                .AddChoices("US", "CA", "MX", "All (US + CA + MX)"));
+        var choice = MenuPrompt.Show(
+            ["US", "CA", "MX", "All (US + CA + MX)", "← Cancel"],
+            s => s switch
+            {
+                "← Cancel"           => "[grey]← Cancel[/]",
+                "All (US + CA + MX)" => $"[bold cyan]{"All",-10}[/]  [grey]Import all three in sequence[/]",
+                _                    => $"[bold cyan]{s}[/]",
+            },
+            escapeReturns: "← Cancel",
+            title: "Country:");
+
+        if (choice == "← Cancel") return 0;
 
         var force    = AnsiConsole.Confirm("  --force (re-import even if rows already exist)?", false);
         var infoOnly = AnsiConsole.Confirm("  --info-only (seed country_info only, skip reference rows)?", false);
@@ -75,9 +76,7 @@ internal static class IngestDashboard
 
     private static async Task<int> RunCandidateAsync()
     {
-        AnsiConsole.Clear();
-        AnsiConsole.Write(new Rule("[bold cyan]ingest candidate[/]").LeftJustified());
-        AnsiConsole.WriteLine();
+        DashboardRenderer.RenderHeader("Ingest › candidate");
 
         var file = AnsiConsole.Prompt(
             new TextPrompt<string>("  Candidate CSV path:")
@@ -85,10 +84,13 @@ internal static class IngestDashboard
                     ? ValidationResult.Success()
                     : ValidationResult.Error("[red]Path is required[/]")));
 
-        var country = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("  Country:")
-                .AddChoices("US", "CA", "MX"));
+        var country = MenuPrompt.Show(
+            ["US", "CA", "MX", "← Cancel"],
+            s => s == "← Cancel" ? "[grey]← Cancel[/]" : $"[bold cyan]{s}[/]",
+            escapeReturns: "← Cancel",
+            title: "Country:");
+
+        if (country == "← Cancel") return 0;
 
         return await RunAndPause("ingest candidate", ["candidate", file, "--country", country]);
     }
@@ -97,9 +99,7 @@ internal static class IngestDashboard
 
     private static async Task<int> RunCoordsAsync()
     {
-        AnsiConsole.Clear();
-        AnsiConsole.Write(new Rule("[bold cyan]ingest coords[/]").LeftJustified());
-        AnsiConsole.WriteLine();
+        DashboardRenderer.RenderHeader("Ingest › coords");
 
         var source = AnsiConsole.Prompt(
             new TextPrompt<string>("  Source CSV path:")
@@ -107,13 +107,18 @@ internal static class IngestDashboard
                     ? ValidationResult.Success()
                     : ValidationResult.Error("[red]Path is required[/]")));
 
-        var countryChoice = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("  Country [grey](optional)[/]:")
-                .UseConverter(s => s == "Any (no filter)"
-                    ? "[grey]Any (no filter)[/]"
-                    : $"[bold cyan]{s}[/]")
-                .AddChoices("US", "CA", "MX", "Any (no filter)"));
+        var countryChoice = MenuPrompt.Show(
+            ["US", "CA", "MX", "Any (no filter)", "← Cancel"],
+            s => s switch
+            {
+                "← Cancel"        => "[grey]← Cancel[/]",
+                "Any (no filter)" => "[grey]Any (no filter)[/]",
+                _                 => $"[bold cyan]{s}[/]",
+            },
+            escapeReturns: "← Cancel",
+            title: "Country (optional):");
+
+        if (countryChoice == "← Cancel") return 0;
 
         var batch = AnsiConsole.Prompt(
             new TextPrompt<int>("  Batch size [grey](default 1000)[/]:")
@@ -136,9 +141,7 @@ internal static class IngestDashboard
 
     private static async Task<int> RunAndPause(string label, List<string> args)
     {
-        AnsiConsole.Clear();
-        AnsiConsole.Write(new Rule($"[bold cyan]{label}[/]").LeftJustified());
-        AnsiConsole.WriteLine();
+        DashboardRenderer.RenderHeader(label);
 
         var exitCode = await IngestCommand.RunAsync([.. args]);
 

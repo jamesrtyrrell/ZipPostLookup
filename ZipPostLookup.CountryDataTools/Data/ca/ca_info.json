@@ -13,11 +13,11 @@
     }
   ],
   "NameLabel": "Place",
-  "CodeCount": 900686,
+  "CodeCount": 900688,
   "CodeRanges": true,
   "Curated": true,
   "CurationStatus": "Curated",
-  "LastUpdated": "2026-06-06",
+  "LastUpdated": "2026-06-07",
   "CodeFormat": "A1A 1A1",
   "CodeRegex": "^[A-Z]\\d[A-Z] \\d[A-Z]\\d$",
   "Description": "Canadian provinces and territories with postal abbreviations and capitals.",
@@ -53,8 +53,8 @@
       "Code": "QC",
       "Capital": "Quebec City",
       "CapitalLocal": "Qu\u00E9bec",
-      "ZipCount": 226781,
-      "NameCount": 229771
+      "ZipCount": 226782,
+      "NameCount": 229772
     },
     {
       "Type": "province",

@@ -8,7 +8,6 @@ using ZipPostLookup.CountryDataTools.Database.WorkDb;
 using ZipPostLookup.CountryDataTools.Enrichment;
 using ZipPostLookup.CountryDataTools.Enrichment.Api;
 using ZipPostLookup.CountryDataTools.Models.Commands;
-using ZipPostLookup.CountryDataTools.Pipeline;
 using ZipPostLookup.CountryDataTools.Utilities;
 using ZipPostLookup.CountryDataTools.Validation;
 
@@ -32,7 +31,7 @@ namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 /// </summary>
 public static class EnrichDirectCommand
 {
-    private const int DelayMs = 1_000;
+    private const int DelayMs = 0_500;
 
     public static async Task<int> RunAsync(string[] args)
     {
@@ -142,6 +141,8 @@ public static class EnrichDirectCommand
         // which happens after Live exits — so the messages still appear, just at a safe moment.
         using var deferredError = new DeferredConsoleError();
 
+        bool userCancelled = false;
+
         await AnsiConsole.Live(
             EnrichCandidatesDisplay.BuildLiveRenderable(
                 0, batch.Count, "[grey]Starting...[/]", counters, isDirectMode: true))
@@ -160,10 +161,11 @@ public static class EnrichDirectCommand
 
                 string statusMarkup;
 
-                if (ReferenceEnrichmentHelper.IsArmedForcesState(admin1Code))
+                var af = rules.GetArmedForcesEnrichment(admin1Code);
+                if (af != null)
                 {
-                    var afResult = ReferenceEnrichmentHelper.GetArmedForcesResult(admin1Code);
-                    statusMarkup = $"ZIP {Markup.Escape(code),-10}  [grey]Armed Forces ({Markup.Escape(admin1Code)}) → {afResult.Timezone}[/]";
+                    var afResult = new ApiLookupResult { Admin1Code = af.Value.Code, Admin1Name = af.Value.Name, Timezone = af.Value.Timezone };
+                    statusMarkup = $"ZIP {Markup.Escape(code),-10}  [grey]Armed Forces ({Markup.Escape(admin1Code)}) → {af.Value.Timezone}[/]";
                     checkpoint.Add((code, afResult, FetchOutcome.Found));
                     counters.IncrementResolved("Armed Forces");
                 }
@@ -212,8 +214,13 @@ public static class EnrichDirectCommand
                 ctx.UpdateTarget(EnrichCandidatesDisplay.BuildLiveRenderable(
                     i + 1, batch.Count, statusMarkup, counters, enrichStopwatch.Elapsed, isDirectMode: true));
 
-                // Flush every 10 actionable results or on the last item.
-                if (checkpoint.Count > 0 && (checkpoint.Count % 10 == 0 || isLast))
+                // Drain any keys pressed during the API call — catch Escape for graceful stop.
+                while (Console.KeyAvailable)
+                    if (Console.ReadKey(intercept: true).Key == ConsoleKey.Escape)
+                        userCancelled = true;
+
+                // Flush every 10 actionable results, on the last item, or when user stops.
+                if (checkpoint.Count > 0 && (checkpoint.Count % 10 == 0 || isLast || userCancelled))
                 {
                     ctx.UpdateTarget(EnrichCandidatesDisplay.BuildLiveRenderable(
                         i + 1, batch.Count,
@@ -230,7 +237,8 @@ public static class EnrichDirectCommand
                                 if (cpOutcome == FetchOutcome.Found)
                                 {
                                     var newName = await ReferenceEnrichmentHelper.UpdateReferenceAsync(
-                                        conn, country, cpZip, cpResult!, tx);
+                                        conn, country, cpZip, cpResult!, tx,
+                                        rules.ResolveAdmin1(cpZip));
                                     if (newName) counters.NewNamesInserted++;
                                 }
                                 // NotFound: no DB action — row stays Curated=0, retried next run.
@@ -250,13 +258,27 @@ public static class EnrichDirectCommand
                     checkpoint.Clear();
                 }
 
+                if (userCancelled) break;
+
                 if (!isLast)
-                    await Task.Delay(DelayMs);
+                {
+                    // Interruptible delay — poll every 100 ms so Escape is detected promptly.
+                    for (int ms = 0; ms < DelayMs && !userCancelled; ms += 100)
+                    {
+                        await Task.Delay(Math.Min(100, DelayMs - ms));
+                        while (Console.KeyAvailable)
+                            if (Console.ReadKey(intercept: true).Key == ConsoleKey.Escape)
+                                userCancelled = true;
+                    }
+                }
             }
         });
 
         Console.WriteLine();
-        Console.WriteLine("Enrichment complete:");
+        if (userCancelled)
+            AnsiConsole.MarkupLine("[yellow]  ⚠ Enrichment stopped by user.[/]");
+        else
+            Console.WriteLine("Enrichment complete:");
         EnrichCandidatesDisplay.PrintSummary(counters, isDirectMode: true);
 
         int remaining = enrichable.Count - batch.Count;

@@ -73,10 +73,34 @@ public sealed class UsCountryCodeRulesTests
     }
 
     [Fact]
-    public void Validate_FiveZeros_ReturnsTrue()
+    public void Validate_FiveZeros_ReturnsFalse()
     {
-        // 00000 is structurally valid for US rules — the registry simply won't find it
-        Assert.True(_rules.Validate("00000"));
+        // 00000 is below the USPS minimum 00501 — structurally 5 digits but out of range
+        Assert.False(_rules.Validate("00000"));
+    }
+
+    [Fact]
+    public void Validate_BelowMinimum_ReturnsFalse()
+    {
+        Assert.False(_rules.Validate("00500")); // one below 00501
+    }
+
+    [Fact]
+    public void Validate_Minimum_ReturnsTrue()
+    {
+        Assert.True(_rules.Validate("00501")); // IRS Holtsville NY — lowest assigned ZIP
+    }
+
+    [Fact]
+    public void Validate_Maximum_ReturnsTrue()
+    {
+        Assert.True(_rules.Validate("99950")); // Ketchikan AK — highest assigned ZIP
+    }
+
+    [Fact]
+    public void Validate_AboveMaximum_ReturnsFalse()
+    {
+        Assert.False(_rules.Validate("99951")); // one above 99950
     }
 
     [Fact]

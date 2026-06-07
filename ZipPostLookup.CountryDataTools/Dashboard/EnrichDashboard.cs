@@ -16,17 +16,15 @@ internal static class EnrichDashboard
     {
         while (true)
         {
-            AnsiConsole.Clear();
-            AnsiConsole.Write(new Rule("[bold cyan]Enrich[/]").LeftJustified());
-            AnsiConsole.WriteLine();
+            DashboardRenderer.RenderHeader("Enrich");
 
-            var selected = AnsiConsole.Prompt(
-                new SelectionPrompt<Subcommand>()
-                    .Title("Select enrichment mode:")
-                    .UseConverter(s => s == Back
-                        ? "[grey]← Back[/]"
-                        : $"[bold cyan]{s.Name,-14}[/]  [grey]{s.Description}[/]")
-                    .AddChoices(Candidates, Direct, Ref, Back));
+            var selected = MenuPrompt.Show(
+                [Candidates, Direct, Ref, Back],
+                s => s == Back
+                    ? "[grey]← Back[/]"
+                    : $"[bold cyan]{s.Name,-14}[/]  [grey]{s.Description}[/]",
+                escapeReturns: Back,
+                title: "Select enrichment mode:");
 
             if (selected == Back)
                 break;
@@ -34,9 +32,7 @@ internal static class EnrichDashboard
             // enrich ref has too many option shapes (file path vs provider) — show help for now.
             if (selected == Ref)
             {
-                AnsiConsole.Clear();
-                AnsiConsole.Write(new Rule("[bold cyan]enrich ref[/]").LeftJustified());
-                AnsiConsole.WriteLine();
+                DashboardRenderer.RenderHeader("Enrich › ref");
                 await EnrichCommand.RunAsync(["-h"]);
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
@@ -44,16 +40,20 @@ internal static class EnrichDashboard
                 continue;
             }
 
-            // ── Configure and run candidates / direct ────────────────────────────
+            DashboardRenderer.RenderHeader($"Enrich › {selected.Name}");
 
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"  [bold]enrich {selected.Name}[/] — configure run");
-            AnsiConsole.WriteLine();
+            var countryChoice = MenuPrompt.Show(
+                ["US", "CA", "MX", "All (US + CA + MX)", "← Cancel"],
+                s => s switch
+                {
+                    "← Cancel"           => "[grey]← Cancel[/]",
+                    "All (US + CA + MX)" => $"[bold cyan]{"All",-10}[/]  [grey]US + CA + MX[/]",
+                    _                    => $"[bold cyan]{s}[/]",
+                },
+                escapeReturns: "← Cancel",
+                title: "Country:");
 
-            var countryChoice = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("  Country:")
-                    .AddChoices("US", "CA", "MX", "All (US + CA + MX)"));
+            if (countryChoice == "← Cancel") continue;
 
             var limit = AnsiConsole.Prompt(
                 new TextPrompt<int>("  Limit [grey](codes per run)[/]:")
@@ -72,9 +72,7 @@ internal static class EnrichDashboard
 
             string[] runArgs = [selected.Key, ..countryArgs, "--limit", limit.ToString(), ..dryRunArgs];
 
-            AnsiConsole.Clear();
-            AnsiConsole.Write(new Rule($"[bold cyan]enrich {selected.Name}[/]").LeftJustified());
-            AnsiConsole.WriteLine();
+            DashboardRenderer.RenderHeader($"Enrich › {selected.Name}");
 
             var exitCode = await EnrichCommand.RunAsync(runArgs);
 

@@ -9,9 +9,7 @@ internal static class ValidateDashboard
     {
         while (true)
         {
-            AnsiConsole.Clear();
-            AnsiConsole.Write(new Rule("[bold cyan]Validate[/]").LeftJustified());
-            AnsiConsole.WriteLine();
+            DashboardRenderer.RenderHeader("Validate");
             AnsiConsole.MarkupLine("  Validates a candidate CSV and guides you through fix/extract steps.");
             AnsiConsole.WriteLine();
 
@@ -21,19 +19,20 @@ internal static class ValidateDashboard
 
             if (string.IsNullOrWhiteSpace(file)) break;
 
-            var country = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("  Country:")
-                    .AddChoices("US", "CA", "MX"));
+            var country = MenuPrompt.Show(
+                ["US", "CA", "MX", "← Cancel"],
+                s => s == "← Cancel" ? "[grey]← Cancel[/]" : $"[bold cyan]{s}[/]",
+                escapeReturns: "← Cancel",
+                title: "Country:");
+
+            if (country == "← Cancel") continue;
 
             var noPrompts = AnsiConsole.Confirm("  --no-prompts (apply fix + extract automatically)?", false);
 
             var args = new List<string> { file, "--country", country };
             if (noPrompts) args.Add("--no-prompts");
 
-            AnsiConsole.Clear();
-            AnsiConsole.Write(new Rule("[bold cyan]validate[/]").LeftJustified());
-            AnsiConsole.WriteLine();
+            DashboardRenderer.RenderHeader("Validate");
 
             var exitCode = await ValidateCommand.RunAsync([.. args]);
 

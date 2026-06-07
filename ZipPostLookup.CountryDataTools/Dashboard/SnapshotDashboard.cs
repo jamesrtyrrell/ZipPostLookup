@@ -9,9 +9,7 @@ internal static class SnapshotDashboard
     {
         while (true)
         {
-            AnsiConsole.Clear();
-            AnsiConsole.Write(new Rule("[bold cyan]Snapshot[/]").LeftJustified());
-            AnsiConsole.WriteLine();
+            DashboardRenderer.RenderHeader("Snapshot");
 
             AnsiConsole.MarkupLine("  Runs the full export pipeline for [bold]US, CA, MX[/] in sequence:");
             AnsiConsole.WriteLine();
@@ -26,22 +24,20 @@ internal static class SnapshotDashboard
             AnsiConsole.MarkupLine("  [grey]This can take several minutes. Stops on first failure.[/]");
             AnsiConsole.WriteLine();
 
-            var choice = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .UseConverter(s => s switch
-                    {
-                        "run"  => "[bold green]▶  Run Snapshot[/]",
-                        "back" => "[grey]← Back[/]",
-                        _      => s,
-                    })
-                    .AddChoices("run", "back"));
+            var choice = MenuPrompt.Show(
+                ["run", "back"],
+                s => s switch
+                {
+                    "run"  => "[bold green]▶  Run Snapshot[/]",
+                    "back" => "[grey]← Back[/]",
+                    _      => s,
+                },
+                escapeReturns: "back");
 
             if (choice == "back")
                 break;
 
-            AnsiConsole.Clear();
-            AnsiConsole.Write(new Rule("[bold cyan]Snapshot — Running[/]").LeftJustified());
-            AnsiConsole.WriteLine();
+            DashboardRenderer.RenderHeader("Snapshot › Running");
 
             // Pass --yes so the handler skips its own plain confirm — we already confirmed above.
             var exitCode = await SnapshotCommand.RunAsync(["--yes"]);

@@ -62,6 +62,38 @@ public interface ICountryRules
     string GetApiLookupCode(string code) => code;
 
     /// <summary>
+    /// Returns the Admin1 (Code, Name) that deterministically maps to <paramref name="zpCode"/>
+    /// based on the country's postal-code structure (e.g. MX ZIP ranges → estado), or
+    /// <c>null</c> if the country doesn't support static range-based resolution.
+    /// When non-null, callers should prefer this over any API-returned admin fields.
+    /// </summary>
+    (string Code, string Name)? ResolveAdmin1(string zpCode) => null;
+
+    /// <summary>
+    /// Returns (Admin1Code, Admin1Name, Timezone) for a US Armed Forces admin code (AA/AE/AP),
+    /// or <c>null</c> if the admin1 code is not an Armed Forces territory.
+    /// When non-null, callers should bypass external API calls and use this result directly.
+    /// Default: null.
+    /// </summary>
+    (string Code, string Name, string Timezone)? GetArmedForcesEnrichment(string? admin1Code) => null;
+
+    /// <summary>
+    /// Returns the Zippopotamus.us country-code path segment to use for a lookup.
+    /// For the US, certain territory admin codes (PR, VI, GU, AS, MP) are served under
+    /// separate Zippopotamus endpoints; this method encapsulates that routing.
+    /// Default: <paramref name="countryCode"/> in lowercase.
+    /// </summary>
+    string GetZippopotamusCountryCode(string countryCode, string? admin1Code)
+        => countryCode.ToLowerInvariant();
+
+    /// <summary>
+    /// Resolves a canonical Admin1 ISO code from a full province/territory name as returned
+    /// by an external API (e.g. "Alberta" → "AB"). Returns <c>null</c> if no mapping is defined.
+    /// Default: null.
+    /// </summary>
+    string? ResolveAdmin1CodeFromName(string admin1Name) => null;
+
+    /// <summary>
     /// Languages used by <see cref="PlaceNameNormalizer"/> when expanding
     /// abbreviations to detect equivalent place names (e.g. "St. Martin" /
     /// "Saint Martin"). Language names must match keys in LanguageAbbreviations.json.

@@ -11,23 +11,23 @@ internal static class IntegrityDashboard
     {
         while (true)
         {
-            AnsiConsole.Clear();
-            AnsiConsole.Write(new Rule("[bold cyan]Integrity[/]").LeftJustified());
-            AnsiConsole.WriteLine();
+            DashboardRenderer.RenderHeader("Integrity");
 
-            var choice = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("Select country to check:")
-                    .UseConverter(s => s switch
-                    {
-                        "← Back"            => "[grey]← Back[/]",
-                        "All (US + CA + MX)" => $"[bold cyan]{"All",-14}[/]  [grey]Run all three, then browse results with ← →[/]",
-                        _                   => $"[bold cyan]{s,-14}[/]",
-                    })
-                    .AddChoices("US", "CA", "MX", "All (US + CA + MX)", "← Back"));
+            var choice = MenuPrompt.Show(
+                ["US", "CA", "MX", "All (US + CA + MX)", "← Back"],
+                s => s switch
+                {
+                    "← Back"             => "[grey]← Back[/]",
+                    "All (US + CA + MX)" => $"[bold cyan]{"All",-14}[/]  [grey]Run all three, then browse results with ← →[/]",
+                    _                    => $"[bold cyan]{s,-14}[/]",
+                },
+                escapeReturns: "← Back",
+                title: "Select country to check:");
 
             if (choice == "← Back")
                 break;
+
+            DashboardRenderer.RenderHeader($"Integrity › {(choice.StartsWith("All") ? "All" : choice)}");
 
             var tests = AnsiConsole.Prompt(
                 new TextPrompt<int>("  Tests [grey](default 1000)[/]:")
@@ -44,9 +44,7 @@ internal static class IntegrityDashboard
             }
             else
             {
-                AnsiConsole.Clear();
-                AnsiConsole.Write(new Rule($"[bold cyan]Integrity — {choice}[/]").LeftJustified());
-                AnsiConsole.WriteLine();
+                DashboardRenderer.RenderHeader($"Integrity › {choice}");
                 await IntegrityCheckCommand.RunAsync(["--country", choice, "--tests", tests.ToString()]);
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
@@ -65,9 +63,7 @@ internal static class IntegrityDashboard
 
         foreach (var cc in countries)
         {
-            AnsiConsole.Clear();
-            AnsiConsole.Write(new Rule($"[bold cyan]Integrity — {cc}[/]").LeftJustified());
-            AnsiConsole.WriteLine();
+            DashboardRenderer.RenderHeader($"Integrity › {cc}");
 
             // Mirror the path the handler will write to (handler uses DateTime.UtcNow at time of
             // write, so computing it right before the run keeps dates in sync for normal runs).
@@ -98,9 +94,6 @@ internal static class IntegrityDashboard
         {
             var page = pages[index];
 
-            AnsiConsole.Clear();
-
-            // ── Navigation bar ────────────────────────────────────────────────
             var prevLabel = index > 0
                 ? $"[bold]← {pages[index - 1].Country}[/]"
                 : "[grey]←[/]";
@@ -111,10 +104,8 @@ internal static class IntegrityDashboard
                 ? "[green]✓ passed[/]"
                 : "[red]✗ failures[/]";
 
-            AnsiConsole.MarkupLine(
-                $"  {prevLabel}    [bold cyan]{page.Country}[/] {statusLabel}" +
-                $"  ({index + 1}/{pages.Count})    {nextLabel}    [grey]Esc: back[/]");
-            AnsiConsole.Write(new Rule().LeftJustified());
+            DashboardRenderer.RenderHeader($"Integrity › {page.Country}  {statusLabel}");
+            AnsiConsole.MarkupLine($"  {prevLabel}    ({index + 1}/{pages.Count})    {nextLabel}    [grey]Esc: back[/]");
             AnsiConsole.WriteLine();
 
             // ── Report content ────────────────────────────────────────────────

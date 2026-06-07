@@ -83,6 +83,303 @@ public static class CommonQueries
           FROM   data.Reference
           WHERE  CountryId = @CountryId AND Curated = 1";
 
+    // Curation progress for ALL countries in one query — for the side-by-side stats panel.
+    public static readonly string GetAllCountryCurationStats =
+        @"SELECT
+              CountryId,
+              SUM(CAST(TimezoneChecked AS INT))                                      AS TotalTimezoneChecked,
+              SUM(CAST(NameChecked     AS INT))                                      AS TotalNameChecked,
+              SUM(CAST(Curated         AS INT))                                      AS TotalCurated,
+              COUNT(*)                                                               AS Total,
+              SUM(CAST(TimezoneChecked AS INT) - CAST(Curated AS INT))               AS Remaining,
+              CAST(SUM(CAST(Curated AS INT)) * 100.0 / NULLIF(COUNT(*), 0)
+                   AS DECIMAL(5,2))                                                  AS PctComplete
+          FROM data.Reference
+          GROUP BY CountryId
+          ORDER BY CountryId";
+
+    // Curation progress per country — mirrors the ad-hoc query used in SSMS.
+    // Remaining = rows where TZ is checked but name is not (the typical in-progress state).
+    public static readonly string GetCurationStats =
+        @"SELECT
+              SUM(CAST(TimezoneChecked AS INT))                                      AS TotalTimezoneChecked,
+              SUM(CAST(NameChecked     AS INT))                                      AS TotalNameChecked,
+              SUM(CAST(Curated         AS INT))                                      AS TotalCurated,
+              COUNT(*)                                                               AS Total,
+              SUM(CAST(TimezoneChecked AS INT) - CAST(Curated AS INT))               AS Remaining,
+              CAST(SUM(CAST(Curated AS INT)) * 100.0 / NULLIF(COUNT(*), 0)
+                   AS DECIMAL(5,2))                                                  AS PctComplete
+          FROM data.Reference
+          WHERE CountryId = @CountryId";
+
+    // Count of distinct uncurated codes (for paginator denominator).
+    public static readonly string GetUncuratedCodeCount =
+        @"SELECT COUNT(DISTINCT ZpCode)
+          FROM   data.Reference
+          WHERE  CountryId = @CountryId AND Curated = 0 AND AltNameOf IS NULL";
+
+    // One row per uncurated ZpCode with the default entry's name/timezone and aggregate curation flags.
+    // MIN(TimezoneChecked) = 1 iff ALL rows for that code are TZ-checked (same for NameChecked).
+    public static readonly string GetUncuratedCodesPage =
+        @"SELECT r.ZpCode,
+                 COALESCE(MAX(CASE WHEN r.IsDefault = 1 THEN r.PlaceName END),
+                          MAX(r.PlaceName))                         AS PlaceName,
+                 COALESCE(MAX(CASE WHEN r.IsDefault = 1 THEN r.Timezone END),
+                          MAX(r.Timezone))                          AS Timezone,
+                 CAST(MIN(CAST(r.TimezoneChecked AS INT)) AS BIT)   AS TimezoneChecked,
+                 CAST(MIN(CAST(r.NameChecked     AS INT)) AS BIT)   AS NameChecked,
+                 MAX(ISNULL(ra.Value, '---'))                       AS Admin1,
+                 MAX(ISNULL(ra.Code,  '---'))                       AS Admin1Code,
+                 COUNT(*)                                           AS NameCount
+          FROM   data.Reference r
+          LEFT   JOIN data.ReferenceAdmins ra
+                 ON  ra.ReferenceId  = r.ReferenceId
+                 AND ra.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
+                                         WHERE CountryId = r.CountryId AND LevelNumber = 1)
+          WHERE  r.CountryId = @CountryId
+            AND  r.Curated   = 0
+            AND  r.AltNameOf IS NULL
+          GROUP  BY r.ZpCode
+          ORDER  BY r.ZpCode
+          OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
+
+    // All rows for a specific code with admin data and curation flags (for the editor detail view).
+    public static readonly string GetReferenceRowsByCode =
+        @"SELECT r.ZpCode, r.PlaceName, r.Timezone,
+                 CAST(r.IsDefault       AS BIT) AS IsDefault,
+                 ISNULL(ra.Value, '---')        AS Admin1,
+                 ISNULL(ra.Code,  '---')        AS Admin1Code,
+                 CAST(r.TimezoneChecked AS BIT) AS TimezoneChecked,
+                 CAST(r.NameChecked     AS BIT) AS NameChecked,
+                 r.AltNameOf
+          FROM data.Reference r
+          LEFT JOIN data.ReferenceAdmins ra
+              ON  ra.ReferenceId  = r.ReferenceId
+              AND ra.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
+                                     WHERE CountryId = r.CountryId AND LevelNumber = 1)
+          WHERE r.CountryId = @CountryId
+            AND r.ZpCode    = @ZpCode
+          ORDER BY r.IsDefault DESC, r.PlaceName";
+
+    // Extended detail rows including Lat/Lng, both admin levels, and Flagged.
+    // Used by the ZpCode editor detail and edit screens.
+    public static readonly string GetCodeDetailRows =
+        @"SELECT r.ReferenceId, r.ZpCode, r.PlaceName, r.Timezone,
+                 CAST(r.IsDefault       AS BIT) AS IsDefault,
+                 ISNULL(r.Lat,  '---')          AS Lat,
+                 ISNULL(r.Lng,  '---')          AS Lng,
+                 r.AltNameOf,
+                 ISNULL(ra1.Value, '---')        AS Admin1,
+                 ISNULL(ra1.Code,  '---')        AS Admin1Code,
+                 ISNULL(ra2.Value, '---')        AS Admin2,
+                 ISNULL(ra2.Code,  '---')        AS Admin2Code,
+                 CAST(r.TimezoneChecked AS BIT)  AS TimezoneChecked,
+                 CAST(r.NameChecked     AS BIT)  AS NameChecked,
+                 CAST(r.Flagged         AS BIT)  AS Flagged
+          FROM data.Reference r
+          LEFT JOIN data.ReferenceAdmins ra1
+              ON  ra1.ReferenceId  = r.ReferenceId
+              AND ra1.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
+                                      WHERE CountryId = r.CountryId AND LevelNumber = 1)
+          LEFT JOIN data.ReferenceAdmins ra2
+              ON  ra2.ReferenceId  = r.ReferenceId
+              AND ra2.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
+                                      WHERE CountryId = r.CountryId AND LevelNumber = 2)
+          WHERE r.CountryId = @CountryId
+            AND r.ZpCode    = @ZpCode
+          ORDER BY r.IsDefault DESC, r.PlaceName";
+
+    // Reload a single detail row after an in-place edit.
+    public static readonly string GetCodeDetailRowById =
+        @"SELECT r.ReferenceId, r.ZpCode, r.PlaceName, r.Timezone,
+                 CAST(r.IsDefault       AS BIT) AS IsDefault,
+                 ISNULL(r.Lat,  '---')          AS Lat,
+                 ISNULL(r.Lng,  '---')          AS Lng,
+                 r.AltNameOf,
+                 ISNULL(ra1.Value, '---')        AS Admin1,
+                 ISNULL(ra1.Code,  '---')        AS Admin1Code,
+                 ISNULL(ra2.Value, '---')        AS Admin2,
+                 ISNULL(ra2.Code,  '---')        AS Admin2Code,
+                 CAST(r.TimezoneChecked AS BIT)  AS TimezoneChecked,
+                 CAST(r.NameChecked     AS BIT)  AS NameChecked,
+                 CAST(r.Flagged         AS BIT)  AS Flagged
+          FROM data.Reference r
+          LEFT JOIN data.ReferenceAdmins ra1
+              ON  ra1.ReferenceId  = r.ReferenceId
+              AND ra1.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
+                                      WHERE CountryId = r.CountryId AND LevelNumber = 1)
+          LEFT JOIN data.ReferenceAdmins ra2
+              ON  ra2.ReferenceId  = r.ReferenceId
+              AND ra2.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
+                                      WHERE CountryId = r.CountryId AND LevelNumber = 2)
+          WHERE r.ReferenceId = @ReferenceId";
+
+    // Individual reference rows for the browse screen (all uncurated, including AltNameOf rows).
+    public static readonly string GetBrowseRowsPage =
+        @"SELECT r.ZpCode, r.PlaceName, r.Timezone,
+                 CAST(r.IsDefault       AS BIT) AS IsDefault,
+                 ISNULL(r.Lat,  '---')          AS Lat,
+                 ISNULL(r.Lng,  '---')          AS Lng,
+                 r.AltNameOf,
+                 ISNULL(ra.Value, '---')         AS Admin1,
+                 ISNULL(ra.Code,  '---')         AS Admin1Code,
+                 CAST(r.TimezoneChecked AS BIT)  AS TimezoneChecked,
+                 CAST(r.NameChecked     AS BIT)  AS NameChecked,
+                 CAST(r.Flagged         AS BIT)  AS Flagged
+          FROM data.Reference r
+          LEFT JOIN data.ReferenceAdmins ra
+              ON  ra.ReferenceId  = r.ReferenceId
+              AND ra.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
+                                     WHERE CountryId = r.CountryId AND LevelNumber = 1)
+          WHERE r.CountryId = @CountryId
+            AND r.Curated   = 0
+          ORDER BY r.ZpCode, r.IsDefault DESC, r.PlaceName
+          OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
+
+    // Row count for browse pagination (all uncurated rows including AltNameOf).
+    public static readonly string GetBrowseRowCount =
+        @"SELECT COUNT(*)
+          FROM   data.Reference
+          WHERE  CountryId = @CountryId AND Curated = 0";
+
+    // Flag / unflag all rows for a ZpCode — flagged codes are excluded from exports.
+    public static readonly string FlagCode =
+        @"UPDATE data.Reference
+          SET    Flagged   = 1,
+                 UpdatedAt = SYSUTCDATETIME()
+          WHERE  CountryId = @CountryId AND ZpCode = @ZpCode";
+
+    public static readonly string UnflagCode =
+        @"UPDATE data.Reference
+          SET    Flagged   = 0,
+                 UpdatedAt = SYSUTCDATETIME()
+          WHERE  CountryId = @CountryId AND ZpCode = @ZpCode";
+
+    // Per-field in-place updates for the row editor (target a single ReferenceId).
+    public static readonly string UpdateReferenceTimezoneById =
+        @"UPDATE data.Reference
+          SET    Timezone  = @Timezone,
+                 UpdatedAt = SYSUTCDATETIME()
+          WHERE  ReferenceId = @ReferenceId";
+
+    public static readonly string UpdateReferencePlaceNameById =
+        @"UPDATE data.Reference
+          SET    PlaceName = @PlaceName,
+                 UpdatedAt = SYSUTCDATETIME()
+          WHERE  ReferenceId = @ReferenceId";
+
+    public static readonly string UpdateReferenceLatById =
+        @"UPDATE data.Reference
+          SET    Lat       = @Lat,
+                 UpdatedAt = SYSUTCDATETIME()
+          WHERE  ReferenceId = @ReferenceId";
+
+    public static readonly string UpdateReferenceLngById =
+        @"UPDATE data.Reference
+          SET    Lng       = @Lng,
+                 UpdatedAt = SYSUTCDATETIME()
+          WHERE  ReferenceId = @ReferenceId";
+
+    public static readonly string UpdateReferenceAltNameOfById =
+        @"UPDATE data.Reference
+          SET    AltNameOf = @AltNameOf,
+                 UpdatedAt = SYSUTCDATETIME()
+          WHERE  ReferenceId = @ReferenceId";
+
+    // Insert or update a single admin level row for a reference entry.
+    public static readonly string UpsertReferenceAdmin =
+        @"MERGE data.ReferenceAdmins AS t
+          USING (SELECT @ReferenceId AS ReferenceId, @AdminLevelId AS AdminLevelId) AS s
+              ON t.ReferenceId  = s.ReferenceId
+             AND t.AdminLevelId = s.AdminLevelId
+          WHEN MATCHED THEN
+              UPDATE SET Value = @Value, Code = @Code
+          WHEN NOT MATCHED THEN
+              INSERT (ReferenceId, AdminLevelId, Value, Code, CreatedAt)
+              VALUES (@ReferenceId, @AdminLevelId, @Value, @Code, SYSUTCDATETIME());";
+
+    // Look up the AdminLevelId PK for a given country + level number.
+    public static readonly string GetAdminLevelIdForLevel =
+        @"SELECT TOP 1 AdminLevelId
+          FROM   data.AdminLevels
+          WHERE  CountryId   = @CountryId
+            AND  LevelNumber = @LevelNumber";
+
+    // Run once to add the Flagged column.  Safe to repeat (IF NOT EXISTS guard).
+    public static readonly string MigrateAddFlaggedColumn =
+        @"IF NOT EXISTS (
+              SELECT 1 FROM sys.columns
+              WHERE  object_id = OBJECT_ID('data.Reference')
+                AND  name      = 'Flagged'
+          )
+          ALTER TABLE data.Reference ADD Flagged BIT NOT NULL DEFAULT 0;";
+
+    // Set both curation flags for every row sharing a ZpCode.
+    public static readonly string MarkCodeAsCurated =
+        @"UPDATE data.Reference
+          SET    TimezoneChecked = 1,
+                 NameChecked     = 1,
+                 UpdatedAt       = SYSUTCDATETIME()
+          WHERE  CountryId = @CountryId
+            AND  ZpCode    = @ZpCode";
+
+    public static readonly string MarkCodeTimezoneChecked =
+        @"UPDATE data.Reference
+          SET    TimezoneChecked = 1,
+                 UpdatedAt       = SYSUTCDATETIME()
+          WHERE  CountryId = @CountryId
+            AND  ZpCode    = @ZpCode";
+
+    public static readonly string MarkCodeNameChecked =
+        @"UPDATE data.Reference
+          SET    NameChecked = 1,
+                 UpdatedAt   = SYSUTCDATETIME()
+          WHERE  CountryId = @CountryId
+            AND  ZpCode    = @ZpCode";
+
+    // Alt-name rows whose canonical code is curated but they themselves are not.
+    // These are "orphaned" — they should have been propagated when the canonical was curated.
+    public static readonly string GetOrphanAltNameCount =
+        @"SELECT COUNT(*)
+          FROM   data.Reference alt
+          WHERE  alt.CountryId = @CountryId
+            AND  alt.AltNameOf IS NOT NULL
+            AND  alt.Curated   = 0
+            AND  EXISTS (
+                SELECT 1 FROM data.Reference canon
+                WHERE  canon.CountryId = alt.CountryId
+                  AND  canon.ZpCode    = alt.ZpCode
+                  AND  canon.AltNameOf IS NULL
+                  AND  canon.Curated   = 1
+            )";
+
+    // Mark all orphaned alt-name rows as curated (propagate from their canonical row).
+    public static readonly string FixOrphanAltNames =
+        @"UPDATE alt
+          SET    alt.TimezoneChecked = 1,
+                 alt.NameChecked     = 1,
+                 alt.UpdatedAt       = SYSUTCDATETIME()
+          FROM   data.Reference alt
+          WHERE  alt.CountryId = @CountryId
+            AND  alt.AltNameOf IS NOT NULL
+            AND  alt.Curated   = 0
+            AND  EXISTS (
+                SELECT 1 FROM data.Reference canon
+                WHERE  canon.CountryId = alt.CountryId
+                  AND  canon.ZpCode    = alt.ZpCode
+                  AND  canon.AltNameOf IS NULL
+                  AND  canon.Curated   = 1
+            )";
+
+    // Update timezone and mark TZ-checked for every row of a ZpCode.
+    public static readonly string UpdateCodeTimezone =
+        @"UPDATE data.Reference
+          SET    Timezone        = @Timezone,
+                 TimezoneChecked = 1,
+                 UpdatedAt       = SYSUTCDATETIME()
+          WHERE  CountryId = @CountryId
+            AND  ZpCode    = @ZpCode";
+
     public static readonly string GetAdminDivisionCounts =
         @"SELECT ra.Code AS AdminCode,
                  COUNT(*)                  AS NameCount,
@@ -171,6 +468,7 @@ public static class CommonQueries
             WHERE r.CountryId = @CountryId
               AND r.Curated   = 1
               AND r.AltNameOf IS NULL
+              AND r.Flagged   = 0
             ORDER BY r.ZpCode, r.IsDefault DESC, r.PlaceName";
 
     public static readonly string ExportReferenceDataWithCuration =
@@ -216,6 +514,7 @@ public static class CommonQueries
                     WHERE CountryId = r.CountryId AND LevelNumber = 1)
             WHERE r.CountryId = @CountryId
               AND r.Curated   = 1
+              AND r.Flagged   = 0
             ORDER BY r.ZpCode, r.IsDefault DESC, r.PlaceName";
 
     // Returns 1 if the incoming name matches any canonical name OR is the
@@ -477,6 +776,32 @@ public static class CommonQueries
               'America/Pangnirtung', 'America/Glace_Bay', 'America/Creston',
               'America/Shiprock'
           );";
+
+    // Remove US reference rows whose ZIP code is outside the USPS-assigned range 00501–99950.
+    // Run PurgeOutOfRangeUsAdmins first to satisfy the FK constraint, then PurgeOutOfRangeUs.
+    public static readonly string PurgeOutOfRangeUsAdmins =
+        @"DELETE ra FROM data.ReferenceAdmins ra
+          JOIN data.Reference r ON r.ReferenceId = ra.ReferenceId
+          WHERE r.CountryId = 'US'
+            AND TRY_CAST(r.ZpCode AS INT) IS NOT NULL
+            AND (TRY_CAST(r.ZpCode AS INT) < 501
+              OR TRY_CAST(r.ZpCode AS INT) > 99950)";
+
+    public static readonly string PurgeOutOfRangeUs =
+        @"DELETE FROM data.Reference
+          WHERE CountryId = 'US'
+            AND TRY_CAST(ZpCode AS INT) IS NOT NULL
+            AND (TRY_CAST(ZpCode AS INT) < 501
+              OR TRY_CAST(ZpCode AS INT) > 99950)";
+
+    // Count of US reference rows outside the valid range — preview before purge.
+    public static readonly string CountOutOfRangeUs =
+        @"SELECT COUNT(*)
+          FROM   data.Reference
+          WHERE  CountryId = 'US'
+            AND  TRY_CAST(ZpCode AS INT) IS NOT NULL
+            AND  (TRY_CAST(ZpCode AS INT) < 501
+               OR TRY_CAST(ZpCode AS INT) > 99950)";
 
     // Delete ReferenceAdmins for rows that became true duplicates after timezone normalisation.
     // A row is a true duplicate when its (CountryId, ZpCode, PlaceName) already has an IsDefault=1 row
