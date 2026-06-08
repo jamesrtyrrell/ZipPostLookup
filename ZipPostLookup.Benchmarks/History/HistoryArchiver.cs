@@ -14,6 +14,50 @@ namespace ZipPostLookup.Benchmarks.History;
 /// Append strategy: tar does not support in-place append, so we read all existing entries
 /// into memory, write them plus the new entry to a temp file, then atomically replace.
 /// </summary>
+internal enum ArchiveOutcome { Added, Overwritten, Skipped }
+
+/// <summary>
+/// Tracks the user's overwrite decision across a batch of archive appends. A single instance is
+/// shared by every <see cref="HistoryArchiver.AppendToArchive"/> call in one run so that choosing
+/// "yes to all" suppresses further prompts for the remaining reports.
+/// </summary>
+internal sealed class OverwritePrompt
+{
+    private bool _yesToAll;
+
+    /// <summary>
+    /// Returns true if the same-date entry should be overwritten. Prompts the user [y/n/a] unless
+    /// "yes to all" was previously chosen. 'a' sets yes-to-all for the rest of the run; empty/'n'
+    /// means skip; anything else re-prompts.
+    /// </summary>
+    public bool ShouldOverwrite(string entryName, string archiveName)
+    {
+        if (_yesToAll)
+            return true;
+
+        while (true)
+        {
+            Console.WriteLine();
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write($"  ⚠  '{entryName}' already exists in {archiveName} — overwrite? [y/n/(a) yes to all] ");
+            Console.ResetColor();
+
+            switch (Console.ReadLine()?.Trim().ToUpperInvariant())
+            {
+                case "Y":
+                    return true;
+                case "A":
+                    _yesToAll = true;
+                    return true;
+                case "N":
+                case "":
+                    return false;
+                // Any other input: re-prompt.
+            }
+        }
+    }
+}
+
 internal static class HistoryArchiver
 {
     private const string NamespacePrefix = "ZipPostLookup.Benchmarks.";
@@ -41,9 +85,12 @@ internal static class HistoryArchiver
     /// Appends the CSV at <paramref name="csvPath"/> into History/{className}.tar.gz
     /// as a dated entry: {yyyy-MM-dd}-{className}-report.csv.
     /// Creates the archive if it doesn't exist.
-    /// Returns false (and prints a warning) if a same-date entry already exists.
+    /// If a same-date entry already exists, <paramref name="prompt"/> decides whether to overwrite
+    /// it or skip; returns <see cref="ArchiveOutcome.Overwritten"/> or <see cref="ArchiveOutcome.Skipped"/>
+    /// accordingly. Otherwise returns <see cref="ArchiveOutcome.Added"/>.
     /// </summary>
-    public static bool AppendToArchive(string historyDir, string className, string csvPath)
+    public static ArchiveOutcome AppendToArchive(
+        string historyDir, string className, string csvPath, OverwritePrompt prompt)
     {
         var date        = DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd");
         var entryName   = $"{date}-{className}-report.csv";
@@ -51,7 +98,8 @@ internal static class HistoryArchiver
         var csvBytes    = File.ReadAllBytes(csvPath);
 
         // Read all existing entries (if archive exists).
-        var existing = new List<(string Name, byte[] Data)>();
+        var existing  = new List<(string Name, byte[] Data)>();
+        var overwrote = false;
 
         if (File.Exists(archivePath))
         {
@@ -67,10 +115,13 @@ internal static class HistoryArchiver
 
                 if (entry.Name == entryName)
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"  ⚠  '{entryName}' already exists in {className}.tar.gz — skipped.");
-                    Console.ResetColor();
-                    return false;
+                    // Same-date entry already archived — ask whether to replace it. Skipping it here
+                    // drops the old copy so the new CSV takes its place when we write below.
+                    if (!prompt.ShouldOverwrite(entryName, $"{className}.tar.gz"))
+                        return ArchiveOutcome.Skipped;
+
+                    overwrote = true;
+                    continue;
                 }
 
                 using var ms = new MemoryStream();
@@ -107,7 +158,7 @@ internal static class HistoryArchiver
             throw;
         }
 
-        return true;
+        return overwrote ? ArchiveOutcome.Overwritten : ArchiveOutcome.Added;
     }
 
     /// <summary>
