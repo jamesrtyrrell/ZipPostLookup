@@ -23,7 +23,6 @@ namespace ZipPostLookup.Benchmarks;
 /// </summary>
 [MemoryDiagnoser]
 [SimpleJob(RuntimeMoniker.Net80)]
-[Config(typeof(BenchmarkConfig))]
 public class ConstructionBenchmarks
 {
     // ── ZipPostLookup ─────────────────────────────────────────────────────────

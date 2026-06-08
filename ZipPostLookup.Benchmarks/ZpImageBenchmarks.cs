@@ -32,7 +32,6 @@ namespace ZipPostLookup.Benchmarks;
 [SimpleJob(RuntimeMoniker.Net80)]
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
 [CategoriesColumn]
-[Config(typeof(BenchmarkConfig))]
 public class ZpImageBenchmarks
 {
     // CountryCode is a readonly struct, so it cannot be a [Params] attribute argument

@@ -34,7 +34,7 @@ Console.ResetColor();
 
 var runStarted = DateTime.UtcNow;
 
-BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
+BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args, new BenchmarkConfig());
 
 // ── History archiving ────────────────────────────────────────────────────────
 

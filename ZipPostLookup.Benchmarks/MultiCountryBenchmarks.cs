@@ -11,7 +11,6 @@ namespace ZipPostLookup.Benchmarks;
 /// </summary>
 [MemoryDiagnoser]
 [SimpleJob(RuntimeMoniker.Net80)]
-[Config(typeof(BenchmarkConfig))]
 public class MultiCountryBenchmarks
 {
     private ZipPostRegistry _all = null!;

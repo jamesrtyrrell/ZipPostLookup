@@ -19,7 +19,6 @@ namespace ZipPostLookup.Benchmarks;
 [SimpleJob(RuntimeMoniker.Net80)]
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
 [CategoriesColumn]
-[Config(typeof(BenchmarkConfig))]
 public class ClosestImageBenchmarks
 {
     [Params("US", "MX")]
