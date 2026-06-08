@@ -19,6 +19,8 @@ public static class ImportCandidatesDisplay
         table.AddRow("Auto-rejected",          $"{counters.AutoRejected:N0}");
         table.AddRow("Special codes bypassed", $"[grey]{counters.SpecialCodes:N0}[/]");
         table.AddRow("Abbreviation matches",   $"[grey]{counters.AbbreviationMatches:N0}[/]");
+        table.AddRow("Curated — skipped",      $"[grey]{counters.CuratedSkipped:N0}[/]");
+        table.AddRow("Flagged — suppressed",   counters.FlaggedSkipped > 0 ? $"[red]{counters.FlaggedSkipped:N0}[/]" : "0");
 
         AnsiConsole.Write(table);
     }

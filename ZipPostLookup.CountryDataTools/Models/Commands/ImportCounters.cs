@@ -11,4 +11,6 @@ public sealed class ImportCounters
     public int AutoRejected          { get; set; }
     public int SpecialCodes          { get; set; }
     public int AbbreviationMatches   { get; set; }
+    public int CuratedSkipped        { get; set; }
+    public int FlaggedSkipped        { get; set; }
 }

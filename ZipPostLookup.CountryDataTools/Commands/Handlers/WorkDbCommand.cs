@@ -284,6 +284,15 @@ public static class WorkDbCommand
 
         try
         {
+            Console.WriteLine("  Resetting TimezoneChecked on rows with blank timezone...");
+            var blanksReset = await Dapper.SqlMapper.ExecuteAsync(conn,
+                CommonQueries.ResetBlankTimezoneChecked, transaction: tx);
+            if (blanksReset > 0)
+                AnsiConsole.MarkupLine(
+                    $"  [yellow]⚠  {blanksReset} row(s) had TimezoneChecked=1 with no timezone — reset to 0.[/]");
+            else
+                AnsiConsole.MarkupLine("  [green]✓ No blank-timezone rows with false TimezoneChecked.[/]");
+
             Console.WriteLine("  Normalising deprecated IANA timezone aliases...");
             var updated = await Dapper.SqlMapper.ExecuteAsync(conn,
                 CommonQueries.NormalizeDeprecatedTimezones, transaction: tx);
@@ -450,6 +459,24 @@ public static class WorkDbCommand
                 Console.WriteLine("  ✓ No new alternates found — AltNameOf is up to date.");
             else
                 AnsiConsole.MarkupLine($"  [green]✓ {linked} alternate link(s) set.[/]");
+
+            // Demote extra IsDefault=1 rows down to IsDefault=0 (keeps the earliest
+            // non-AltNameOf row as the winner). Runs unconditionally — cheap scan.
+            try
+            {
+                var demoted = await conn.ExecuteAsync(
+                    CommonQueries.FixDuplicateIsDefaults,
+                    new { CountryId = cc });
+                if (demoted > 0)
+                    AnsiConsole.MarkupLine(
+                        $"  [yellow]⚠  {demoted} duplicate IsDefault=1 row(s) demoted to IsDefault=0.[/]");
+            }
+            catch (Exception ex)
+            {
+                await Console.Error.WriteLineAsync(
+                    $"  ✗ Duplicate IsDefault fix failed for {cc}: {ex.Message}");
+                exitCode = 1;
+            }
 
             // Propagate curation flags from canonical rows to their alt-name children.
             // Runs whether or not new links were created — catches pre-existing orphans too.
@@ -696,10 +723,12 @@ public static class WorkDbCommand
                           Full wipe for a country — clears pipeline data AND
                           data.reference. Use to start completely from scratch.
               normalize-tz
-                          1. Normalise deprecated IANA timezone aliases to canonical forms.
-                          2. Delete resulting duplicate rows.
-                          3. Normalise admin level 1 name variants to dominant spelling.
-                          4. Resolve IANA timezone from Lat/Lng for rows where
+                          1. Reset TimezoneChecked=0 on rows with blank/null timezone
+                             (undoes false "verified" marks; rows re-surface in editor).
+                          2. Normalise deprecated IANA timezone aliases to canonical forms.
+                          3. Delete resulting duplicate rows.
+                          4. Normalise admin level 1 name variants to dominant spelling.
+                          5. Resolve IANA timezone from Lat/Lng for rows where
                              TimezoneChecked=0 — sets correct timezone and marks verified.
                           Idempotent. Re-export affected countries after running.
               normalize-names --country XX

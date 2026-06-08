@@ -10,4 +10,5 @@
   <Project Path="ZipPostLookup.CountryDataTools/ZipPostLookup.CountryDataTools.csproj" />
   <Project Path="ZipPostLookup.Tests/ZipPostLookup.Tests.csproj" />
   <Project Path="ZipPostLookup/ZipPostLookup.csproj" />
+  <Project Path="ZipPostLookup.Legacy/ZipPostLookup.Legacy.csproj" />
 </Solution>

@@ -9,7 +9,11 @@ namespace ZipPostLookup.CountryDataTools.Validation.Mx;
 /// two digits of the 5-digit ZIP identify the state. <see cref="ResolveAdmin1"/>
 /// uses this to return a canonical (Code, Name) pair without any API call.
 /// Ranges sourced from SEPOMEX / Wikipedia "Postal codes in Mexico".
-/// Gaps (17000–19999) are unassigned and return null.
+///
+/// CMX covers two discontiguous bands:
+///   00001–16999  (01xxx–16xxx; 00xxx parse to 1–999 after leading-zero strip)
+///   17000–19999  (CDMX overflow — previously documented as "unassigned" but
+///                 all confirmed SEPOMEX CDMX codes)
 /// </summary>
 public sealed class MxCountryRules : ICountryRules
 {
@@ -27,8 +31,10 @@ public sealed class MxCountryRules : ICountryRules
         if (!int.TryParse(zpCode, out var n)) return null;
         return n switch
         {
-            // 01000–16999: leading zero parsed away, so range starts at 1000
-            >= 1000  and <= 16999 => ("CMX", "Ciudad de México"),
+            // 00001–16999: leading zeros parsed away (00xxx → 1–999), all CMX
+            >= 1     and <= 16999 => ("CMX", "Ciudad de México"),
+            // 17000–19999: CDMX overflow codes (SEPOMEX confirmed)
+            >= 17000 and <= 19999 => ("CMX", "Ciudad de México"),
             >= 20000 and <= 20999 => ("AGS", "Aguascalientes"),
             >= 21000 and <= 22999 => ("BC",  "Baja California"),
             >= 23000 and <= 23999 => ("BCS", "Baja California Sur"),

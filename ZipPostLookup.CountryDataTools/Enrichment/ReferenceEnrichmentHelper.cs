@@ -110,6 +110,19 @@ internal static class ReferenceEnrichmentHelper
             }
         }
 
+        // Propagate the API timezone to any sibling rows that still have a blank
+        // timezone, so MarkCodeAsCurated's TimezoneChecked guard passes for all rows.
+        if (result.Timezone != null)
+        {
+            await conn.ExecuteAsync(
+                @"UPDATE data.Reference
+                  SET    Timezone  = @Timezone, UpdatedAt = SYSUTCDATETIME()
+                  WHERE  CountryId = @CountryId
+                    AND  ZpCode    = @ZpCode
+                    AND  (Timezone IS NULL OR Timezone = '' OR Timezone = '---')",
+                new { CountryId = countryUpper, ZpCode = zip, Timezone = result.Timezone }, tx);
+        }
+
         // Mark all rows for this zip as fully curated. The API confirmed the code
         // is valid; timezone and place names from the source CSV are trustworthy.
         await conn.ExecuteAsync(

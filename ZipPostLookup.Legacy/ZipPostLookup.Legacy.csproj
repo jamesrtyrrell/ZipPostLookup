@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<AssemblyName>ZipPostLookup</AssemblyName>
+		<RootNamespace>ZipPostLookup</RootNamespace>
+		<LangVersion>latest</LangVersion>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+
+		<!-- Package identity -->
+		<PackageId>ZipPostLookup.Legacy</PackageId>
+		<Version>1.0.0</Version>
+		<Authors>jamesrtyrrell</Authors>
+		<Copyright>Copyright ©James.r.Tyrrell 2026</Copyright>
+
+		<!-- Package description -->
+		<Description>Fast postal code lookup for .NET Standard 2.0 — compatible with .NET Framework 4.6.1+, .NET Core 2+, .NET 5–7, and Unity. Built-in data for US (41k zip codes), Canada (891k postal codes) and Mexico (32k postal codes). Lookup by zip/postal code, city, state, province and IANA timezone. For .NET 8+ apps use the ZipPostLookup package instead (FrozenDictionary-backed, binary ZPI format).</Description>
+		<PackageTags>dotnet;csharp;zipcode;postal-code;geocoding;address-lookup;timezone;nuget;canada;mexico;netstandard;netframework</PackageTags>
+		<PackageReadmeFile>README.MD</PackageReadmeFile>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+
+		<!-- Repository links -->
+		<PackageProjectUrl>https://github.com/jamesrtyrrell/ZipPostLookup</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/jamesrtyrrell/ZipPostLookup</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+
+		<!-- Symbols for debugging support -->
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Required for netstandard2.0 — built into net8.0+ -->
+		<PackageReference Include="System.Text.Json" Version="9.0.0" />
+	</ItemGroup>
+
+	<!-- Source: link all .cs files from the main ZipPostLookup project.
+	     #if NET8_0_OR_GREATER guards in ZPImage/ files compile them out automatically. -->
+	<ItemGroup>
+		<Compile Include="..\ZipPostLookup\**\*.cs"
+		         Exclude="..\ZipPostLookup\obj\**\*.cs;..\ZipPostLookup\bin\**\*.cs"
+		         Link="%(RecursiveDir)%(Filename)%(Extension)" />
+	</ItemGroup>
+
+	<!-- Data: CSV resources only — no ZPI binary images -->
+	<ItemGroup>
+		<EmbeddedResource Include="..\ZipPostLookup\Data\us\us.csv" Link="Data\us\us.csv" />
+		<EmbeddedResource Include="..\ZipPostLookup\Data\ca\ca.csv" Link="Data\ca\ca.csv" />
+		<EmbeddedResource Include="..\ZipPostLookup\Data\mx\mx.csv" Link="Data\mx\mx.csv" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="..\README.MD" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+</Project>

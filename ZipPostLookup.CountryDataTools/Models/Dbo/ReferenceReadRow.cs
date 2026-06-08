@@ -14,6 +14,8 @@ public sealed class ReferenceReadRow
     public string Timezone        { get; set; } = "";
     public bool   IsDefault       { get; set; }
     public bool   TimezoneChecked { get; set; }
+    public bool   Curated         { get; set; }
+    public bool   Flagged         { get; set; }
     public string  Lat        { get; set; } = "---";
     public string  Lng        { get; set; } = "---";
     public string? AltNameOf  { get; set; }

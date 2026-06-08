@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net10.0;net8.0;netstandard2.0</TargetFrameworks>
+		<TargetFrameworks>net10.0;net8.0</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 
@@ -18,7 +18,7 @@
 		<Copyright>Copyright ©James.r.Tyrrell 2026</Copyright>
 
 		<!-- Package description -->
-		<Description>Fast, zero-allocation postal code lookup for .NET. Built-in data for US (41k zip codes), Canada (891k postal codes) and Mexico (32k postal codes). Lookup by zip/postal code, city, state, province and IANA timezone. FrozenDictionary-backed on .NET 8+. Extensible via IZipDataSource.</Description>
+		<Description>Fast, zero-allocation postal code lookup for .NET 8+. Built-in data for US (41k zip codes), Canada (891k postal codes) and Mexico (32k postal codes). Lookup by zip/postal code, city, state, province and IANA timezone. FrozenDictionary-backed for low-allocation hot paths. Extensible via ICodeDataSource. For .NET Standard 2.0 / .NET Framework support use the ZipPostLookup.Legacy package.</Description>
 		<PackageTags>dotnet;csharp;zipcode;postal-code;geocoding;address-lookup;timezone;nuget;canada;mexico</PackageTags>
 		<PackageReadmeFile>README.MD</PackageReadmeFile>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -35,26 +35,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!--
-      System.Text.Json is built into net8.0+ but needs an explicit package
-      reference for netstandard2.0 compatibility.
-    -->
-		<PackageReference Include="System.Text.Json" Version="9.0.0" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<EmbeddedResource Include="Data\us\us.csv" />
 		<EmbeddedResource Include="Data\ca\ca.csv" />
 		<EmbeddedResource Include="Data\mx\mx.csv" />
 	</ItemGroup>
 
-	<!--
-	  ZP frozen images (binary lookup format). The reader is net8.0+ only, so the images are
-	  embedded only for compatible targets to avoid bloating the netstandard2.0 build.
-	  Filename convention: {cc}.u16.zpi.br (nameIndex u16, normal) or {cc}.u32.zpi.br (nameIndex u32,
-	  large datasets > 65k unique names). The glob also picks up legacy {cc}.zpi.br during transition.
-	-->
-	<ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
+	<!-- ZP frozen images. Filename convention: {cc}.u16.zpi.br or {cc}.u32.zpi.br. -->
+	<ItemGroup>
 		<EmbeddedResource Include="Data\us\us*.zpi.br" />
 		<EmbeddedResource Include="Data\ca\ca*.zpi.br" />
 		<EmbeddedResource Include="Data\mx\mx*.zpi.br" />

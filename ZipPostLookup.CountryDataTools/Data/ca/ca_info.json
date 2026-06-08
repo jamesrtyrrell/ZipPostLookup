@@ -17,7 +17,7 @@
   "CodeRanges": true,
   "Curated": true,
   "CurationStatus": "Curated",
-  "LastUpdated": "2026-06-07",
+  "LastUpdated": "2026-06-08",
   "CodeFormat": "A1A 1A1",
   "CodeRegex": "^[A-Z]\\d[A-Z] \\d[A-Z]\\d$",
   "Description": "Canadian provinces and territories with postal abbreviations and capitals.",

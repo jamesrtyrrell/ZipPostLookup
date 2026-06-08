@@ -27,8 +27,10 @@ Organised by the breadcrumb path shown in the title bar so that naming any path 
 | `ZipPostLookup › Export › zpi` | `Dashboard/ExportDashboard.cs` | inner loop |
 | `ZipPostLookup › Analyse` | `Dashboard/AnalyseDashboard.cs` | `RunAsync` |
 | `ZipPostLookup › Integrity` | `Dashboard/IntegrityDashboard.cs` | `RunAsync` |
-| `ZipPostLookup › Integrity › {CC}` | `Dashboard/IntegrityDashboard.cs` | single-country branch |
-| `ZipPostLookup › Integrity › All` | `Dashboard/IntegrityDashboard.cs` | `RunAllAndBrowseAsync` |
+| `ZipPostLookup › Integrity › ZPL Data › {CC}` | `Dashboard/IntegrityDashboard.cs` | `RunZplModeAsync` |
+| `ZipPostLookup › Integrity › ZPL Data › All` | `Dashboard/IntegrityDashboard.cs` | `RunZplAllAndBrowseAsync` |
+| `ZipPostLookup › Integrity › CDT DB › {CC}` | `Dashboard/IntegrityDashboard.cs` | `RunCdtDbModeAsync` |
+| `ZipPostLookup › Integrity › CDT DB › All` | `Dashboard/IntegrityDashboard.cs` | `RunCdtDbModeAsync` |
 | `ZipPostLookup › Convert` | `Dashboard/ConvertDashboard.cs` | `RunAsync` |
 | `ZipPostLookup › Snapshot` | `Dashboard/SnapshotDashboard.cs` | `RunAsync` |
 | `ZipPostLookup › DB` | `Dashboard/DbDashboard.cs` | `RunAsync` |
@@ -38,12 +40,16 @@ Organised by the breadcrumb path shown in the title bar so that naming any path 
 | `ZipPostLookup › DB › newrun` | `Dashboard/DbDashboard.cs` | `RunNewRunAsync` |
 | `ZipPostLookup › DB › normalize-tz` | `Dashboard/DbDashboard.cs` | `RunSimpleAsync("normalize-tz")` |
 | `ZipPostLookup › DB › normalize-names` | `Dashboard/DbDashboard.cs` | `RunNormalizeNamesAsync` |
+| `ZipPostLookup › DB › normalize-admins` | `Dashboard/DbDashboard.cs` | `RunNormalizeAdminsAsync` |
+| `ZipPostLookup › DB › purge-oob-us` | `Dashboard/DbDashboard.cs` | `RunSimpleAsync("purge-oob-us")` |
 | `ZipPostLookup › DB › clear` | `Dashboard/DbDashboard.cs` | `RunWithCountryAsync("clear")` |
 | `ZipPostLookup › DB › reset` | `Dashboard/DbDashboard.cs` | `RunWithCountryAsync("reset")` |
 | `ZipPostLookup › ZpCode Editor` | `Dashboard/ZpCodeEditorDashboard.cs` | `RunAsync` |
-| `ZipPostLookup › ZpCode Editor › {CC}` | `Dashboard/ZpCodeEditorDashboard.cs` | `BrowseCodesAsync` |
-| `ZipPostLookup › ZpCode Editor › {CC} › {ZpCode}` | `Dashboard/ZpCodeEditorDashboard.cs` | `EditCodeAsync` |
-| `ZipPostLookup › ZpCode Editor › {CC} › {ZpCode} › Edit Timezone` | `Dashboard/ZpCodeEditorDashboard.cs` | `PromptTimezoneAsync` |
+| `ZipPostLookup › ZpCode Editor › {CC}` | `Dashboard/ZpCodeEditorDashboard.cs` | `BrowseCodesAsync` (uncurated) |
+| `ZipPostLookup › ZpCode Editor › {CC} › Flagged` | `Dashboard/ZpCodeEditorDashboard.cs` | `BrowseCodesAsync` (flagged mode) |
+| `ZipPostLookup › ZpCode Editor › {CC} › {ZpCode}` | `Dashboard/ZpCodeEditorDashboard.cs` | `ViewCodeAsync` |
+| `ZipPostLookup › ZpCode Editor › {CC} › {ZpCode} › Edit` | `Dashboard/ZpCodeEditorDashboard.cs` | `EditRowAsync` |
+| `ZipPostLookup › ZpCode Editor › {CC} › {ZpCode} › Edit › {Field}` | `Dashboard/ZpCodeEditorDashboard.cs` | `EditFieldAsync` |
 
 ---
 
@@ -71,8 +77,10 @@ The main command menu. Displays all 10 commands on the left alongside an all-cou
 
 **Keyboard:** ↑↓ move · Enter select · Esc exit to terminal
 
+**Commands (in menu order):** ingest · validate · enrich · export · analyse · integrity · convert · snapshot · db · editor
+
 **Files:**
-- `Dashboard/DashboardCommand.cs` — `RunAsync`, `Render`, `BuildMenuTable`
+- `Dashboard/DashboardCommand.cs` — `RunAsync`, `Render`, `BuildMenuTable`, `BuildCommands`
 - `Dashboard/DashboardStats.cs` — `TryLoadAllAsync`, `BuildTable`
 - `Database/Sql/CommonQueries.cs` — `GetAllCountryCurationStats`
 
@@ -172,7 +180,7 @@ Exports the source-of-truth reference CSV to `CountryDataTools/Data/{cc}/`. Afte
 
 ## Export › main
 
-Exports optimised library CSV (range-compressed, AltNameOf rows excluded) to `ZipPostLookup/Data/{cc}/`. Options: country, `--curated-only`.
+Exports optimised library CSV (range-compressed, AltNameOf rows excluded, Flagged rows excluded) to `ZipPostLookup/Data/{cc}/`. Options: country, `--curated-only`.
 
 **Files:**
 - `Dashboard/ExportDashboard.cs` — inner loop, `TargetMain`
@@ -201,36 +209,51 @@ Analyses curated reference data and writes a Markdown report to `DataAnalysis/`.
 
 # ZipPostLookup › Integrity
 
-Verifies embedded library data against the reference DB by sampling random codes. Prompts for country (or all) and sample size (default 1000). Running all three countries writes per-country report files then enters the report pager (← → to browse, Esc to exit).
+Two-mode integrity screen. First menu selects **ZPL Data** (library vs DB sampling) or **CDT DB** (DB quality scan). Second menu selects country (US / CA / MX / All). Running All enters a ← → report browser after all countries complete.
+
+**Keyboard:** ↑↓/Enter menu · ← → browse reports (All mode) · Esc back
 
 **Files:**
-- `Dashboard/IntegrityDashboard.cs` — `RunAsync`, `RunAllAndBrowseAsync`, `BrowseReports`
-- `Commands/Handlers/IntegrityCheckCommand.cs` — `RunAsync(string[] args)`
+- `Dashboard/IntegrityDashboard.cs` — `RunAsync`, `RunZplModeAsync`, `RunCdtDbModeAsync`, `BrowseReports`
 
-## Integrity › {CC}
+## Integrity › ZPL Data › {CC}
 
-Single-country integrity run. Streams results to screen; "Press any key" to return.
-
-**Files:**
-- `Dashboard/IntegrityDashboard.cs` — single-country branch in `RunAsync`
-- `Commands/Handlers/IntegrityCheckCommand.cs`
-
-## Integrity › All
-
-Runs US → CA → MX in sequence with a 2-second pause between countries. Writes report files to `DataAnalysis/{cc}-integrity-{yyyyMMdd}.md`. After all three complete, enters the multi-page report browser (← → navigate countries, Esc exit).
+Samples random curated codes from the DB and verifies they resolve correctly against the embedded library CSV/ZPI. Prompts for sample size (default 1000). Single-country run streams results to screen; "Press any key" to return.
 
 **Files:**
-- `Dashboard/IntegrityDashboard.cs` — `RunAllAndBrowseAsync`, `BrowseReports`
+- `Dashboard/IntegrityDashboard.cs` — `RunZplModeAsync`
+- `Commands/Handlers/IntegrityCheckCommand.cs` — `RunForCountryAsync`
+- `Commands/Display/IntegrityDisplay.cs` — `PrintSummary`
+
+## Integrity › ZPL Data › All
+
+Runs US → CA → MX in sequence with a 2-second pause between countries. Writes report files to `DataAnalysis/{cc}-integrity-{yyyyMMdd}.md`. After all three complete, enters the ← → report browser showing `IntegrityCheckSummary` per country.
+
+**Files:**
+- `Dashboard/IntegrityDashboard.cs` — `RunZplAllAndBrowseAsync`, `BrowseReports`
 - Report files: `DataAnalysis/{cc}-integrity-{yyyyMMdd}.md`
+
+## Integrity › CDT DB › {CC}
+
+Scans `data.Reference` for 9 data-quality problems (admin mismatches, missing admin1, orphan AltNameOf, duplicate IsDefault, invalid ZpCode format, curated codes with no default row, alt-name rows marked IsDefault, curated blank place names, TimezoneChecked rows with blank timezone). Flagged+Curated rows are excluded from all checks. Writes a Markdown report to `DataAnalysis/{cc}-db-integrity-{yyyyMMdd}.md`.
+
+**Files:**
+- `Dashboard/IntegrityDashboard.cs` — `RunCdtDbModeAsync`
+- `Commands/Handlers/CdtDbIntegrityCommand.cs` — `RunForCountryAsync`, `PrintSummaryTable`, `BuildMarkdownReport`
+- `Database/Sql/CommonQueries.cs` — `GetCuratedDefaultAdminCodes`, `GetCuratedMissingAdmin1Count`, `GetOrphanAltNamesDetailed`, `GetDuplicateIsDefaultCodes`, `GetInvalidZpCodes`, `GetCuratedCodesWithNoDefault`, `GetAltNameRowsMarkedDefault`, `GetCuratedBlankPlaceNames`, `GetCheckedBlankTimezones`
+
+## Integrity › CDT DB › All
+
+Runs US → CA → MX in sequence. After all three complete, enters the ← → report browser showing `DbCheckResults` summary table per country via `CdtDbIntegrityCommand.PrintSummaryTable`.
 
 ---
 
 # ZipPostLookup › Convert
 
-Converts a GeoNames or OpenStreetMap TSV to a candidate CSV. Prompts for input TSV path (blank = back), optional country override, optional output path, and `--no-prompts` flag.
+Converts a GeoNames or OpenStreetMap TSV to a candidate CSV. Prompts for input TSV path (blank = back), optional country override, optional output path, and `--no-prompts` flag. Leading/trailing `"` or `'` are stripped from path inputs automatically.
 
 **Files:**
-- `Dashboard/ConvertDashboard.cs` — `RunAsync`
+- `Dashboard/ConvertDashboard.cs` — `RunAsync`, `StripPathQuotes`
 - `Commands/Handlers/ConvertKnownFormatsCommand.cs` — `RunAsync(string[] args)`
 
 ---
@@ -247,7 +270,7 @@ Full export pipeline for all three countries in sequence. Step 1: `export --targ
 
 # ZipPostLookup › DB
 
-Submenu for managing the working database connection and pipeline state. Destructive subcommands (clear, reset) are highlighted red in the menu.
+Submenu for managing the working database connection and pipeline state. Destructive subcommands (purge-oob-us, clear, reset) are highlighted red in the menu.
 
 **Files:** `Dashboard/DbDashboard.cs` — `RunAsync`
 
@@ -298,13 +321,36 @@ Normalises timezone aliases (e.g. deprecated IANA names) and resolves timezones 
 
 ## DB › normalize-names
 
-Detects place-name abbreviation alternates (e.g. "St." vs "Saint") and links them via `data.Reference.AltNameOf`. Also propagates curation flags to orphaned alt-name rows whose canonical code is already curated.
+Three steps run in sequence per country:
+1. Detects place-name abbreviation alternates (e.g. "St." vs "Saint") and links them via `data.Reference.AltNameOf`. Clears `AltNameOf` from any `IsDefault=1` row before processing.
+2. Demotes duplicate `IsDefault=1` rows — keeps the earliest non-AltNameOf row as winner, clears `IsDefault` on all others (`FixDuplicateIsDefaults`).
+3. Propagates curation flags (TimezoneChecked + NameChecked) from canonical rows to any still-uncurated alt-name children (`FixOrphanAltNames`).
+
+Prompts: country (US / CA / MX / All).
 
 **Files:**
 - `Dashboard/DbDashboard.cs` — `RunNormalizeNamesAsync`
 - `Commands/Handlers/WorkDbCommand.cs` — `RunNormalizeNamesAsync`
-- `Validation/NormalizePlaceNamesCheck.cs`
-- `Database/Sql/CommonQueries.cs` — `FixOrphanAltNames`
+- `Validation/Export/NormalizePlaceNamesCheck.cs` — abbreviation-linking logic
+- `Database/Sql/CommonQueries.cs` — `FixDuplicateIsDefaults`, `FixOrphanAltNames`
+
+## DB › normalize-admins
+
+Backfills missing `Admin1Code` / `Admin1Name` in `data.ReferenceAdmins` using ZIP-prefix rules (`ResolveAdmin1`). US and MX only (CA has no prefix rule). Prompts: country (US / MX / All US+MX).
+
+**Files:**
+- `Dashboard/DbDashboard.cs` — `RunNormalizeAdminsAsync`
+- `Commands/Handlers/WorkDbCommand.cs` — `RunNormalizeAdminsAsync`
+- `Validation/CountryRulesFactory.cs` — `ICountryRules.ResolveAdmin1`
+
+## DB › purge-oob-us ⚠
+
+Removes US `data.Reference` rows whose ZipCode falls outside the valid range 00501–99950. One-shot with no country prompt.
+
+**Files:**
+- `Dashboard/DbDashboard.cs` — `RunSimpleAsync("purge-oob-us", [])`
+- `Commands/Handlers/WorkDbCommand.cs` — `RunPurgeOutOfRangeUsAsync`
+- `Database/Sql/CommonQueries.cs` — `PurgeOutOfRangeUsAdmins`, `PurgeOutOfRangeUs`
 
 ## DB › clear ⚠
 
@@ -326,9 +372,9 @@ Full wipe — removes `data.Reference` too. Requires typing the country code to 
 
 # ZipPostLookup › ZpCode Editor
 
-Entry screen for the curation workflow. Loads all-country stats from the DB and displays them in a progress table (rows: CA / MX / US · columns: Tz. Checked / Name Checked / Curated / Total / Remaining / Progress). Below the table, a country picker lets you enter a country's uncurated code list.
+Entry screen. Loads all-country stats from the DB and displays them in a progress table. Below the table, a country picker lets you choose a country, then a mode picker selects **Edit Uncurated** or **Edit Flagged**.
 
-**Keyboard:** ↑↓ move · Enter select country · Esc back to Dashboard
+**Keyboard:** ↑↓ move · Enter select · Esc back to Dashboard
 
 **Files:**
 - `Dashboard/ZpCodeEditorDashboard.cs` — `RunAsync`
@@ -337,36 +383,66 @@ Entry screen for the curation workflow. Loads all-country stats from the DB and 
 
 ## ZpCode Editor › {CC}
 
-Paginated browse of uncurated codes for the selected country. Left panel: code list (`Code · Admin · TZ ✓ · Nm ✓ · Name`), 15 rows per page with a count + page caption. Right panel: slim vertical stats for this country only (`TZ ✓ / Nm ✓ / Curated / Total / Remaining / Progress / Orphans` if any). If all codes are curated but orphaned alt-name rows exist, shows an orphan-fix prompt instead of the list.
+Paginated browse of individual uncurated `data.Reference` rows for the selected country (15 rows/page). Left panel: row list with columns Code · D (IsDefault) · TZ✓ · Nm✓ · ⚑ (Flagged) · Place Name · Timezone · Lat · Lng · AltNameOf · Admin. Right panel: slim vertical stats for this country (TZ ✓ / Nm ✓ / Curated / Total / Remaining / Progress / Orphans if any). If all codes curated but orphaned alt-name rows exist, shows the orphan-fix prompt.
 
-**Keyboard:** ↑↓ move · PgUp/PgDn page · Enter open code · O fix orphans (when shown) · Esc back
+**Keyboard:** ↑↓ move · PgUp/PgDn page · Enter open detail · O fix orphans (when shown) · Esc back
 
 **Files:**
-- `Dashboard/ZpCodeEditorDashboard.cs` — `BrowseCodesAsync`, `RenderListPage`, `BuildCodeListTable`, `BuildCurrentCountryStatsTable`, `LoadPageAsync`, `RunOrphanFixAsync`
-- `Database/Sql/CommonQueries.cs` — `GetCurationStats`, `GetUncuratedCodeCount`, `GetUncuratedCodesPage`, `GetOrphanAltNameCount`, `FixOrphanAltNames`
-- `Database/WorkDb/IWorkDbConnectionFactory.cs` — connection factory (single connection, sequential awaits — no MARS)
+- `Dashboard/ZpCodeEditorDashboard.cs` — `BrowseCodesAsync`, `RenderBrowsePage`, `BuildBrowseTable`, `BuildCurrentCountryStatsTable`, `LoadBrowsePageAsync`, `RunOrphanFixAsync`
+- `Database/Sql/CommonQueries.cs` — `GetCurationStats`, `GetBrowseRowCount`, `GetBrowseRowsPage`, `GetOrphanAltNameCount`, `FixOrphanAltNames`
 
-**DTOs (private to `ZpCodeEditorDashboard`):**
-- `CodeRow` — list row: `ZpCode`, `PlaceName`, `Timezone`, `Admin1`, `Admin1Code`, `TimezoneChecked`, `NameChecked`, `NameCount`
-- `CurationStats` — right-panel stats: `TotalTimezoneChecked`, `TotalNameChecked`, `TotalCurated`, `Total`, `Remaining`, `PctComplete`, `OrphanAltNames`
+**DTOs (private):**
+- `BrowseRow` — `ZpCode`, `PlaceName`, `Timezone`, `IsDefault`, `Lat`, `Lng`, `AltNameOf`, `Admin1`, `Admin1Code`, `TimezoneChecked`, `NameChecked`, `Flagged`
+- `CurationStats` — `TotalTimezoneChecked`, `TotalNameChecked`, `TotalCurated`, `Total`, `Remaining`, `PctComplete`, `OrphanAltNames`
+
+## ZpCode Editor › {CC} › Flagged
+
+Same layout as the uncurated browse screen but filtered to `Flagged = 1` rows. Header shows `ZpCode Editor › {CC} › Flagged`. The orphan-fix prompt is suppressed. "No flagged codes" shown when empty.
+
+**Files:**
+- `Dashboard/ZpCodeEditorDashboard.cs` — `BrowseCodesAsync(country, flaggedMode: true)`
+- `Database/Sql/CommonQueries.cs` — `GetFlaggedBrowseRowCount`, `GetFlaggedBrowseRowsPage`
 
 ## ZpCode Editor › {CC} › {ZpCode}
 
-Detail view for a single postal code. Shows all `data.Reference` rows for this code — default row first, then alternates. Each row shows: IsDefault tag, TZ ✓/✗, Nm ✓/✗, PlaceName (truncated to 33 chars), Timezone. `AltNameOf` rows show their canonical code instead of curation icons. Curation actions apply to **all rows** for this ZpCode. After each action the rows reload; if all rows are curated the view closes automatically and returns to the browse list.
+Detail view for a single postal code. Shows all `data.Reference` rows for this code in a table (default row first). Columns: D · TZ✓ · Nm✓ · ⚑ · PlaceName · Timezone · Lat · Lng · AltNameOf · Admin1. Selected row highlighted. Curation actions C/T/N/F apply to **all rows** for this ZpCode. After each action rows reload; if all rows become curated the view closes automatically.
 
-**Keyboard:** C curate all · T mark TZ checked · N mark names checked · E edit timezone · Esc back
+**Keyboard:** ↑↓ move · C curate all · T TZ checked · N names checked · E edit selected row · F flag/unflag all · Esc back
 
 **Files:**
-- `Dashboard/ZpCodeEditorDashboard.cs` — `EditCodeAsync`, `LoadDetailRowsAsync`, `RunUpdateAsync`
-- `Database/Sql/CommonQueries.cs` — `GetReferenceRowsByCode`, `MarkCodeAsCurated`, `MarkCodeTimezoneChecked`, `MarkCodeNameChecked`, `UpdateCodeTimezone`
+- `Dashboard/ZpCodeEditorDashboard.cs` — `ViewCodeAsync`, `LoadDetailRowsAsync`, `RunUpdateAsync`, `BuildDetailTable`
+- `Database/Sql/CommonQueries.cs` — `GetCodeDetailRows`, `MarkCodeAsCurated`, `MarkCodeTimezoneChecked`, `MarkCodeNameChecked`, `FlagCode`, `UnflagCode`
 
 **DTO (private):**
-- `CodeDetail` — `ZpCode`, `PlaceName`, `Timezone`, `IsDefault`, `Admin1`, `Admin1Code`, `TimezoneChecked`, `NameChecked`, `AltNameOf`
+- `DetailRow` — `ReferenceId`, `ZpCode`, `PlaceName`, `Timezone`, `IsDefault`, `Lat`, `Lng`, `AltNameOf`, `Admin1`, `Admin1Code`, `Admin2`, `Admin2Code`, `TimezoneChecked`, `NameChecked`, `Flagged`
 
-## ZpCode Editor › {CC} › {ZpCode} › Edit Timezone
+## ZpCode Editor › {CC} › {ZpCode} › Edit
 
-Simple IANA timezone text prompt. Pre-filled with the current default row's timezone value. Blank input cancels without writing. On confirm, updates Timezone + sets TimezoneChecked = 1 for all rows of this ZpCode.
+Vertical field editor for a single `data.Reference` row. Lists all 10 editable fields; selected field is highlighted. Press Enter to edit the highlighted field; Esc returns to the detail view. If the Code field was renamed, the new code is propagated back to `ViewCodeAsync` so the detail view stays in sync.
+
+**Editable fields:** Code · PlaceName · Timezone · Lat · Lng · AltNameOf · Admin1Code · Admin1Name · Admin2Code · Admin2Name
+
+**Keyboard:** ↑↓ move · Enter edit field · Esc back
 
 **Files:**
-- `Dashboard/ZpCodeEditorDashboard.cs` — `PromptTimezoneAsync` (prompt only), `EditCodeAsync` (calls `UpdateCodeTimezone` on return)
-- `Database/Sql/CommonQueries.cs` — `UpdateCodeTimezone`
+- `Dashboard/ZpCodeEditorDashboard.cs` — `EditRowAsync`, `BuildEditTable`, `GetFieldValue`
+
+## ZpCode Editor › {CC} › {ZpCode} › Edit › {Field}
+
+Single-field prompt screen. Shows the current value and prompts for a new value (blank = cancel). Field-specific behaviour:
+
+| Field | Behaviour |
+|---|---|
+| `Code` | Requires Y/N confirmation before writing. Updates only the specific `ReferenceId` row (`RenameZpCode`). Returns the new code to `EditRowAsync` so the header updates. |
+| `PlaceName` | Updates by `ReferenceId` (`UpdateReferencePlaceNameById`). |
+| `Timezone` | Updates by `ReferenceId` (`UpdateReferenceTimezoneById`). |
+| `Lat` / `Lng` | Updates by `ReferenceId` (`UpdateReferenceLatById` / `UpdateReferenceLngById`). |
+| `AltNameOf` | `---` or `—` input clears to NULL. Updates by `ReferenceId` (`UpdateReferenceAltNameOfById`). |
+| `Admin1Code` / `Admin1Name` | MERGE into `data.ReferenceAdmins` at level 1 (`UpsertReferenceAdmin`). |
+| `Admin2Code` / `Admin2Name` | MERGE into `data.ReferenceAdmins` at level 2 (`UpsertReferenceAdmin`). |
+
+After the write, reloads the row via `GetCodeDetailRowById` so the edit table reflects the saved value.
+
+**Files:**
+- `Dashboard/ZpCodeEditorDashboard.cs` — `EditFieldAsync`, `LoadSingleDetailRowAsync`
+- `Database/Sql/CommonQueries.cs` — `RenameZpCode`, `UpdateReferencePlaceNameById`, `UpdateReferenceTimezoneById`, `UpdateReferenceLatById`, `UpdateReferenceLngById`, `UpdateReferenceAltNameOfById`, `UpsertReferenceAdmin`, `GetCodeDetailRowById`, `GetAdminLevelIdForLevel`

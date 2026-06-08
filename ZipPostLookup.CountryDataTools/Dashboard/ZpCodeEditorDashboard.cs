@@ -315,7 +315,8 @@ internal static class ZpCodeEditorDashboard
                     break;
 
                 case ConsoleKey.E when rows.Count > 0:
-                    await EditRowAsync(factory, country, zpCode, rows[selectedIndex]);
+                    var renamedTo = await EditRowAsync(factory, country, zpCode, rows[selectedIndex]);
+                    if (renamedTo is not null) zpCode = renamedTo;
                     rows = await LoadDetailRowsAsync(factory, country, zpCode) ?? rows;
                     selectedIndex = Math.Min(selectedIndex, Math.Max(0, rows.Count - 1));
                     break;
@@ -339,17 +340,19 @@ internal static class ZpCodeEditorDashboard
     // ── Edit row (ZpCode Editor › {CC} › {ZpCode} › Edit) ────────────────────
 
     private static readonly string[] EditableFields =
-        ["PlaceName", "Timezone", "Lat", "Lng", "AltNameOf",
+        ["Code", "PlaceName", "Timezone", "Lat", "Lng", "AltNameOf",
          "Admin1Code", "Admin1Name", "Admin2Code", "Admin2Name"];
 
-    private static async Task EditRowAsync(
+    private static async Task<string?> EditRowAsync(
         IWorkDbConnectionFactory factory, string country, string zpCode, DetailRow row)
     {
         var selectedField = 0;
+        string? renamedTo = null;
 
         while (true)
         {
-            DashboardRenderer.RenderHeader($"ZpCode Editor › {country} › {zpCode} › Edit");
+            // Use row.ZpCode so the header reflects the current code after a rename.
+            DashboardRenderer.RenderHeader($"ZpCode Editor › {country} › {row.ZpCode} › Edit");
             AnsiConsole.MarkupLine("  [grey]Select a field and press Enter to edit.[/]");
             AnsiConsole.WriteLine();
 
@@ -370,18 +373,19 @@ internal static class ZpCodeEditorDashboard
                     break;
 
                 case ConsoleKey.Enter:
-                    await EditFieldAsync(factory, country, zpCode, row, EditableFields[selectedField]);
+                    var newCode = await EditFieldAsync(factory, country, row.ZpCode, row, EditableFields[selectedField]);
+                    if (newCode is not null) renamedTo = newCode;
                     var updated = await LoadSingleDetailRowAsync(factory, row.ReferenceId);
                     if (updated is not null) row = updated;
                     break;
 
                 case ConsoleKey.Escape:
-                    return;
+                    return renamedTo;
             }
         }
     }
 
-    private static async Task EditFieldAsync(
+    private static async Task<string?> EditFieldAsync(
         IWorkDbConnectionFactory factory, string country, string zpCode,
         DetailRow row, string fieldName)
     {
@@ -396,7 +400,7 @@ internal static class ZpCodeEditorDashboard
         var input = AnsiConsole.Prompt(
             new TextPrompt<string>($"  New {fieldName}:").AllowEmpty());
 
-        if (string.IsNullOrWhiteSpace(input)) return;
+        if (string.IsNullOrWhiteSpace(input)) return null;
         var newValue = input.Trim();
 
         try
@@ -405,6 +409,27 @@ internal static class ZpCodeEditorDashboard
 
             switch (fieldName)
             {
+                case "Code":
+                    if (string.Equals(newValue, zpCode, StringComparison.OrdinalIgnoreCase))
+                    {
+                        AnsiConsole.MarkupLine("  [grey]Code unchanged.[/]");
+                        return null;
+                    }
+                    AnsiConsole.WriteLine();
+                    AnsiConsole.MarkupLine(
+                        $"  [yellow]⚠  Change code [bold]{Markup.Escape(zpCode)}[/] → [bold]{Markup.Escape(newValue)}[/]" +
+                        $" for ReferenceId [bold]{row.ReferenceId}[/] ([grey]{Markup.Escape(row.PlaceName)}[/]) only.[/]");
+                    AnsiConsole.MarkupLine("  [grey]Press [/][bold yellow]Y[/][grey] to confirm, any other key cancels.[/]");
+                    if (Console.ReadKey(intercept: true).Key != ConsoleKey.Y)
+                    {
+                        AnsiConsole.MarkupLine("[grey]  Cancelled.[/]");
+                        return null;
+                    }
+                    await conn.ExecuteAsync(
+                        CommonQueries.RenameZpCode,
+                        new { row.ReferenceId, NewCode = newValue });
+                    return newValue;
+
                 case "PlaceName":
                     await conn.ExecuteAsync(CommonQueries.UpdateReferencePlaceNameById,
                         new { ReferenceId = row.ReferenceId, PlaceName = newValue });
@@ -483,12 +508,15 @@ internal static class ZpCodeEditorDashboard
             AnsiConsole.MarkupLine("[grey]  Press any key...[/]");
             Console.ReadKey(intercept: true);
         }
+
+        return null;
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     private static string GetFieldValue(DetailRow row, string fieldName) => fieldName switch
     {
+        "Code"       => row.ZpCode,
         "PlaceName"  => row.PlaceName,
         "Timezone"   => row.Timezone,
         "Lat"        => row.Lat,
@@ -736,9 +764,6 @@ internal static class ZpCodeEditorDashboard
             .AddColumn(new TableColumn("").Width(14))
             .AddColumn(new TableColumn(""));
 
-        // Code is always shown read-only at the top.
-        table.AddRow(" ", "[grey]Code[/]", $"[grey]{Markup.Escape(row.ZpCode)}[/]");
-
         for (var i = 0; i < EditableFields.Length; i++)
         {
             var f   = EditableFields[i];
@@ -746,10 +771,21 @@ internal static class ZpCodeEditorDashboard
             var ind = sel ? "[bold green]❯[/]" : " ";
             var val = Markup.Escape(GetFieldValue(row, f));
 
-            table.AddRow(
-                ind,
-                sel ? $"[bold cyan]{f}[/]" : $"[grey]{f}[/]",
-                sel ? $"[bold white]{val}[/]" : val);
+            // Code rename is destructive — highlight in yellow when focused.
+            if (f == "Code")
+            {
+                table.AddRow(
+                    ind,
+                    sel ? $"[bold yellow]{f}[/]" : $"[grey]{f}[/]",
+                    sel ? $"[bold yellow]{val}[/]" : $"[grey]{val}[/]");
+            }
+            else
+            {
+                table.AddRow(
+                    ind,
+                    sel ? $"[bold cyan]{f}[/]" : $"[grey]{f}[/]",
+                    sel ? $"[bold white]{val}[/]" : val);
+            }
         }
 
         return table;

@@ -22,8 +22,8 @@
     "RangeTimezone": "America/St_Johns"
   },
   "MX": {
-    "ExactCode": "01000",
-    "ExactPlaceName": "San \u00C1ngel",
+    "ExactCode": "00500",
+    "ExactPlaceName": "Omitl\u00E1n de Ju\u00E1rez",
     "ExactAdmin1Code": "CMX",
     "ExactTimezone": "America/Mexico_City",
     "RangeProbe": null,

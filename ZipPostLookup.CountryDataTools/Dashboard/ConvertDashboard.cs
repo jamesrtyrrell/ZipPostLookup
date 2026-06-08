@@ -18,15 +18,16 @@ internal static class ConvertDashboard
                 new TextPrompt<string>("  Input TSV path [grey](or blank to go back)[/]:")
                     .AllowEmpty());
 
+            file = StripPathQuotes(file);
             if (string.IsNullOrWhiteSpace(file)) break;
 
             var countryOverride = AnsiConsole.Prompt(
                 new TextPrompt<string>("  Country override [grey](blank = derive from filename or data)[/]:")
                     .AllowEmpty());
 
-            var outputOverride = AnsiConsole.Prompt(
+            var outputOverride = StripPathQuotes(AnsiConsole.Prompt(
                 new TextPrompt<string>("  Output path [grey](blank = {cc}-candidate.csv alongside input)[/]:")
-                    .AllowEmpty());
+                    .AllowEmpty()));
 
             var noPrompts = AnsiConsole.Confirm("  --no-prompts (skip format confirmation)?", false);
 
@@ -49,5 +50,15 @@ internal static class ConvertDashboard
         }
 
         return 0;
+    }
+
+    private static string StripPathQuotes(string path)
+    {
+        path = path.Trim();
+        if (path.Length >= 2 &&
+            ((path[0] == '"'  && path[^1] == '"') ||
+             (path[0] == '\'' && path[^1] == '\'')))
+            path = path[1..^1].Trim();
+        return path;
     }
 }

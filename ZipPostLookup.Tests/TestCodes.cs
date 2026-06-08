@@ -27,8 +27,8 @@ internal static class TestCodes
 
     internal static class MX
     {
-        public const string ExactCode       = "01000";
-        public const string ExactPlaceName  = "San Ángel";
+        public const string ExactCode       = "00500";
+        public const string ExactPlaceName  = "Omitlán de Juárez";
         public const string ExactAdmin1Code = "CMX";
         public const string ExactTimezone   = "America/Mexico_City";
     }

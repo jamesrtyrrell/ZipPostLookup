@@ -36,9 +36,12 @@ public static class CommonQueries
 
     public static readonly string GetReferenceForImportBatch =
         @"SELECT r.ReferenceId, r.ZpCode, r.PlaceName, r.Timezone,
-                 CAST(r.IsDefault AS BIT) AS IsDefault,
+                 CAST(r.IsDefault       AS BIT) AS IsDefault,
                  CAST(r.TimezoneChecked AS BIT) AS TimezoneChecked,
-                 ISNULL(r.Lat, '---') AS Lat, ISNULL(r.Lng, '---') AS Lng
+                 CAST(r.Curated         AS BIT) AS Curated,
+                 CAST(r.Flagged         AS BIT) AS Flagged,
+                 ISNULL(r.Lat, '---') AS Lat, ISNULL(r.Lng, '---') AS Lng,
+                 r.AltNameOf
             FROM data.Reference r
             INNER JOIN @Codes c ON c.Code = r.ZpCode
             WHERE r.CountryId = @CountryId;";
@@ -57,6 +60,9 @@ public static class CommonQueries
 
     public static readonly string CountReferenceByCode =
         @"SELECT COUNT(*) FROM data.Reference WHERE CountryId = @CountryId AND ZpCode = @ZpCode";
+
+    public static readonly string RenameZpCode =
+        @"UPDATE data.Reference SET ZpCode = @NewCode WHERE ReferenceId = @ReferenceId";
 
     // Returns one row per distinct ZpCode that is not yet curated (TimezoneChecked=0 OR NameChecked=0).
     // Admin1Code is taken from the level-1 admin of the first reference row for that code.
@@ -377,20 +383,30 @@ public static class CommonQueries
           ALTER TABLE data.Reference ADD Flagged BIT NOT NULL DEFAULT 0;";
 
     // Set both curation flags for every row sharing a ZpCode.
+    // TimezoneChecked is only raised to 1 when the row actually has a timezone value —
+    // rows with a blank/placeholder timezone are left with their current TimezoneChecked
+    // state so they surface in the "checked but blank" integrity check.
     public static readonly string MarkCodeAsCurated =
         @"UPDATE data.Reference
-          SET    TimezoneChecked = 1,
+          SET    TimezoneChecked = CASE
+                     WHEN Timezone IS NOT NULL
+                      AND Timezone NOT IN ('', '---') THEN 1
+                     ELSE TimezoneChecked
+                 END,
                  NameChecked     = 1,
                  UpdatedAt       = SYSUTCDATETIME()
           WHERE  CountryId = @CountryId
             AND  ZpCode    = @ZpCode";
 
+    // Only raises TimezoneChecked when the row has an actual timezone value.
     public static readonly string MarkCodeTimezoneChecked =
         @"UPDATE data.Reference
           SET    TimezoneChecked = 1,
                  UpdatedAt       = SYSUTCDATETIME()
-          WHERE  CountryId = @CountryId
-            AND  ZpCode    = @ZpCode";
+          WHERE  CountryId  = @CountryId
+            AND  ZpCode     = @ZpCode
+            AND  Timezone   IS NOT NULL
+            AND  Timezone   NOT IN ('', '---')";
 
     public static readonly string MarkCodeNameChecked =
         @"UPDATE data.Reference
@@ -414,6 +430,33 @@ public static class CommonQueries
                   AND  canon.AltNameOf IS NULL
                   AND  canon.Curated   = 1
             )";
+
+    // For each ZpCode that has more than one IsDefault=1 row, demote all but the
+    // "winner" to IsDefault=0. Winner priority: non-AltNameOf row first, then
+    // lowest ReferenceId (original import order) as a deterministic tie-breaker.
+    // Codes with exactly one IsDefault=1 row are untouched.
+    public static readonly string FixDuplicateIsDefaults =
+        @"WITH Winners AS (
+              SELECT ReferenceId
+              FROM (
+                  SELECT ReferenceId,
+                         ROW_NUMBER() OVER (
+                             PARTITION BY ZpCode
+                             ORDER BY CASE WHEN AltNameOf IS NULL THEN 0 ELSE 1 END,
+                                      ReferenceId
+                         ) AS Rn
+                  FROM   data.Reference
+                  WHERE  CountryId = @CountryId
+                    AND  IsDefault = 1
+              ) t
+              WHERE Rn = 1
+          )
+          UPDATE data.Reference
+          SET    IsDefault = 0,
+                 UpdatedAt = SYSUTCDATETIME()
+          WHERE  CountryId  = @CountryId
+            AND  IsDefault  = 1
+            AND  ReferenceId NOT IN (SELECT ReferenceId FROM Winners)";
 
     // Mark all orphaned alt-name rows as curated (propagate from their canonical row).
     public static readonly string FixOrphanAltNames =
@@ -820,6 +863,17 @@ public static class CommonQueries
                 CurationStatus = 'NoData'
             WHERE CountryId = @CountryId;";
 
+    // Reset TimezoneChecked=0 on any row where the timezone is blank/null/placeholder
+    // but TimezoneChecked is currently 1. This undoes false "verified" marks so the
+    // rows surface in the uncurated browse list for manual fixing (or are immediately
+    // re-resolved by the coordinate resolver if they have lat/lng).
+    public static readonly string ResetBlankTimezoneChecked =
+        @"UPDATE data.Reference
+          SET    TimezoneChecked = 0,
+                 UpdatedAt       = SYSUTCDATETIME()
+          WHERE  TimezoneChecked = 1
+            AND  (Timezone IS NULL OR Timezone = '' OR Timezone = '---')";
+
     // Normalise all deprecated IANA timezone aliases to their canonical equivalents.
     // Run this across all countries; it is safe to repeat (idempotent).
     public static readonly string NormalizeDeprecatedTimezones =
@@ -1023,6 +1077,7 @@ public static class CommonQueries
                 WHERE  r.CountryId = @CountryId
                 AND    r.Curated   = 1
                 AND    r.IsDefault = 1
+                AND    r.Flagged   = 0
                 GROUP BY r.ZpCode
                 ORDER BY NEWID()
             ),
@@ -1045,6 +1100,7 @@ public static class CommonQueries
                 WHERE  r.CountryId = @CountryId
                 AND    r.Curated   = 1
                 AND    r.IsDefault = 1
+                AND    r.Flagged   = 0
             )
             SELECT ZpCode, PlaceName, Timezone, IsDefault, Admin1, Admin1Code
             FROM   RankedDefaults
@@ -1070,6 +1126,7 @@ public static class CommonQueries
                 AND  r.Curated   = 1
                 AND  r.IsDefault = 0
                 AND  r.AltNameOf IS NULL
+                AND  r.Flagged   = 0
               ORDER  BY NEWID()";
 
     // =========================================================================
@@ -1088,6 +1145,7 @@ public static class CommonQueries
             AND  r.Curated   = 1
             AND  r.IsDefault = 1
             AND  r.AltNameOf IS NULL
+            AND  r.Flagged   = 0
           ORDER  BY r.ZpCode";
 
     // AltNameOf rows where the canonical name (AltNameOf value) does not exist
@@ -1096,6 +1154,7 @@ public static class CommonQueries
         @"SELECT r.ZpCode, r.PlaceName, r.AltNameOf
           FROM   data.Reference r
           WHERE  r.CountryId  = @CountryId
+            AND  r.Flagged    = 0
             AND  r.AltNameOf IS NOT NULL
             AND  NOT EXISTS (
                      SELECT 1 FROM data.Reference r2
@@ -1113,6 +1172,7 @@ public static class CommonQueries
             AND  r.Curated   = 1
             AND  r.IsDefault = 1
             AND  r.AltNameOf IS NULL
+            AND  r.Flagged   = 0
           GROUP  BY r.ZpCode
           HAVING COUNT(*) > 1
           ORDER  BY COUNT(*) DESC, r.ZpCode";
@@ -1128,16 +1188,11 @@ public static class CommonQueries
           WHERE  r.CountryId = @CountryId
             AND  r.Curated   = 1
             AND  r.AltNameOf IS NULL
+            AND  r.Flagged   = 0
             AND (ra.ReferenceId IS NULL
               OR ra.Code = '---'
               OR ra.Code = ''
               OR ra.Code NOT LIKE '%[^0-9]%')";
-
-    // Latest update timestamp for curated rows — used for the stale-data check.
-    public static readonly string GetLastCuratedUpdateTime =
-        @"SELECT MAX(UpdatedAt)
-          FROM   data.Reference
-          WHERE  CountryId = @CountryId AND Curated = 1";
 
     // Rows whose ZpCode doesn't match the country's expected format.
     // Pass @ValidPattern as a SQL LIKE pattern: '[0-9][0-9][0-9][0-9][0-9]' for US/MX,
@@ -1146,6 +1201,57 @@ public static class CommonQueries
         @"SELECT r.ReferenceId, r.ZpCode, r.PlaceName
           FROM   data.Reference r
           WHERE  r.CountryId = @CountryId
+            AND  r.Flagged   = 0
             AND  r.ZpCode NOT LIKE @ValidPattern
+          ORDER  BY r.ZpCode";
+
+    // Curated non-AltNameOf codes where no row has IsDefault=1.
+    // GetByCode() has no authoritative primary for these codes.
+    public static readonly string GetCuratedCodesWithNoDefault =
+        @"SELECT r.ZpCode
+          FROM   data.Reference r
+          WHERE  r.CountryId = @CountryId
+            AND  r.Curated   = 1
+            AND  r.AltNameOf IS NULL
+            AND  r.Flagged   = 0
+          GROUP  BY r.ZpCode
+          HAVING SUM(CAST(r.IsDefault AS INT)) = 0
+          ORDER  BY r.ZpCode";
+
+    // AltNameOf rows that are also marked IsDefault=1.
+    // These are returned as the primary result by GetByCode() instead of the canonical row.
+    public static readonly string GetAltNameRowsMarkedDefault =
+        @"SELECT r.ZpCode, r.PlaceName, r.AltNameOf
+          FROM   data.Reference r
+          WHERE  r.CountryId = @CountryId
+            AND  r.AltNameOf IS NOT NULL
+            AND  r.IsDefault = 1
+            AND  r.Curated   = 1
+            AND  r.Flagged   = 0
+          ORDER  BY r.ZpCode";
+
+    // Curated rows with a blank or placeholder PlaceName.
+    public static readonly string GetCuratedBlankPlaceNames =
+        @"SELECT r.ReferenceId, r.ZpCode, r.PlaceName
+          FROM   data.Reference r
+          WHERE  r.CountryId = @CountryId
+            AND  r.Curated   = 1
+            AND  r.Flagged   = 0
+            AND  (r.PlaceName IS NULL
+               OR LTRIM(RTRIM(r.PlaceName)) = ''
+               OR r.PlaceName = '---')
+          ORDER  BY r.ZpCode";
+
+    // TimezoneChecked=1 rows with a blank or placeholder Timezone.
+    // Claims verified but would return an empty timezone string.
+    public static readonly string GetCheckedBlankTimezones =
+        @"SELECT r.ReferenceId, r.ZpCode, r.PlaceName
+          FROM   data.Reference r
+          WHERE  r.CountryId       = @CountryId
+            AND  r.TimezoneChecked = 1
+            AND  r.Flagged         = 0
+            AND  (r.Timezone IS NULL
+               OR LTRIM(RTRIM(r.Timezone)) = ''
+               OR r.Timezone = '---')
           ORDER  BY r.ZpCode";
 }

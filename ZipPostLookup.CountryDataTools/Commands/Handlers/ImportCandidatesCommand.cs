@@ -331,7 +331,17 @@ public static class ImportCandidatesCommand
                 continue;
             }
 
-            // Step 5 — attempt a case-insensitive match on the name field.
+            // Step 5b — flagged-code guard: this code is a known bad actor.
+            // Flagged codes are suppressed from ingest regardless of name or timezone match.
+            if (refRows.Any(r => r.Flagged))
+            {
+                candidate.Status = StatusString(CandidateStatus.Clean);
+                acc.StatusUpdates.Add(candidate);
+                counters.FlaggedSkipped++;
+                continue;
+            }
+
+            // Step 5c — attempt a case-insensitive match on the name field.
             var nameMatch = refRows.FirstOrDefault(r =>
                 string.Equals(r.PlaceName, name, StringComparison.OrdinalIgnoreCase));
 
@@ -362,7 +372,18 @@ public static class ImportCandidatesCommand
                 continue;
             }
 
-            // Step 7 — name matched; check whether the timezone also agrees.
+            // Step 7 — curated + coords guard: the reference row is already fully authoritative.
+            // Curated means TimezoneChecked=1 AND NameChecked=1; if it also has coordinates the
+            // candidate cannot add anything new — skip without creating discrepancies or back-fills.
+            if (nameMatch.Curated && HasCoords(nameMatch.Lat, nameMatch.Lng))
+            {
+                candidate.Status = StatusString(CandidateStatus.Clean);
+                acc.StatusUpdates.Add(candidate);
+                counters.CuratedSkipped++;
+                continue;
+            }
+
+            // Step 8 — name matched; check whether the timezone also agrees.
             bool tzMatch = string.Equals(nameMatch.Timezone, tz, StringComparison.OrdinalIgnoreCase);
 
             if (tzMatch)
