@@ -29,21 +29,22 @@ jobs:
             10.0.x
 
       - name: Restore
-        run: dotnet restore ZipPostLookup/ZipPostLookup.csproj
+        run: |
+          dotnet restore ZipPostLookup/ZipPostLookup.csproj
+          dotnet restore ZipPostLookup.Legacy/ZipPostLookup.Legacy.csproj
 
       - name: Build
-        run: dotnet build ZipPostLookup/ZipPostLookup.csproj --configuration Release --no-restore
+        run: |
+          dotnet build ZipPostLookup/ZipPostLookup.csproj --configuration Release --no-restore
+          dotnet build ZipPostLookup.Legacy/ZipPostLookup.Legacy.csproj --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test ZipPostLookup.Tests/ZipPostLookup.Tests.csproj --configuration Release --no-build --verbosity normal
+        run: dotnet test ZipPostLookup.Tests/ZipPostLookup.Tests.csproj --configuration Release --verbosity normal
 
       - name: Pack
-        run: >
-          dotnet pack ZipPostLookup/ZipPostLookup.csproj
-          --configuration Release
-          --no-build
-          --output ./nupkg
-          /p:Version=${{ github.event.inputs.version }}
+        run: |
+          dotnet pack ZipPostLookup/ZipPostLookup.csproj --configuration Release --no-build --output ./nupkg /p:Version=${{ github.event.inputs.version }}
+          dotnet pack ZipPostLookup.Legacy/ZipPostLookup.Legacy.csproj --configuration Release --no-build --output ./nupkg /p:Version=${{ github.event.inputs.version }}
 
       - name: Push to NuGet (Trusted Publishing)
         run: >

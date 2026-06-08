@@ -1,6 +1,8 @@
 using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Commands.Display;
 using ZipPostLookup.CountryDataTools.Commands.Handlers;
+using ZipPostLookup.CountryDataTools.Dashboard.Layout;
+using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
 using ZipPostLookup.CountryDataTools.Models.Commands;
 using ZplIntegrity    = ZipPostLookup.CountryDataTools.Commands.Handlers.IntegrityCheckCommand;
@@ -19,13 +21,13 @@ internal static class IntegrityDashboard
     {
         while (true)
         {
-            DashboardRenderer.RenderHeader("Integrity");
+            HeaderBar.Render("Integrity");
 
-            var mode = MenuPrompt.Show(
+            var mode = CdtSelectMenu.Show(
                 ["ZPL Data", "CDT DB", "← Back"],
                 s => s switch
                 {
-                    "← Back" => "[grey]← Back[/]",
+                    "← Back"   => "[grey]← Back[/]",
                     "ZPL Data" => $"[bold cyan]{"ZPL Data",-14}[/]  [grey]Compare library vs DB — detects stale exports[/]",
                     "CDT DB"   => $"[bold cyan]{"CDT DB",-14}[/]  [grey]Scan DB for admin errors, orphans, duplicates[/]",
                     _          => s,
@@ -35,9 +37,9 @@ internal static class IntegrityDashboard
 
             if (mode == "← Back") break;
 
-            DashboardRenderer.RenderHeader($"Integrity › {mode}");
+            HeaderBar.Render($"Integrity › {mode}");
 
-            var country = MenuPrompt.Show(
+            var country = CdtSelectMenu.Show(
                 ["US", "CA", "MX", "All (US + CA + MX)", "← Back"],
                 s => s switch
                 {
@@ -68,7 +70,7 @@ internal static class IntegrityDashboard
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine($"[red]  ✗ DB connection failed: {Markup.Escape(ex.Message)}[/]");
-            AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+            FooterBar.PressAnyKey();
             Console.ReadKey(intercept: true);
             return;
         }
@@ -78,12 +80,12 @@ internal static class IntegrityDashboard
 
         if (country.StartsWith("All"))
         {
-            DashboardRenderer.RenderHeader("Integrity › ZPL Data › All");
+            HeaderBar.Render("Integrity › ZPL Data › All");
             await RunZplAllAndBrowseAsync(db, ["US", "CA", "MX"], tests);
         }
         else
         {
-            DashboardRenderer.RenderHeader($"Integrity › ZPL Data › {country}");
+            HeaderBar.Render($"Integrity › ZPL Data › {country}");
 
             var (exitCode, summary, reportPath) =
                 await ZplIntegrity.RunForCountryAsync(db, country.ToUpperInvariant(), tests, null);
@@ -91,7 +93,7 @@ internal static class IntegrityDashboard
             AnsiConsole.WriteLine();
             ShowResultBanner(exitCode);
             if (reportPath is not null) ShowReportPath(reportPath);
-            AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+            FooterBar.PressAnyKey();
             Console.ReadKey(intercept: true);
         }
     }
@@ -102,7 +104,7 @@ internal static class IntegrityDashboard
 
         foreach (var cc in countries)
         {
-            DashboardRenderer.RenderHeader($"Integrity › ZPL Data › {cc}");
+            HeaderBar.Render($"Integrity › ZPL Data › {cc}");
 
             var (exitCode, summary, reportPath) =
                 await ZplIntegrity.RunForCountryAsync(db, cc.ToUpperInvariant(), tests, null);
@@ -134,23 +136,21 @@ internal static class IntegrityDashboard
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine($"[red]  ✗ DB connection failed: {Markup.Escape(ex.Message)}[/]");
-            AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+            FooterBar.PressAnyKey();
             Console.ReadKey(intercept: true);
             return;
         }
 
         if (country.StartsWith("All"))
         {
-            DashboardRenderer.RenderHeader("Integrity › CDT DB › All");
+            HeaderBar.Render("Integrity › CDT DB › All");
             AnsiConsole.WriteLine();
 
-            var pages     = new List<ReportPage>();
-            var datestamp = DateTime.UtcNow.ToString("yyyyMMdd");
-            var baseDir   = Path.Combine(Directory.GetCurrentDirectory(), "DataAnalysis");
+            var pages = new List<ReportPage>();
 
             foreach (var cc in new[] { "US", "CA", "MX" })
             {
-                DashboardRenderer.RenderHeader($"Integrity › CDT DB › {cc}");
+                HeaderBar.Render($"Integrity › CDT DB › {cc}");
 
                 var (exitCode, checkResults, reportPath) = await CdtDbIntegrity.RunForCountryAsync(
                     db, cc.ToUpperInvariant(), null);
@@ -169,7 +169,7 @@ internal static class IntegrityDashboard
         }
         else
         {
-            DashboardRenderer.RenderHeader($"Integrity › CDT DB › {country}");
+            HeaderBar.Render($"Integrity › CDT DB › {country}");
             AnsiConsole.WriteLine();
 
             var (exitCode, checkResults, reportPath) = await CdtDbIntegrity.RunForCountryAsync(
@@ -178,7 +178,7 @@ internal static class IntegrityDashboard
             AnsiConsole.WriteLine();
             ShowResultBanner(exitCode);
             ShowReportPath(reportPath);
-            AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+            FooterBar.PressAnyKey();
             Console.ReadKey(intercept: true);
         }
     }
@@ -197,10 +197,9 @@ internal static class IntegrityDashboard
             var nextLabel   = index < pages.Count - 1 ? $"[bold]{pages[index + 1].Country} →[/]" : "[grey]→[/]";
             var statusLabel = page.ExitCode == 0 ? "[green]✓ passed[/]" : "[red]✗ issues[/]";
 
-            DashboardRenderer.RenderHeader(
-                $"Integrity › {page.Mode} › {page.Country}  {statusLabel}");
+            HeaderBar.Render($"Integrity › {page.Mode} › {page.Country}  {statusLabel}");
 
-            AnsiConsole.MarkupLine(
+            CdtCommandMenu.Render(
                 $"  {prevLabel}    ({index + 1}/{pages.Count})    {nextLabel}    [grey]Esc: back[/]");
             AnsiConsole.WriteLine();
 

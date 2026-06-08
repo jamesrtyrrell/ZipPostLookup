@@ -53,10 +53,14 @@ public static class CommonQueries
           FROM data.Reference
           WHERE CountryId = @CountryId AND ZpCode IN @Codes";
 
+    // Curated, non-flagged reference rows with their admin levels — for analysis.
+    // LEFT JOIN so codes with no admin data are still included (Admin1 falls back to '---').
+    // Flagged rows are excluded because they are dropped from every export, so analysing
+    // them would inflate compression/size estimates against data that never ships.
     public static readonly string GetAllReferenceDataWithAdmins =
         @"SELECT * FROM data.Reference RData
-            INNER JOIN data.ReferenceAdmins RAdmins ON RData.ReferenceId = RAdmins.ReferenceId
-            WHERE CountryId = @CountryId AND Curated = 1";
+            LEFT JOIN data.ReferenceAdmins RAdmins ON RData.ReferenceId = RAdmins.ReferenceId
+            WHERE RData.CountryId = @CountryId AND RData.Curated = 1 AND RData.Flagged = 0";
 
     public static readonly string CountReferenceByCode =
         @"SELECT COUNT(*) FROM data.Reference WHERE CountryId = @CountryId AND ZpCode = @ZpCode";
@@ -894,6 +898,7 @@ public static class CommonQueries
           );";
 
     // Remove US reference rows whose ZIP code is outside the USPS-assigned range 00501–99950.
+    // Range mirrors UsCountryRules.IsOutOfBoundsUs — keep both in sync if the boundary changes.
     // Run PurgeOutOfRangeUsAdmins first to satisfy the FK constraint, then PurgeOutOfRangeUs.
     public static readonly string PurgeOutOfRangeUsAdmins =
         @"DELETE ra FROM data.ReferenceAdmins ra

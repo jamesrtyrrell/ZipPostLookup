@@ -1,5 +1,7 @@
 using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Commands;
+using ZipPostLookup.CountryDataTools.Dashboard.Layout;
+using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 
 namespace ZipPostLookup.CountryDataTools.Dashboard;
 
@@ -16,7 +18,6 @@ internal static class DbDashboard
         new("normalize-tz",    "normalize-tz",     "Normalise timezone aliases and resolve from coordinates"),
         new("normalize-names",   "normalize-names",   "Detect and link place-name abbreviation alternates"),
         new("normalize-admins",  "normalize-admins",  "Backfill missing admin1 from ZIP prefix rules"),
-        new("purge-oob-us",      "purge-oob-us",      "Remove US ZIP codes outside 00501–99950",  Destructive: true),
         new("clear",           "clear",            "Clear pipeline working data for a country", Destructive: true),
         new("reset",           "reset",            "Full wipe — removes reference data too",   Destructive: true),
     ];
@@ -25,11 +26,11 @@ internal static class DbDashboard
     {
         while (true)
         {
-            DashboardRenderer.RenderHeader("DB");
+            HeaderBar.Render("DB");
 
             var back = new Sub("back", "← Back", "");
 
-            var selected = MenuPrompt.Show(
+            var selected = CdtSelectMenu.Show(
                 [.. Subs, back],
                 s => s == back
                     ? "[grey]← Back[/]"
@@ -51,7 +52,6 @@ internal static class DbDashboard
                 "newrun"          => await RunNewRunAsync(),
                 "normalize-names"   => await RunNormalizeNamesAsync(),
                 "normalize-admins"  => await RunNormalizeAdminsAsync(),
-                "purge-oob-us"      => await RunSimpleAsync("purge-oob-us",   []),
                 "clear"           => await RunWithCountryAsync("clear",     needsConfirm: false),
                 "reset"           => await RunWithCountryAsync("reset",     needsConfirm: false),
                 _                 => 0,
@@ -67,7 +67,7 @@ internal static class DbDashboard
 
     private static async Task<int> RunSimpleAsync(string sub, string[] extra)
     {
-        DashboardRenderer.RenderHeader($"DB › {sub}");
+        HeaderBar.Render($"DB › {sub}");
 
         var exitCode = await DbCommand.RunAsync([sub, .. extra]);
 
@@ -76,7 +76,7 @@ internal static class DbDashboard
             ? "[green]  ✓ Done[/]"
             : $"[red]  ✗ Exited with code {exitCode}[/]");
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+        FooterBar.PressAnyKey();
         Console.ReadKey(intercept: true);
         return exitCode;
     }
@@ -85,12 +85,12 @@ internal static class DbDashboard
 
     private static async Task<int> RunInitAsync()
     {
-        DashboardRenderer.RenderHeader("DB › init");
+        HeaderBar.Render("DB › init");
         AnsiConsole.MarkupLine("  Creates [grey]workdb.json[/] in the current directory.");
         AnsiConsole.MarkupLine("  [grey]Tip: add workdb.json to .gitignore — it contains your connection string.[/]");
         AnsiConsole.WriteLine();
 
-        var country = MenuPrompt.Show(
+        var country = CdtSelectMenu.Show(
             ["US", "CA", "MX", "← Cancel"],
             s => s == "← Cancel" ? "[grey]← Cancel[/]" : $"[bold cyan]{s}[/]",
             escapeReturns: "← Cancel",
@@ -109,7 +109,7 @@ internal static class DbDashboard
                 .DefaultValue("sqlserver")
                 .AllowEmpty());
 
-        DashboardRenderer.RenderHeader("DB › init");
+        HeaderBar.Render("DB › init");
 
         var args = new List<string> { "init", "--country", country, "--connection", connection };
         if (!string.IsNullOrWhiteSpace(provider) && provider != "sqlserver")
@@ -122,7 +122,7 @@ internal static class DbDashboard
             ? "[green]  ✓ workdb.json written[/]"
             : $"[red]  ✗ Init failed (exit {exitCode})[/]");
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+        FooterBar.PressAnyKey();
         Console.ReadKey(intercept: true);
         return exitCode;
     }
@@ -131,7 +131,7 @@ internal static class DbDashboard
 
     private static async Task<int> RunNewRunAsync()
     {
-        DashboardRenderer.RenderHeader("DB › newrun");
+        HeaderBar.Render("DB › newrun");
 
         var source = AnsiConsole.Prompt(
             new TextPrompt<string>("  Source file path [grey](candidate CSV)[/]:")
@@ -148,7 +148,7 @@ internal static class DbDashboard
             ? "[green]  ✓ Run created[/]"
             : $"[red]  ✗ Failed (exit {exitCode})[/]");
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+        FooterBar.PressAnyKey();
         Console.ReadKey(intercept: true);
         return exitCode;
     }
@@ -157,9 +157,9 @@ internal static class DbDashboard
 
     private static async Task<int> RunNormalizeNamesAsync()
     {
-        DashboardRenderer.RenderHeader("DB › normalize-names");
+        HeaderBar.Render("DB › normalize-names");
 
-        var choice = MenuPrompt.Show(
+        var choice = CdtSelectMenu.Show(
             ["US", "CA", "MX", "All (US + CA + MX)", "← Cancel"],
             s => s switch
             {
@@ -183,9 +183,9 @@ internal static class DbDashboard
 
     private static async Task<int> RunNormalizeAdminsAsync()
     {
-        DashboardRenderer.RenderHeader("DB › normalize-admins");
+        HeaderBar.Render("DB › normalize-admins");
 
-        var choice = MenuPrompt.Show(
+        var choice = CdtSelectMenu.Show(
             ["US", "MX", "All (US + MX)", "← Cancel"],
             s => s switch
             {
@@ -209,7 +209,7 @@ internal static class DbDashboard
 
     private static async Task<int> RunWithCountryAsync(string sub, bool needsConfirm)
     {
-        DashboardRenderer.RenderHeader($"DB › {sub}");
+        HeaderBar.Render($"DB › {sub}");
 
         if (sub == "reset")
         {
@@ -224,7 +224,7 @@ internal static class DbDashboard
 
         AnsiConsole.WriteLine();
 
-        var country = MenuPrompt.Show(
+        var country = CdtSelectMenu.Show(
             ["US", "CA", "MX", "← Cancel"],
             s => s == "← Cancel" ? "[grey]← Cancel[/]" : $"[bold cyan]{s}[/]",
             escapeReturns: "← Cancel",
@@ -234,7 +234,7 @@ internal static class DbDashboard
 
         // The handler itself contains AnsiConsole.Confirm (clear) or
         // TextPrompt type-to-confirm (reset) — pass through directly.
-        DashboardRenderer.RenderHeader($"DB › {sub} › {country}");
+        HeaderBar.Render($"DB › {sub} › {country}");
 
         var exitCode = await DbCommand.RunAsync([sub, "--country", country]);
 
@@ -243,7 +243,7 @@ internal static class DbDashboard
             ? "[green]  ✓ Done[/]"
             : $"[red]  ✗ Exited with code {exitCode}[/]");
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+        FooterBar.PressAnyKey();
         Console.ReadKey(intercept: true);
         return exitCode;
     }

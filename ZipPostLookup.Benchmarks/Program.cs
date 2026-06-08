@@ -1,11 +1,12 @@
 
 using BenchmarkDotNet.Running;
+using ZipPostLookup.Benchmarks;
 using ZipPostLookup.Benchmarks.History;
 
 #if DEBUG
 
 // BenchmarkDotNet requires a Release build to produce meaningful numbers.
-// JIT optimisations are disabled in Debug, making results up to 10× slower
+// JIT optimizations are disabled in Debug, making results up to 10× slower
 // and unrepresentative of real-world performance.
 Console.ForegroundColor = ConsoleColor.Yellow;
 Console.Error.WriteLine();
@@ -78,23 +79,33 @@ else
 
         var archived = 0;
         var skipped  = 0;
+        var prompt   = new OverwritePrompt();
 
         foreach (var (className, csvPath) in freshReports)
         {
             Console.Write($"  Archiving {className}... ");
             try
             {
-                var added = HistoryArchiver.AppendToArchive(historyDir, className, csvPath);
-                if (added)
+                switch (HistoryArchiver.AppendToArchive(historyDir, className, csvPath, prompt))
                 {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"✓  → History/{className}.tar.gz");
-                    Console.ResetColor();
-                    archived++;
-                }
-                else
-                {
-                    skipped++;
+                    case ArchiveOutcome.Added:
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"✓  → History/{className}.tar.gz");
+                        Console.ResetColor();
+                        archived++;
+                        break;
+                    case ArchiveOutcome.Overwritten:
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"  ✓  overwritten → History/{className}.tar.gz");
+                        Console.ResetColor();
+                        archived++;
+                        break;
+                    case ArchiveOutcome.Skipped:
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                        Console.WriteLine("  – skipped.");
+                        Console.ResetColor();
+                        skipped++;
+                        break;
                 }
             }
             catch (Exception ex)

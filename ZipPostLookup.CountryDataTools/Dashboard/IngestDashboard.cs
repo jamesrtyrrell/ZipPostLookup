@@ -1,5 +1,7 @@
 using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Commands;
+using ZipPostLookup.CountryDataTools.Dashboard.Layout;
+using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 
 namespace ZipPostLookup.CountryDataTools.Dashboard;
 
@@ -16,9 +18,9 @@ internal static class IngestDashboard
     {
         while (true)
         {
-            DashboardRenderer.RenderHeader("Ingest");
+            HeaderBar.Render("Ingest");
 
-            var selected = MenuPrompt.Show(
+            var selected = CdtSelectMenu.Show(
                 [SubRef, SubCandidate, SubCoords, SubBack],
                 s => s == SubBack
                     ? "[grey]← Back[/]"
@@ -45,9 +47,9 @@ internal static class IngestDashboard
 
     private static async Task<int> RunRefAsync()
     {
-        DashboardRenderer.RenderHeader("Ingest › ref");
+        HeaderBar.Render("Ingest › ref");
 
-        var choice = MenuPrompt.Show(
+        var choice = CdtSelectMenu.Show(
             ["US", "CA", "MX", "All (US + CA + MX)", "← Cancel"],
             s => s switch
             {
@@ -76,7 +78,7 @@ internal static class IngestDashboard
 
     private static async Task<int> RunCandidateAsync()
     {
-        DashboardRenderer.RenderHeader("Ingest › candidate");
+        HeaderBar.Render("Ingest › candidate");
 
         var file = AnsiConsole.Prompt(
             new TextPrompt<string>("  Candidate CSV path:")
@@ -84,7 +86,7 @@ internal static class IngestDashboard
                     ? ValidationResult.Success()
                     : ValidationResult.Error("[red]Path is required[/]")));
 
-        var country = MenuPrompt.Show(
+        var country = CdtSelectMenu.Show(
             ["US", "CA", "MX", "← Cancel"],
             s => s == "← Cancel" ? "[grey]← Cancel[/]" : $"[bold cyan]{s}[/]",
             escapeReturns: "← Cancel",
@@ -99,7 +101,7 @@ internal static class IngestDashboard
 
     private static async Task<int> RunCoordsAsync()
     {
-        DashboardRenderer.RenderHeader("Ingest › coords");
+        HeaderBar.Render("Ingest › coords");
 
         var source = AnsiConsole.Prompt(
             new TextPrompt<string>("  Source CSV path:")
@@ -107,7 +109,7 @@ internal static class IngestDashboard
                     ? ValidationResult.Success()
                     : ValidationResult.Error("[red]Path is required[/]")));
 
-        var countryChoice = MenuPrompt.Show(
+        var countryChoice = CdtSelectMenu.Show(
             ["US", "CA", "MX", "Any (no filter)", "← Cancel"],
             s => s switch
             {
@@ -141,7 +143,7 @@ internal static class IngestDashboard
 
     private static async Task<int> RunAndPause(string label, List<string> args)
     {
-        DashboardRenderer.RenderHeader(label);
+        HeaderBar.Render(label);
 
         var exitCode = await IngestCommand.RunAsync([.. args]);
 
@@ -150,7 +152,7 @@ internal static class IngestDashboard
             ? "[green]  ✓ Done[/]"
             : $"[red]  ✗ Exited with code {exitCode}[/]");
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+        FooterBar.PressAnyKey();
         Console.ReadKey(intercept: true);
         return exitCode;
     }

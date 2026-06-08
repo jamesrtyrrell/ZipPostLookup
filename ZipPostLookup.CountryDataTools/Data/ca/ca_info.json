@@ -53,8 +53,8 @@
       "Code": "QC",
       "Capital": "Quebec City",
       "CapitalLocal": "Qu\u00E9bec",
-      "ZipCount": 226782,
-      "NameCount": 229772
+      "ZipCount": 226783,
+      "NameCount": 229777
     },
     {
       "Type": "province",
@@ -62,7 +62,7 @@
       "Code": "NS",
       "Capital": "Halifax",
       "ZipCount": 30038,
-      "NameCount": 31240
+      "NameCount": 31550
     },
     {
       "Type": "province",
@@ -70,8 +70,8 @@
       "LocalName": "Nouveau-Brunswick",
       "Code": "NB",
       "Capital": "Fredericton",
-      "ZipCount": 61076,
-      "NameCount": 61741
+      "ZipCount": 61078,
+      "NameCount": 61744
     },
     {
       "Type": "province",

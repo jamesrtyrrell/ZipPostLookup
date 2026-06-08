@@ -56,7 +56,6 @@ public static class WorkDbCommand
             "normalize-tz"     => await RunNormalizeTzAsync(),
             "normalize-names"  => await RunNormalizeNamesAsync(args[1..]),
             "normalize-admins" => await RunNormalizeAdminsAsync(args[1..]),
-            "purge-oob-us"     => await RunPurgeOutOfRangeUsAsync(),
             _ => UnknownSubcommand(args[0]),
         };
     }
@@ -280,6 +279,51 @@ public static class WorkDbCommand
         if (db == null) return 1;
 
         using var conn = db.GetFactory().CreateConnection();
+
+        // ── Purge out-of-bounds US ZIP codes (US only) ───────────────────────
+        if (db.CountryCode.Equals("US", StringComparison.OrdinalIgnoreCase))
+        {
+            var oobCount = await Dapper.SqlMapper.ExecuteScalarAsync<int>(
+                conn, CommonQueries.CountOutOfRangeUs);
+
+            if (oobCount > 0)
+            {
+                AnsiConsole.MarkupLine(
+                    $"  [yellow]Found {oobCount:N0} US row(s) with ZIP codes outside 00501–99950.[/]");
+
+                if (AnsiConsole.Confirm("Delete these out-of-bounds rows from data.Reference?"))
+                {
+                    using var purgeTx = conn.BeginTransaction();
+                    try
+                    {
+                        var adminsDeleted = await Dapper.SqlMapper.ExecuteAsync(
+                            conn, CommonQueries.PurgeOutOfRangeUsAdmins, transaction: purgeTx);
+                        var rowsDeleted = await Dapper.SqlMapper.ExecuteAsync(
+                            conn, CommonQueries.PurgeOutOfRangeUs, transaction: purgeTx);
+                        purgeTx.Commit();
+                        AnsiConsole.MarkupLine(
+                            $"  [green]✓ {rowsDeleted:N0} reference row(s) deleted ({adminsDeleted:N0} admin row(s)).[/]");
+                    }
+                    catch (Exception ex)
+                    {
+                        purgeTx.Rollback();
+                        AnsiConsole.MarkupLine($"  [red]✗ Purge failed: {Markup.Escape(ex.Message)}[/]");
+                        return 1;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("  Purge skipped — continuing with normalize-tz.");
+                }
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("  [green]✓ No out-of-bounds US ZIP codes — nothing to purge.[/]");
+            }
+
+            Console.WriteLine();
+        }
+
         using var tx = conn.BeginTransaction();
 
         try
@@ -642,60 +686,6 @@ public static class WorkDbCommand
     }
 
     // -------------------------------------------------------------------------
-    // db purge-oob-us
-    // -------------------------------------------------------------------------
-
-    private static async Task<int> RunPurgeOutOfRangeUsAsync()
-    {
-        var db = await LoadDbAsync();
-        if (db == null) return 1;
-
-        using var conn = db.GetFactory().CreateConnection();
-
-        var count = await Dapper.SqlMapper.ExecuteScalarAsync<int>(
-            conn, CommonQueries.CountOutOfRangeUs);
-
-        if (count == 0)
-        {
-            AnsiConsole.MarkupLine("  [green]✓ No US reference rows outside 00501–99950 — nothing to purge.[/]");
-            return 0;
-        }
-
-        AnsiConsole.MarkupLine($"  [yellow]Found {count:N0} US reference row(s) with ZIP codes outside 00501–99950.[/]");
-        Console.WriteLine("  These codes fall outside the USPS-assigned range and will be permanently deleted.");
-        Console.WriteLine();
-
-        if (!AnsiConsole.Confirm("Delete these rows from data.Reference?"))
-        {
-            Console.WriteLine("  Aborted.");
-            return 0;
-        }
-
-        using var tx = conn.BeginTransaction();
-        try
-        {
-            var adminsDeleted = await Dapper.SqlMapper.ExecuteAsync(
-                conn, CommonQueries.PurgeOutOfRangeUsAdmins, transaction: tx);
-
-            var rowsDeleted = await Dapper.SqlMapper.ExecuteAsync(
-                conn, CommonQueries.PurgeOutOfRangeUs, transaction: tx);
-
-            tx.Commit();
-
-            AnsiConsole.MarkupLine($"  [green]✓ {rowsDeleted:N0} reference row(s) deleted ({adminsDeleted:N0} admin row(s)).[/]");
-            Console.WriteLine("  Re-export US reference data and rebuild the ZPI image.");
-        }
-        catch (Exception ex)
-        {
-            tx.Rollback();
-            AnsiConsole.MarkupLine($"  [red]✗ Purge failed: {Markup.Escape(ex.Message)}[/]");
-            return 1;
-        }
-
-        return 0;
-    }
-
-    // -------------------------------------------------------------------------
 
     private static int UnknownSubcommand(string name)
     {
@@ -723,10 +713,12 @@ public static class WorkDbCommand
                           Full wipe for a country — clears pipeline data AND
                           data.reference. Use to start completely from scratch.
               normalize-tz
-                          1. Reset TimezoneChecked=0 on rows with blank/null timezone
+                          1. (US only) Count out-of-bounds ZIP codes (outside 00501–99950)
+                             and prompt to permanently delete them.
+                          2. Reset TimezoneChecked=0 on rows with blank/null timezone
                              (undoes false "verified" marks; rows re-surface in editor).
-                          2. Normalise deprecated IANA timezone aliases to canonical forms.
-                          3. Delete resulting duplicate rows.
+                          3. Normalise deprecated IANA timezone aliases to canonical forms.
+                          4. Delete resulting duplicate rows.
                           4. Normalise admin level 1 name variants to dominant spelling.
                           5. Resolve IANA timezone from Lat/Lng for rows where
                              TimezoneChecked=0 — sets correct timezone and marks verified.
@@ -746,11 +738,6 @@ public static class WorkDbCommand
                           AltNameOf on the abbreviated row to link it to the canonical
                           name. Safe to re-run; skips already-linked rows.
                           --all runs US, CA, MX in sequence.
-              purge-oob-us
-                          Remove US data.Reference rows whose ZIP code falls outside the
-                          USPS-assigned range 00501–99950. Shows a count and asks for
-                          confirmation before deleting. Run once after the initial load
-                          if the source data contained out-of-range codes.
             """);
 
     private static string TruncatePath(string path, int maxLen) =>

@@ -41,7 +41,6 @@ Organised by the breadcrumb path shown in the title bar so that naming any path 
 | `ZipPostLookup › DB › normalize-tz` | `Dashboard/DbDashboard.cs` | `RunSimpleAsync("normalize-tz")` |
 | `ZipPostLookup › DB › normalize-names` | `Dashboard/DbDashboard.cs` | `RunNormalizeNamesAsync` |
 | `ZipPostLookup › DB › normalize-admins` | `Dashboard/DbDashboard.cs` | `RunNormalizeAdminsAsync` |
-| `ZipPostLookup › DB › purge-oob-us` | `Dashboard/DbDashboard.cs` | `RunSimpleAsync("purge-oob-us")` |
 | `ZipPostLookup › DB › clear` | `Dashboard/DbDashboard.cs` | `RunWithCountryAsync("clear")` |
 | `ZipPostLookup › DB › reset` | `Dashboard/DbDashboard.cs` | `RunWithCountryAsync("reset")` |
 | `ZipPostLookup › ZpCode Editor` | `Dashboard/ZpCodeEditorDashboard.cs` | `RunAsync` |
@@ -313,11 +312,18 @@ Creates a new `pipeline.Runs` row and writes its ID back to `workdb.json` as `ac
 
 ## DB › normalize-tz
 
-Normalises timezone aliases (e.g. deprecated IANA names) and resolves timezones from coordinates for rows in `data.Reference` where the timezone is missing or aliased.
+Four steps run in sequence:
+
+1. **(US only)** Counts `data.Reference` rows whose ZIP code falls outside the USPS-assigned range 00501–99950 (`CountOutOfRangeUs`). If any are found, shows the count and prompts to permanently delete them (`PurgeOutOfRangeUsAdmins` + `PurgeOutOfRangeUs`). The valid-range rule is defined in `UsCountryRules.IsOutOfBoundsUs`.
+2. Resets `TimezoneChecked=0` on rows where `TimezoneChecked=1` but Timezone is blank/null/`---` (undoes false "verified" marks; those rows re-surface in the editor).
+3. Normalises deprecated IANA timezone aliases to their canonical forms and deletes any resulting duplicate rows.
+4. Resolves IANA timezones from coordinates for all three countries for rows where `TimezoneChecked=0`.
 
 **Files:**
 - `Dashboard/DbDashboard.cs` — `RunSimpleAsync("normalize-tz", [])`
 - `Commands/Handlers/WorkDbCommand.cs` — `RunNormalizeTzAsync`
+- `Validation/Us/UsCountryRules.cs` — `IsOutOfBoundsUs(int n)` — boundary rule (< 501 || > 99950)
+- `Database/Sql/CommonQueries.cs` — `CountOutOfRangeUs`, `PurgeOutOfRangeUsAdmins`, `PurgeOutOfRangeUs`
 
 ## DB › normalize-names
 
@@ -342,15 +348,6 @@ Backfills missing `Admin1Code` / `Admin1Name` in `data.ReferenceAdmins` using ZI
 - `Dashboard/DbDashboard.cs` — `RunNormalizeAdminsAsync`
 - `Commands/Handlers/WorkDbCommand.cs` — `RunNormalizeAdminsAsync`
 - `Validation/CountryRulesFactory.cs` — `ICountryRules.ResolveAdmin1`
-
-## DB › purge-oob-us ⚠
-
-Removes US `data.Reference` rows whose ZipCode falls outside the valid range 00501–99950. One-shot with no country prompt.
-
-**Files:**
-- `Dashboard/DbDashboard.cs` — `RunSimpleAsync("purge-oob-us", [])`
-- `Commands/Handlers/WorkDbCommand.cs` — `RunPurgeOutOfRangeUsAsync`
-- `Database/Sql/CommonQueries.cs` — `PurgeOutOfRangeUsAdmins`, `PurgeOutOfRangeUs`
 
 ## DB › clear ⚠
 

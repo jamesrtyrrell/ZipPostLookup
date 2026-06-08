@@ -21,7 +21,7 @@ internal static class ZpImageFormat
 {
     public static readonly byte[] Magic = "ZPIM"u8.ToArray();
 
-    public const ushort CurrentVersion      = 3;   // v3: single-pass FNV + fastrange MPHF eval
+    public const ushort CurrentVersion      = 4;   // v4: fused directory — single-record codes inline their record
     public const int    HeaderBytes         = 32;
     public const int    SectionEntryBytes   = 12;
     public const int    RecordBytes         = 6;   // nameIndex u16 — normal datasets (.u16.zpi.br)
@@ -35,6 +35,24 @@ internal static class ZpImageFormat
     public const int RecordTzOffset    = 2;  // u8  — index into TimezoneTable
     public const int RecordAdminOffset = 3;  // u8  — index into AdminTable
     public const int RecordFlagsOffset = 4;  // u8  — RecordFlags
+
+    // ── v4 Directory entry layout (still DirectoryEntryBytes = 16) ────────────
+    // [0..8)  packedCode u64
+    // [8..12) firstRecord u32 — bits[0..30) record id; bit31 Inline; bit30 InlineIsDefault
+    // [12]    inline tzIndex    u8  (inline entries only; else unused)
+    // [13]    inline adminIndex u8  (inline entries only; else unused)
+    // [14..16) u16 — inline: nameIndex (u16 images only); multi-record: record count
+    // For a single-record code (count == 1) in a u16 image, the record's name/tz/admin
+    // are copied into the directory entry so GetByCode materialises without touching the
+    // Records section. The record still exists in Records (postings, cache, GetAll use it).
+    public const int  DirFirstOffset       = 8;
+    public const int  DirInlineTzOffset    = 12;
+    public const int  DirInlineAdminOffset = 13;
+    public const int  DirCountOrNameOffset = 14;
+
+    public const uint DirInlineFlag    = 0x8000_0000u; // bit31 of firstRecord: entry is inline
+    public const uint DirInlineDefault = 0x4000_0000u; // bit30 of firstRecord: inline record IsDefault
+    public const uint DirRecordIdMask  = 0x3FFF_FFFFu; // low 30 bits: record id
 
     [System.Flags]
     public enum RecordFlags : byte

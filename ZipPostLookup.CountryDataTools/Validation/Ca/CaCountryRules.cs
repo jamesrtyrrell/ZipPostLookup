@@ -25,6 +25,41 @@ public sealed class CaCountryRules : ICountryRules
 
     public IReadOnlyList<string> PlaceNameLanguages => ["English", "French"];
 
+    // ── FSA first letter → province/territory ISO 3166-2:CA code ──────────────
+    // Canada Post allocates the first letter of every FSA to exactly one province
+    // or territory. This makes admin1 100% derivable from the code with 0 true
+    // exceptions in the current dataset. NU codes share the X prefix with NT
+    // (Canada Post treats them identically for routing).
+    // Source: Canada Post FSA allocation table.
+
+    private static readonly IReadOnlyDictionary<char, (string Code, string Name)> _fsaProvince =
+        new Dictionary<char, (string Code, string Name)>
+        {
+            ['A'] = ("NL", "Newfoundland and Labrador"),
+            ['B'] = ("NS", "Nova Scotia"),
+            ['C'] = ("PE", "Prince Edward Island"),
+            ['E'] = ("NB", "New Brunswick"),
+            ['G'] = ("QC", "Quebec"),
+            ['H'] = ("QC", "Quebec"),
+            ['J'] = ("QC", "Quebec"),
+            ['K'] = ("ON", "Ontario"),
+            ['L'] = ("ON", "Ontario"),
+            ['M'] = ("ON", "Ontario"),
+            ['N'] = ("ON", "Ontario"),
+            ['P'] = ("ON", "Ontario"),
+            ['R'] = ("MB", "Manitoba"),
+            ['S'] = ("SK", "Saskatchewan"),
+            ['T'] = ("AB", "Alberta"),
+            ['V'] = ("BC", "British Columbia"),
+            ['X'] = ("NT", "Northwest Territories"),
+            ['Y'] = ("YT", "Yukon"),
+        };
+
+    public (string Code, string Name)? ResolveAdmin1(string zpCode) =>
+        zpCode.Length > 0 && _fsaProvince.TryGetValue(char.ToUpperInvariant(zpCode[0]), out var v)
+            ? v
+            : null;
+
     // ── Province/territory name → ISO 3166-2:CA code ──────────────────────────
     // Covers the English names returned by the GeoLocator API.
 

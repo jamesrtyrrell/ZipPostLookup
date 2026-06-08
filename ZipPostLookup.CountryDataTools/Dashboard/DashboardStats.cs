@@ -2,6 +2,7 @@ using Dapper;
 using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
+using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 
 namespace ZipPostLookup.CountryDataTools.Dashboard;
 
@@ -67,7 +68,7 @@ internal static class DashboardStats
                 $"[{color}]{s.TotalCurated:N0}[/]",
                 $"[{color}]{s.Total:N0}[/]",
                 remaining,
-                $"{ProgressBar(s.PctComplete, 10, color)} [bold]{s.PctComplete:F2}[/]"
+                $"{CdtProgressBarCell.Render(s.PctComplete, 10, color)} [bold]{s.PctComplete:F2}[/]"
             );
         }
 
@@ -95,9 +96,4 @@ internal static class DashboardStats
         return table;
     }
 
-    private static string ProgressBar(decimal pct, int width, string color)
-    {
-        var filled = Math.Clamp((int)Math.Round(pct / 100.0m * width), 0, width);
-        return $"[{color}]{new string('█', filled)}{new string('░', width - filled)}[/]";
-    }
 }

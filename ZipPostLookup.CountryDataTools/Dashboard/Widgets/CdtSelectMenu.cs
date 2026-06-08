@@ -1,14 +1,13 @@
 using Spectre.Console;
 
-namespace ZipPostLookup.CountryDataTools.Dashboard;
+namespace ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 
-internal static class MenuPrompt
+/// <summary>
+/// Keyboard-driven vertical selection menu with ↑↓/Enter/Esc support.
+/// Replaces MenuPrompt — use CdtSelectMenu.Show() at all call sites.
+/// </summary>
+internal static class CdtSelectMenu
 {
-    /// <summary>
-    /// Keyboard-driven selection menu with Escape support.
-    /// Pressing Escape returns <paramref name="escapeReturns"/> — the same value
-    /// that existing "← Back" sentinel checks already handle.
-    /// </summary>
     public static T Show<T>(
         IReadOnlyList<T> choices,
         Func<T, string> converter,

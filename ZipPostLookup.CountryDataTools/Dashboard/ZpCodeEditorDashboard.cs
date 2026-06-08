@@ -1,5 +1,7 @@
 using Dapper;
 using Spectre.Console;
+using ZipPostLookup.CountryDataTools.Dashboard.Layout;
+using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
 
@@ -63,7 +65,7 @@ internal static class ZpCodeEditorDashboard
     {
         while (true)
         {
-            DashboardRenderer.RenderHeader("ZpCode Editor");
+            HeaderBar.Render("ZpCode Editor");
 
             var entryStats = await DashboardStats.TryLoadAllAsync();
 
@@ -81,7 +83,7 @@ internal static class ZpCodeEditorDashboard
                 AnsiConsole.WriteLine();
             }
 
-            var country = MenuPrompt.Show(
+            var country = CdtSelectMenu.Show(
                 ["US", "CA", "MX", "← Back"],
                 s => s == "← Back" ? "[grey]← Back[/]" : $"[bold cyan]{s}[/]",
                 escapeReturns: "← Back",
@@ -89,9 +91,9 @@ internal static class ZpCodeEditorDashboard
 
             if (country == "← Back") break;
 
-            DashboardRenderer.RenderHeader("ZpCode Editor");
+            HeaderBar.Render("ZpCode Editor");
 
-            var mode = MenuPrompt.Show(
+            var mode = CdtSelectMenu.Show(
                 ["Edit Uncurated", "Edit Flagged", "← Back"],
                 s => s switch
                 {
@@ -125,10 +127,10 @@ internal static class ZpCodeEditorDashboard
         }
         catch (Exception ex)
         {
-            DashboardRenderer.RenderHeader(header);
+            HeaderBar.Render(header);
             AnsiConsole.MarkupLine($"[red]  ✗ {Markup.Escape(ex.Message)}[/]");
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+            FooterBar.PressAnyKey();
             Console.ReadKey(intercept: true);
             return;
         }
@@ -142,7 +144,7 @@ internal static class ZpCodeEditorDashboard
         {
             if (totalCount == 0)
             {
-                DashboardRenderer.RenderHeader(header);
+                HeaderBar.Render(header);
                 AnsiConsole.Write(BuildCurrentCountryStatsTable(stats, country));
                 AnsiConsole.WriteLine();
 
@@ -265,13 +267,13 @@ internal static class ZpCodeEditorDashboard
         while (true)
         {
             var flagged = rows.Any(r => r.Flagged);
-            DashboardRenderer.RenderHeader($"ZpCode Editor › {country} › {zpCode}");
+            HeaderBar.Render($"ZpCode Editor › {country} › {zpCode}");
 
             AnsiConsole.Write(BuildDetailTable(rows, selectedIndex));
             AnsiConsole.WriteLine();
 
             var flagHint = flagged ? "[red bold]F[/][grey] unflag[/]" : "[bold]F[/][grey] flag[/]";
-            AnsiConsole.MarkupLine(
+            CdtCommandMenu.Render(
                 $"  [bold]C[/][grey] curate all   [/][bold]T[/][grey] TZ checked   [/]" +
                 $"[bold]N[/][grey] names checked   [/][bold]E[/][grey] edit   {flagHint}   Esc back[/]");
 
@@ -352,13 +354,13 @@ internal static class ZpCodeEditorDashboard
         while (true)
         {
             // Use row.ZpCode so the header reflects the current code after a rename.
-            DashboardRenderer.RenderHeader($"ZpCode Editor › {country} › {row.ZpCode} › Edit");
+            HeaderBar.Render($"ZpCode Editor › {country} › {row.ZpCode} › Edit");
             AnsiConsole.MarkupLine("  [grey]Select a field and press Enter to edit.[/]");
             AnsiConsole.WriteLine();
 
             AnsiConsole.Write(BuildEditTable(row, selectedField));
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("  [grey]↑↓ move   Enter edit   Esc back[/]");
+            CdtCommandMenu.Render("  [grey]↑↓ move   Enter edit   Esc back[/]");
 
             var key = Console.ReadKey(intercept: true).Key;
 
@@ -389,7 +391,7 @@ internal static class ZpCodeEditorDashboard
         IWorkDbConnectionFactory factory, string country, string zpCode,
         DetailRow row, string fieldName)
     {
-        DashboardRenderer.RenderHeader(
+        HeaderBar.Render(
             $"ZpCode Editor › {country} › {zpCode} › Edit › {fieldName}");
 
         var currentValue = GetFieldValue(row, fieldName);
@@ -582,9 +584,9 @@ internal static class ZpCodeEditorDashboard
         }
         catch (Exception ex)
         {
-            DashboardRenderer.RenderHeader($"ZpCode Editor › {country} › {zpCode}");
+            HeaderBar.Render($"ZpCode Editor › {country} › {zpCode}");
             AnsiConsole.MarkupLine($"[red]  ✗ {Markup.Escape(ex.Message)}[/]");
-            AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+            FooterBar.PressAnyKey();
             Console.ReadKey(intercept: true);
             return null;
         }
@@ -620,7 +622,7 @@ internal static class ZpCodeEditorDashboard
         var header = flaggedMode
             ? $"ZpCode Editor › {country} › Flagged"
             : $"ZpCode Editor › {country}";
-        DashboardRenderer.RenderHeader(header);
+        HeaderBar.Render(header);
 
         var browseTable  = BuildBrowseTable(page, selectedIndex, offset, totalCount, stats, flaggedMode);
         var countryPanel = BuildCurrentCountryStatsTable(stats, country);
@@ -630,7 +632,7 @@ internal static class ZpCodeEditorDashboard
         var hint = (!flaggedMode && stats?.OrphanAltNames > 0)
             ? "  [grey]↑↓ move   PgUp/PgDn page   Enter view   [/][bold]O[/][grey] fix orphans   Esc back[/]"
             : "  [grey]↑↓ move   PgUp/PgDn page   Enter view   Esc back[/]";
-        AnsiConsole.MarkupLine(hint);
+        CdtCommandMenu.Render(hint);
     }
 
     private static Table BuildBrowseTable(

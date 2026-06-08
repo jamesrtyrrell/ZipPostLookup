@@ -5,7 +5,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 
-		<AssemblyName>ZipPostLookup</AssemblyName>
+		<AssemblyName>ZipPostLookup.Legacy</AssemblyName>
 		<RootNamespace>ZipPostLookup</RootNamespace>
 		<LangVersion>latest</LangVersion>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>

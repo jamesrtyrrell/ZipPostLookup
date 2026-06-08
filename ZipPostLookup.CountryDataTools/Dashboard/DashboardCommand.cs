@@ -1,4 +1,6 @@
 using Spectre.Console;
+using ZipPostLookup.CountryDataTools.Dashboard.Layout;
+using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 
 namespace ZipPostLookup.CountryDataTools.Dashboard;
 
@@ -43,7 +45,7 @@ public static class DashboardCommand
                     }
                     else
                     {
-                        DashboardRenderer.RenderHeader(selected.Name);
+                        HeaderBar.Render(selected.Name);
                         await selected.ShowHelp();
                         AnsiConsole.WriteLine();
                         AnsiConsole.MarkupLine("[grey]  Press any key to return to the menu...[/]");
@@ -69,7 +71,7 @@ public static class DashboardCommand
     private static void Render(
         IReadOnlyList<CommandEntry> items, int selectedIndex, List<CountryStatsRow> stats)
     {
-        DashboardRenderer.RenderHeader("Dashboard");
+        HeaderBar.Render("Dashboard");
 
         var menuTable = BuildMenuTable(items, selectedIndex);
 
@@ -79,7 +81,7 @@ public static class DashboardCommand
             AnsiConsole.Write(menuTable);
 
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("  [grey]↑↓ move   Enter select   Esc exit[/]");
+        CdtCommandMenu.Render("  [grey]↑↓ move   Enter select   Esc exit[/]");
     }
 
     private static Table BuildMenuTable(IReadOnlyList<CommandEntry> items, int selectedIndex)

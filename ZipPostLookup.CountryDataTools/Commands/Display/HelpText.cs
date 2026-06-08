@@ -98,7 +98,7 @@ public static class HelpText
 
         AnsiConsole.MarkupLine("  [bold cyan]snapshot[/]        [[--yes]] Run the full export pipeline for all countries in one command.");
         Console.WriteLine("                    Steps (in order):");
-        Console.WriteLine("                      1. export --target ref --all --curated-only");
+        Console.WriteLine("                      1. export --target ref --all");
         Console.WriteLine("                      2. export --all --curated-only");
         Console.WriteLine("                    Prompts for confirmation before starting (skip with --yes).");
         Console.WriteLine("                    Stops on first failure and prints recovery guidance. On success,");

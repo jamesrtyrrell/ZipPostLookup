@@ -1,6 +1,7 @@
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
+using static ShereSoft.Zip2City;
 using ZipPostLookup.Core;
 using ZipPostLookup.ZPImage;
 
@@ -12,6 +13,9 @@ namespace ZipPostLookup.Benchmarks;
 /// Backends compared for every operation:
 ///   • <see cref="ZipPostRegistry"/>   — the CSV-built registry (FrozenDictionary indexes)
 ///   • <see cref="ZpImageLookup"/>      — the binary ZP frozen image (MPHF + lazy materialisation)
+///
+/// GetByCode hit/miss also include a Zip2City column (US only) to complete the three-way picture.
+/// For CA/MX params the Zip2City methods return null immediately (US-only library).
 ///
 /// Layout:
 ///   • <see cref="Country"/> is a [Params] dimension — every benchmark runs once per country.
@@ -106,6 +110,7 @@ public class ZpImageBenchmarks
 
         _csv = new ZipPostRegistry(Country);
         _zpi = ZpImageLookup.FromBuiltIn(Country);
+        if (Country == "US") _ = GetDefaultCityState("10001"); // warm Zip2City static ctor
 
         // Resolve a genuinely multi-entry code from the data so GetAllByCode exercises the
         // multi-name path where it exists. Falls back to the primary hit if the country has none.
@@ -160,6 +165,10 @@ public class ZpImageBenchmarks
     [BenchmarkCategory("GetByCode hit"), Benchmark(Description = "ZPI")]
     public CodeEntry? Zpi_Hit() => _zpi.GetByCode(_hit);
 
+    [BenchmarkCategory("GetByCode hit"), Benchmark(Description = "Zip2City")]
+    public string[]? Zip2City_Hit() =>
+        Country == "US" ? GetDefaultCityState(_hit) : null;
+
     // ── GetByCode alt path (CA: exact LDU vs range; US/MX: second exact code) ──────────────────
     [BenchmarkCategory("GetByCode alt"), Benchmark(Baseline = true, Description = "CSV")]
     public CodeEntry? Csv_HitAlt() => _csv.GetByCode(_hitAlt);
@@ -173,6 +182,10 @@ public class ZpImageBenchmarks
 
     [BenchmarkCategory("GetByCode miss"), Benchmark(Description = "ZPI")]
     public CodeEntry? Zpi_Miss() => _zpi.GetByCode(_miss);
+
+    [BenchmarkCategory("GetByCode miss"), Benchmark(Description = "Zip2City")]
+    public string[]? Zip2City_Miss() =>
+        Country == "US" ? GetDefaultCityState(_miss) : null;
 
     // ── GetAllByCode (multi-name) ────────────────────────────────────────────────────────────
     [BenchmarkCategory("GetAllByCode"), Benchmark(Baseline = true, Description = "CSV")]

@@ -5,13 +5,16 @@ using ZipPostLookup.Core;
 namespace ZipPostLookup.Benchmarks;
 
 /// <summary>
-/// Batch lookup benchmarks — <see cref="ZipPostRegistry.GetBatch"/> vs equivalent sequential
+/// Batch lookup benchmarks — <see>
+///     <cref>ZipPostRegistry.GetBatch</cref>
+/// </see>
+/// vs equivalent sequential
 /// <see cref="ZipPostRegistry.GetByCode"/> calls at three input sizes.
-///
+/// 
 /// Key questions:
 ///   1. Is batch faster than a loop of individual lookups?
 ///   2. How does the gap scale with input size (10, 100, 1000 codes)?
-///
+/// 
 /// US data: 57,400 entries — fully curated.
 /// </summary>
 [MemoryDiagnoser]

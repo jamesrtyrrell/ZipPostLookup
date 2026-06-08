@@ -53,8 +53,10 @@ internal sealed class ZpImageReader
     private readonly int _namePoolOffsets; // offsets[count+1] base
     private readonly int _namePoolBytes;   // utf-8 bytes base
 
-    // Piece 1: NamePool decoded once at load — Name(idx) is a zero-alloc array lookup.
-    private readonly string[] _namePool;
+    // Piece 1: NamePool decoded lazily — Name(idx) decodes the UTF-8 string on first access and
+    //          caches it, so repeat reads are a zero-alloc array lookup. Avoids the full up-front
+    //          decode (e.g. MX = 77,932 string allocations) that most callers never touch.
+    private readonly string?[] _namePool;
 
     // Piece 2: AdminLevel arrays pre-built per admin index — Materialize references these
     //          directly instead of allocating new[] { new AdminLevel(...) } per call.
@@ -168,8 +170,8 @@ internal sealed class ZpImageReader
         _adminCodeIndex = BuildAdminIndex(selectCode: true);
         _adminNameIndex = BuildAdminIndex(selectCode: false);
 
-        // Piece 1 — decode entire NamePool up-front; Name(idx) becomes a zero-alloc array lookup.
-        _namePool    = DecodeNamePool();
+        // Piece 1 — allocate the NamePool cache; entries are decoded on first access via Name(idx).
+        _namePool    = new string?[poolCount];
 
         // Piece 2 — pre-build one AdminLevel[] per admin division; shared across all Materialize calls.
         _adminLevels = BuildAdminLevels();
@@ -261,8 +263,12 @@ internal sealed class ZpImageReader
 
         for (var slot = 0; slot < _exactCount; slot++)
         {
-            var e = _directoryBase + slot * DirectoryEntryBytes;
-            int first = (int)ReadU32(e + 8), count = ReadU16(e + 12);
+            var e  = _directoryBase + slot * DirectoryEntryBytes;
+            var fr = ReadU32(e + DirFirstOffset);
+            var first = (int)(fr & DirRecordIdMask);
+            var count = !_u32NameIndex && (fr & DirInlineFlag) != 0
+                ? 1
+                : ReadU16(e + DirCountOrNameOffset);
             if (first < 0 || count <= 0 || first + (long)count > _recordCount)
             {
                 throw Corrupt($"directory slot {slot} record span [{first},{first + count}) outside {_recordCount} records");
@@ -399,13 +405,25 @@ internal sealed class ZpImageReader
     /// <summary>Returns the default entry for an exact code, or <c>null</c> if not present.</summary>
     public CodeEntry? GetByCodeExact(string code)
     {
-        if (!TryResolve(code, out var first, out _, out var packed))
+        var entry = ResolveEntry(code, out var packed);
+        if (entry < 0)
         {
             return null;
         }
 
-        // Cache hit is fully allocation-free: skip the Unpack (which builds a string) entirely.
-        return _entryCache[first] ?? Materialize(first, CodePacker.Unpack(packed));
+        // v4 fused directory — a single-record code in a u16 image carries its record's fields in the
+        // directory entry, so the default lookup never touches the Records section.
+        var fr       = ReadU32Fast(entry + DirFirstOffset);
+        var recordId = (int)(fr & DirRecordIdMask);
+
+        if (_entryCache[recordId] is { } cached)
+        {
+            return cached; // allocation-free repeat hit; no Unpack, no Records read.
+        }
+
+        return !_u32NameIndex && (fr & DirInlineFlag) != 0
+            ? MaterializeInline(entry, recordId, fr, packed)
+            : Materialize(recordId, CodePacker.Unpack(packed));
     }
 
     /// <summary>Returns all entries for an exact code (default first), or <c>null</c> if absent.</summary>
@@ -428,32 +446,71 @@ internal sealed class ZpImageReader
         return list;
     }
 
-    private bool TryResolve(string code, out int first, out int count, out ulong packed)
+    /// <summary>
+    /// Resolves an exact code to its verified directory-entry byte offset, or <c>-1</c> on a miss.
+    /// Shared by the single- and all-entry lookups so the MPHF eval + packed-code verify live once.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private int ResolveEntry(string code, out ulong packed)
     {
-        first = count = 0;
         packed = 0;
-
         if (_exactCount == 0 || !CodePacker.TryPack(code.AsSpan(), out packed))
         {
-            return false;
+            return -1;
         }
 
         var slot = Evaluate(packed);
-        if (slot < 0 || slot >= _exactCount)
+        if ((uint)slot >= (uint)_exactCount)
+        {
+            return -1;
+        }
+
+        var entry = _directoryBase + slot * DirectoryEntryBytes;
+        return ReadU64Fast(entry) == packed ? entry : -1; // MPHF maps unknowns arbitrarily — verify.
+    }
+
+    /// <summary>Decodes the (firstRecord, count) span from a v4 directory entry.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void DirSpan(int entry, out int first, out int count)
+    {
+        var fr = ReadU32Fast(entry + DirFirstOffset);
+        first  = (int)(fr & DirRecordIdMask);
+        count  = !_u32NameIndex && (fr & DirInlineFlag) != 0
+            ? 1
+            : ReadU16Fast(entry + DirCountOrNameOffset);
+    }
+
+    private bool TryResolve(string code, out int first, out int count, out ulong packed)
+    {
+        first = count = 0;
+
+        var entry = ResolveEntry(code, out packed);
+        if (entry < 0)
         {
             return false;
         }
 
-        // Piece 5 — fast reads on the hot directory lookup.
-        var entry = _directoryBase + slot * DirectoryEntryBytes;
-        if (ReadU64Fast(entry) != packed)
-        {
-            return false; // MPHF maps unknown keys to arbitrary slots — verify.
-        }
-
-        first = (int)ReadU32Fast(entry + 8);
-        count = ReadU16Fast(entry + 12);
+        DirSpan(entry, out first, out count);
         return true;
+    }
+
+    /// <summary>
+    /// Materialises a single-record code straight from its inlined directory entry — the name, tz,
+    /// and admin index are read from the directory, not the Records section. Byte-identical to
+    /// <see cref="Materialize"/> for the same record (the Records copy is the source of truth at
+    /// build time); caches under the real record id so reverse-lookup paths share the instance.
+    /// </summary>
+    private CodeEntry MaterializeInline(int entry, int recordId, uint fr, ulong packed)
+    {
+        var nameIdx   = ReadU16Fast(entry + DirCountOrNameOffset);
+        var name      = Name(nameIdx);
+        var timezone  = _timezones[_image[entry + DirInlineTzOffset]];
+        var admins    = _adminLevels[_image[entry + DirInlineAdminOffset]];
+        var isDefault = (fr & DirInlineDefault) != 0;
+
+        var ce = new CodeEntry(CodePacker.Unpack(packed), name, timezone, isDefault, admins);
+        _entryCache[recordId] = ce;
+        return ce;
     }
 
     private int Evaluate(ulong key)
@@ -505,13 +562,13 @@ internal sealed class ZpImageReader
         foreach (var entryIndex in entries)
         {
             var p      = rangeBase + entryIndex * RangeEntryBytes;
-            var start4 = _namePool[(int)ReadU32Fast(p + 8)];
-            var end4   = _namePool[(int)ReadU32Fast(p + 12)];
+            var start4 = Name((int)ReadU32Fast(p + 8));
+            var end4   = Name((int)ReadU32Fast(p + 12));
 
             if (string.Compare(prefix, start4, StringComparison.OrdinalIgnoreCase) >= 0 &&
                 string.Compare(prefix, end4, StringComparison.OrdinalIgnoreCase) <= 0)
             {
-                codeStr = _namePool[(int)ReadU32Fast(p)]; // original range notation
+                codeStr = Name((int)ReadU32Fast(p)); // original range notation
                 return (int)ReadU32Fast(p + 16);           // record id
             }
         }
@@ -532,7 +589,7 @@ internal sealed class ZpImageReader
         var entryBase = off + 4;
         for (var i = 0; i < count; i++)
         {
-            var fsa = _namePool[(int)ReadU32Fast(entryBase + i * RangeEntryBytes + 4)];
+            var fsa = Name((int)ReadU32Fast(entryBase + i * RangeEntryBytes + 4));
             if (!map.TryGetValue(fsa, out var list))
             {
                 list = new List<int>(1);
@@ -625,7 +682,7 @@ internal sealed class ZpImageReader
             var nameIdx = _u32NameIndex
                 ? (int)ReadU32Fast(_recordsBase + r * _recordBytes + RecordNameOffset)
                 : (int)ReadU16Fast(_recordsBase + r * _recordBytes + RecordNameOffset);
-            var name = _namePool[nameIdx];
+            var name = Name(nameIdx);
             if (!index.TryGetValue(name, out var list))
             {
                 list = new List<int>(1);
@@ -742,8 +799,7 @@ internal sealed class ZpImageReader
             var slot    = (int)ReadU32Fast(sortedBase + i * 4);
             var entry   = _directoryBase + slot * DirectoryEntryBytes;
             var packed  = ReadU64Fast(entry);
-            var first   = (int)ReadU32Fast(entry + 8);
-            var count   = ReadU16Fast(entry + 12);
+            DirSpan(entry, out var first, out var count);
             var codeStr = CodePacker.Unpack(packed);
             for (var k = 0; k < count; k++)
             {
@@ -773,7 +829,7 @@ internal sealed class ZpImageReader
         var nameIdx   = _u32NameIndex
             ? (int)ReadU32Fast(rec + RecordNameOffset)
             : (int)ReadU16Fast(rec + RecordNameOffset);
-        var name      = _namePool[nameIdx];
+        var name      = Name(nameIdx);
         var timezone  = _timezones[_image[rec + RecordTzOffset]];
         var isDefault = (_image[rec + RecordFlagsOffset] & (byte)RecordFlags.IsDefault) != 0;
 
@@ -833,8 +889,7 @@ internal sealed class ZpImageReader
         {
             var slot  = (int)ReadU32Fast(sortedBase + i * 4);
             var entry = _directoryBase + slot * DirectoryEntryBytes;
-            var first = (int)ReadU32Fast(entry + 8);
-            var count = ReadU16Fast(entry + 12);
+            DirSpan(entry, out var first, out var count);
             for (var k = 0; k < count; k++)
             {
                 map[first + k] = slot;
@@ -866,7 +921,7 @@ internal sealed class ZpImageReader
         for (var i = 0; i < count; i++)
         {
             var p = entryBase + i * RangeEntryBytes;
-            map[(int)ReadU32Fast(p + 16)] = _namePool[(int)ReadU32Fast(p)];
+            map[(int)ReadU32Fast(p + 16)] = Name((int)ReadU32Fast(p));
         }
 
         return map;
@@ -876,20 +931,19 @@ internal sealed class ZpImageReader
     // Section decoders + primitive reads
     // =========================================================================
 
-    // Piece 1 — decode entire NamePool into string[] at load.
-    private string[] DecodeNamePool()
+    // Piece 1 — lazily decode a single NamePool entry, caching it for subsequent reads. The decode
+    // is deterministic, so the unsynchronised cache write is a benign race (identical string, atomic
+    // reference assignment); worst case a name is decoded twice. Keeps the hot path lock-free.
+    private string Name(int idx)
     {
-        var namePoolBase = Off(SectionKind.NamePool);
-        var count        = (int)ReadU32(namePoolBase);
-        var pool         = new string[count];
-        for (var i = 0; i < count; i++)
-        {
-            var start = (int)ReadU32(_namePoolOffsets + i * 4);
-            var end   = (int)ReadU32(_namePoolOffsets + (i + 1) * 4);
-            pool[i]   = Encoding.UTF8.GetString(_image, _namePoolBytes + start, end - start);
-        }
+        return _namePool[idx] ??= DecodeNameAt(idx);
+    }
 
-        return pool;
+    private string DecodeNameAt(int idx)
+    {
+        var start = (int)ReadU32(_namePoolOffsets + idx * 4);
+        var end   = (int)ReadU32(_namePoolOffsets + (idx + 1) * 4);
+        return Encoding.UTF8.GetString(_image, _namePoolBytes + start, end - start);
     }
 
     // Piece 2 — pre-build one AdminLevel[] per admin division.

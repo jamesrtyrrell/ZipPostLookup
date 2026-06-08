@@ -4,7 +4,7 @@ A build-once, read-only binary representation of one country's postal data. Desi
 decompressed once into a single `byte[]` and queried zero-copy, with no CSV parsing and no
 per-entry object allocation at load time. Available on .NET 8+ only.
 
-**Current format version: 2**
+**Current format version: 4**
 
 ---
 
@@ -137,17 +137,28 @@ g   i32[n]   — displacement array (see MPHF section below)
 
 ### 5. Directory (kind = 5)
 
-One entry per MPHF slot. Maps a slot to the packed code key and the record span for that code.
+One entry per MPHF slot. Maps a slot to the packed code key and either an inlined record (the common
+single-record case) or the record span for that code. **16 bytes** (`DirectoryEntryBytes = 16`).
 
 ```
 entry × ExactCount:
   packedCode   u64   — code packed by CodePacker (for miss-detection; MPHF maps unknowns to arbitrary slots)
-  firstRecord  u32   — index of first record for this code in the Records section
-  count        u16   — number of records (1 for most codes, >1 for multi-name zips)
-  reserved     u16
+  firstRecord  u32   — low 30 bits = first record index in the Records section
+                       bit31 (DirInlineFlag)    = entry is inlined (single record, u16 images only)
+                       bit30 (DirInlineDefault) = the inlined record is the default entry
+  [12]         u8    — inline: tzIndex      | multi: unused
+  [13]         u8    — inline: adminIndex   | multi: unused
+  [14..16]     u16   — inline: nameIndex    | multi: record count
 ```
 
-Total: 16 bytes per entry (`DirectoryEntryBytes = 16`).
+**Fused directory (v4).** For a single-record code (`count == 1`) in a u16 image, the record's
+`nameIndex` / `tzIndex` / `adminIndex` / `IsDefault` are copied into the directory entry's spare
+bytes (the slots a multi-record entry uses for `count` + reserved). `GetByCode` then materialises the
+entry straight from the directory, skipping the second memory fetch into the Records section — the win
+on the dominant single-record path (CA ~99%, US ~76% of codes). The record is **still written to the
+Records section**, so the cache (keyed by record id), reverse-lookup postings, and `GetAll` are
+unchanged; the directory copy is purely a read shortcut. u32 images (NamePool > 65,535) never inline —
+their nameIndex doesn't fit the 2-byte slot — and fall back to `firstRecord` + `count`.
 
 ### 6. Records (kind = 6)
 
@@ -295,17 +306,23 @@ Hot path (`GetByCode`):
 1. `CodePacker.TryPack` the input string → `ulong`.
 2. Evaluate the MPHF → slot (using `Unsafe.ReadUnaligned<int>` on the displacement array).
 3. Read `packedCode` from the Directory (`Unsafe.ReadUnaligned<ulong>`); compare to detect a miss.
-4. Read `firstRecord` and `count` from the Directory (`Unsafe.ReadUnaligned<uint/ushort>`).
-5. Return `_entryCache[firstRecord]` if already materialised, else call `Materialize`.
+4. Read `firstRecord` (with the inline flag bits) from the Directory.
+5. Return `_entryCache[recordId]` if already materialised. Otherwise:
+   - **Inline entry (v4, u16 single-record):** read `nameIndex`/`tzIndex`/`adminIndex`/`IsDefault`
+     directly from the **same directory entry** and build the `CodeEntry` — the Records section is
+     never touched. This removes one random memory access on the dominant path.
+   - **Multi-record / u32 entry:** read `count` and call `Materialize(firstRecord, …)`, which reads
+     the record fields from the Records section as before.
 
-`Materialize` (first call per code):
+`Materialize` (first call per non-inlined code):
 - Reads nameIndex (`u16` or `u32` depending on `_u32NameIndex`) → `_namePool[nameIdx]` (zero-alloc).
 - Reads tzIndex, adminIndex, flags as single-byte array reads.
 - Returns `_adminLevels[adminIdx]` (pre-built, zero-alloc).
-- Total allocations: **1** (`new CodeEntry(...)`) — down from 3 in V1.
+- Total allocations: **1** (`new CodeEntry(...)`).
 
-Range fallback, reverse lookups, and materialisation are unchanged from V1 except all hot-path
-reads use `Unsafe.ReadUnaligned` with `[AggressiveInlining]`.
+Both the inline and `Materialize` paths cache the built `CodeEntry` under the same record id, so a
+later reverse-lookup hit on the same record returns the identical instance. Range fallback and reverse
+lookups are unchanged; all hot-path reads use `Unsafe.ReadUnaligned` with `[AggressiveInlining]`.
 
 ---
 
@@ -317,12 +334,14 @@ These must be kept in sync between builder and reader:
 |---|---|
 | `RecordBytes = 6` (u16) / `RecordBytesU32 = 8` (u32) | Encoded in filename suffix; reader sets `_recordBytes` from caller flag |
 | Record field offsets: `RecordNameOffset=0`, `RecordTzOffset=2`, `RecordAdminOffset=3`, `RecordFlagsOffset=4` | u16 layout; u32 layout shifts tz/admin/flags by 2 |
-| `DirectoryEntryBytes = 16` | Field order: packedCode u64, firstRecord u32, count u16, reserved u16 |
+| `DirectoryEntryBytes = 16` | v4 packing: packedCode u64; firstRecord u32 (bit31 Inline, bit30 InlineDefault, low 30 record id); then inline tz u8 @12 / admin u8 @13 / nameIndex u16 @14 — or, for multi/u32, unused @12–13 and count u16 @14 |
+| Inline only for u16 single-record codes | Builder sets the inline bit iff `!u32NameIndex && count == 1`; reader gates the inline read on `!_u32NameIndex` too |
+| Inlined record also present in Records | Directory inline is a read shortcut; the record stays in Records so postings / cache / GetAll are unaffected |
 | `RangeEntryBytes = 20` | Field order: codeIndex u32, fsaIndex u32, start4Index u32, end4Index u32, recordId u32 |
 | `SectionEntryBytes = 12` | Field order: kind u16, reserved u16, offset u32, length u32 |
 | `HeaderBytes = 32` | See byte map above |
 | `SectionAlignment = 8` | All section payloads start on an 8-byte boundary |
-| `CurrentVersion = 2` | Reader throws on version mismatch |
+| `CurrentVersion = 4` | Reader throws on version mismatch |
 | 4-byte size prefix in `.zpi.br` | Written by `ZpImageWriter`; read before decompression in `LoadCompressed` |
 | Filename suffix encodes nameIndex width | `.u16.` → u16 (RecordBytes=6), `.u32.` → u32 (RecordBytesU32=8) |
 | Range stride check | Reader validates total RangeTable length vs `RangeCount × RangeEntryBytes` |
@@ -353,12 +372,16 @@ countrydatatools export --country CA --target zpi --from-csv
 
 ## Version history
 
-| Version | RecordBytes | Size prefix | nameIndex |
-|---|---|---|---|
-| 1 (legacy) | 8 | No | u32 (fixed) |
-| 2 (current) | 6 or 8 | Yes (4 bytes) | u16 or u32 (from filename) |
+| Version | RecordBytes | Size prefix | nameIndex | MPHF eval | Directory |
+|---|---|---|---|---|---|
+| 1 (legacy) | 8 | No | u32 (fixed) | modulo, two FNV passes | span only |
+| 2 | 6 or 8 | Yes (4 bytes) | u16 or u32 (from filename) | modulo, two FNV passes | span only |
+| 3 | 6 or 8 | Yes (4 bytes) | u16 or u32 (from filename) | single FNV + fastrange | span only |
+| 4 (current) | 6 or 8 | Yes (4 bytes) | u16 or u32 (from filename) | single FNV + fastrange | **fused** (single-record codes inlined, u16) |
 
-V1 images are rejected by the V2 reader with a clear re-export hint.
+Each reader rejects images whose version it does not recognise, with a re-export hint. The Records
+section layout is unchanged across v2–v4; v3 changed only the MPHF evaluation, and v4 only the
+Directory entry packing — but both alter lookup results for an old reader, so each bumps the version.
 
 ---
 
@@ -367,7 +390,7 @@ V1 images are rejected by the V2 reader with a clear re-export hint.
 **What it is:** A custom binary format for postal code lookup. One file per country. Brotli-compressed.
 `.NET 8+ only`. Built offline by `ZpImageBuilder`, read at runtime by `ZpImageReader`.
 
-**Current version: 2.** V1 images are rejected at load.
+**Current version: 4.** Older-version images are rejected at load with a re-export hint.
 
 **Filename convention:** `{cc}.u16.zpi.br` (nameIndex u16, RecordBytes=6, normal) or `{cc}.u32.zpi.br`
 (nameIndex u32, RecordBytesU32=8, auto-promoted when NamePool > 65k entries). The suffix is the
@@ -377,8 +400,10 @@ then `.u32.`, then legacy `.zpi.br`. `FromFile` detects from path.
 **`.zpi.br` wrapper:** First 4 bytes = uncompressed size (u32 LE). Reader uses this to pre-allocate
 an exact buffer via `GC.AllocateUninitializedArray<byte>` before decompressing. No `MemoryStream`.
 
-**Primary lookup:** MPHF maps packed `ulong` code → directory slot → record span. O(1),
-`Unsafe.ReadUnaligned` on all hot-path reads.
+**Primary lookup:** MPHF maps packed `ulong` code → directory slot. O(1), `Unsafe.ReadUnaligned` on
+all hot-path reads. In v4 a single-record code (u16 image) carries its record **inline in the directory
+entry**, so the default lookup never reads the Records section; multi-record and u32 entries follow the
+`firstRecord` + `count` span into Records.
 
 **First-call Materialize: 1 allocation** (just `CodeEntry`). NamePool decoded into `string[]` at
 load (zero-alloc name reads). `AdminLevel[]` pre-built per division at load (zero-alloc admin reads).

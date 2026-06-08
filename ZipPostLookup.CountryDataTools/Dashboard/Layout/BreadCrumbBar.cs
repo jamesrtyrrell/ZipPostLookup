@@ -1,6 +1,9 @@
-﻿namespace ZipPostLookup.CountryDataTools.Dashboard.Layout;
+using Spectre.Console;
 
-public class BreadCrumbBar
+namespace ZipPostLookup.CountryDataTools.Dashboard.Layout;
+
+internal static class BreadCrumbBar
 {
-    
+    public static string Markup(string path) =>
+        $"[grey]  ›[/]  [bold]{Spectre.Console.Markup.Escape(path)}[/]";
 }

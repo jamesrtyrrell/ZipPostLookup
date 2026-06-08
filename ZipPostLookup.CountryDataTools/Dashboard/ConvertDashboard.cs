@@ -1,5 +1,6 @@
 using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Commands;
+using ZipPostLookup.CountryDataTools.Dashboard.Layout;
 
 namespace ZipPostLookup.CountryDataTools.Dashboard;
 
@@ -9,7 +10,7 @@ internal static class ConvertDashboard
     {
         while (true)
         {
-            DashboardRenderer.RenderHeader("Convert");
+            HeaderBar.Render("Convert");
             AnsiConsole.MarkupLine("  Converts a GeoNames or OpenStreetMap TSV to a candidate CSV.");
             AnsiConsole.MarkupLine("  [grey]Supported: GeoNames postal TSV, OSM streets/addresses/houses TSV.[/]");
             AnsiConsole.WriteLine();
@@ -36,7 +37,7 @@ internal static class ConvertDashboard
             if (!string.IsNullOrWhiteSpace(outputOverride))  args.AddRange(["--output",  outputOverride]);
             if (noPrompts) args.Add("--no-prompts");
 
-            DashboardRenderer.RenderHeader("Convert");
+            HeaderBar.Render("Convert");
 
             var exitCode = await ConvertKnownFormatsCommand.RunAsync([.. args]);
 
@@ -45,7 +46,7 @@ internal static class ConvertDashboard
                 ? "[green]  ✓ Conversion complete[/]"
                 : $"[red]  ✗ Exited with code {exitCode}[/]");
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+            FooterBar.PressAnyKey();
             Console.ReadKey(intercept: true);
         }
 

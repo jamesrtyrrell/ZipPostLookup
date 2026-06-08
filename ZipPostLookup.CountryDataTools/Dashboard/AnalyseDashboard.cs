@@ -1,5 +1,7 @@
 using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Commands;
+using ZipPostLookup.CountryDataTools.Dashboard.Layout;
+using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 
 namespace ZipPostLookup.CountryDataTools.Dashboard;
 
@@ -9,11 +11,11 @@ internal static class AnalyseDashboard
     {
         while (true)
         {
-            DashboardRenderer.RenderHeader("Analyse");
+            HeaderBar.Render("Analyse");
             AnsiConsole.MarkupLine("  Analyses curated reference data and writes a Markdown report.");
             AnsiConsole.WriteLine();
 
-            var choice = MenuPrompt.Show(
+            var choice = CdtSelectMenu.Show(
                 ["US", "CA", "MX", "All (US + CA + MX)", "← Back"],
                 s => s switch
                 {
@@ -26,7 +28,7 @@ internal static class AnalyseDashboard
 
             if (choice == "← Back") break;
 
-            DashboardRenderer.RenderHeader("Analyse");
+            HeaderBar.Render("Analyse");
 
             var output = AnsiConsole.Prompt(
                 new TextPrompt<string>("  Output path [grey](blank = default DataAnalysis/ dir)[/]:")
@@ -37,7 +39,7 @@ internal static class AnalyseDashboard
             else args.AddRange(["--country", choice]);
             if (!string.IsNullOrWhiteSpace(output)) args.AddRange(["--output", output]);
 
-            DashboardRenderer.RenderHeader("Analyse");
+            HeaderBar.Render("Analyse");
 
             var exitCode = await AnalyseCommand.RunAsync([.. args]);
 
@@ -46,7 +48,7 @@ internal static class AnalyseDashboard
                 ? "[green]  ✓ Report written[/]"
                 : $"[red]  ✗ Exited with code {exitCode}[/]");
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+            FooterBar.PressAnyKey();
             Console.ReadKey(intercept: true);
         }
 

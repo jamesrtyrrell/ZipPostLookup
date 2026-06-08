@@ -1,5 +1,7 @@
 using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Commands;
+using ZipPostLookup.CountryDataTools.Dashboard.Layout;
+using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 
 namespace ZipPostLookup.CountryDataTools.Dashboard;
 
@@ -16,9 +18,9 @@ internal static class EnrichDashboard
     {
         while (true)
         {
-            DashboardRenderer.RenderHeader("Enrich");
+            HeaderBar.Render("Enrich");
 
-            var selected = MenuPrompt.Show(
+            var selected = CdtSelectMenu.Show(
                 [Candidates, Direct, Ref, Back],
                 s => s == Back
                     ? "[grey]← Back[/]"
@@ -32,17 +34,17 @@ internal static class EnrichDashboard
             // enrich ref has too many option shapes (file path vs provider) — show help for now.
             if (selected == Ref)
             {
-                DashboardRenderer.RenderHeader("Enrich › ref");
+                HeaderBar.Render("Enrich › ref");
                 await EnrichCommand.RunAsync(["-h"]);
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+                FooterBar.PressAnyKey();
                 Console.ReadKey(intercept: true);
                 continue;
             }
 
-            DashboardRenderer.RenderHeader($"Enrich › {selected.Name}");
+            HeaderBar.Render($"Enrich › {selected.Name}");
 
-            var countryChoice = MenuPrompt.Show(
+            var countryChoice = CdtSelectMenu.Show(
                 ["US", "CA", "MX", "All (US + CA + MX)", "← Cancel"],
                 s => s switch
                 {
@@ -72,7 +74,7 @@ internal static class EnrichDashboard
 
             string[] runArgs = [selected.Key, ..countryArgs, "--limit", limit.ToString(), ..dryRunArgs];
 
-            DashboardRenderer.RenderHeader($"Enrich › {selected.Name}");
+            HeaderBar.Render($"Enrich › {selected.Name}");
 
             var exitCode = await EnrichCommand.RunAsync(runArgs);
 

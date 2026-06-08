@@ -40,7 +40,7 @@ namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 /// </summary>
 public static class EnrichCandidatesCommand
 {
-    private const int DelayMs = 0_500;
+    private const int DelayMs = 1_500;
 
     public static async Task<int> RunAsync(string[] args)
     {

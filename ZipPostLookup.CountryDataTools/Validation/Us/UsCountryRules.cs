@@ -42,6 +42,9 @@ public sealed class UsCountryRules : ICountryRules
 
     // ── Code ranges ────────────────────────────────────────────────────────────
 
+    // USPS-assigned range. Matches the SQL guard in CommonQueries.PurgeOutOfRangeUs.
+    public static bool IsOutOfBoundsUs(int n) => n < 501 || n > 99950;
+
     public bool IsKnownSpecialCode(string code)
     {
         if (string.IsNullOrEmpty(code) || !int.TryParse(code, out var n)) return false;

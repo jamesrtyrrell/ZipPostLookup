@@ -198,7 +198,7 @@ internal static class ZpImageBuilder
             (SectionKind.TimezoneTable,    SerializeTimezoneTable(tzTable)),
             (SectionKind.AdminTable,       SerializeAdminTable(adminTable)),
             (SectionKind.Mphf,             SerializeMphf(mphf)),
-            (SectionKind.Directory,        SerializeDirectory(directory)),
+            (SectionKind.Directory,        SerializeDirectory(directory, records, u32NameIndex)),
             (SectionKind.Records,          SerializeRecords(records, u32NameIndex)),
             (SectionKind.SortedSlots,      SerializeSortedSlots(sortedSlots)),
             (SectionKind.TimezonePostings, SerializePostings(records, tzTable.Length, r => r.TimezoneIndex)),
@@ -305,15 +305,48 @@ internal static class ZpImageBuilder
         return w.ToArray();
     }
 
-    private static byte[] SerializeDirectory((ulong Packed, int First, int Count)[] directory)
+    /// <summary>
+    /// Serialises the v4 directory. A single-record code in a u16 image inlines its record's
+    /// name/timezone/admin into the entry (Inline flag set in firstRecord's high bit) so the reader
+    /// can satisfy <c>GetByCode</c> without a second fetch into the Records section. Multi-record
+    /// codes, and every entry in a u32 image, store <c>firstRecord</c> + <c>count</c> as before.
+    /// The inlined record is still emitted into the Records section — this is a read shortcut, not a
+    /// relocation — so postings, GetAll, and reverse lookups are unaffected.
+    /// </summary>
+    private static byte[] SerializeDirectory(
+        (ulong Packed, int First, int Count)[] directory,
+        List<BuiltRecord> records,
+        bool u32NameIndex)
     {
         var w = new BlobWriter(capacity: directory.Length * DirectoryEntryBytes);
         foreach (var (packed, first, count) in directory)
         {
             w.U64(packed);
-            w.U32((uint)first);
-            w.U16((ushort)count);
-            w.U16(0);
+
+            // Inline only when the single record's nameIndex fits the u16 slot and the record id
+            // fits the 30-bit field (always true in practice; guarded for safety).
+            var canInline = !u32NameIndex && count == 1 && (uint)first <= DirRecordIdMask;
+            if (canInline)
+            {
+                var rec = records[first];
+                var fr  = (uint)first | DirInlineFlag;
+                if ((rec.Flags & RecordFlags.IsDefault) != 0)
+                {
+                    fr |= DirInlineDefault;
+                }
+
+                w.U32(fr);                       // [8..12) firstRecord + inline flags
+                w.U8(rec.TimezoneIndex);         // [12]    inline tzIndex
+                w.U8(rec.AdminIndex);            // [13]    inline adminIndex
+                w.U16((ushort)rec.NameIndex);   // [14..16) inline nameIndex
+            }
+            else
+            {
+                w.U32((uint)first);              // [8..12) firstRecord (Inline bit clear)
+                w.U8(0);                         // [12]    unused
+                w.U8(0);                         // [13]    unused
+                w.U16((ushort)count);           // [14..16) record count
+            }
         }
 
         return w.ToArray();

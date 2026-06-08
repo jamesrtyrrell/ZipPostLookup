@@ -1,5 +1,7 @@
 using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Commands;
+using ZipPostLookup.CountryDataTools.Dashboard.Layout;
+using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 
 namespace ZipPostLookup.CountryDataTools.Dashboard;
 
@@ -16,9 +18,9 @@ internal static class ExportDashboard
     {
         while (true)
         {
-            DashboardRenderer.RenderHeader("Export");
+            HeaderBar.Render("Export");
 
-            var target = MenuPrompt.Show(
+            var target = CdtSelectMenu.Show(
                 [TargetRef, TargetMain, TargetZpi, TargetBack],
                 t => t == TargetBack
                     ? "[grey]← Back[/]"
@@ -28,9 +30,9 @@ internal static class ExportDashboard
 
             if (target == TargetBack) break;
 
-            DashboardRenderer.RenderHeader($"Export › {target.Key}");
+            HeaderBar.Render($"Export › {target.Key}");
 
-            var countryChoice = MenuPrompt.Show(
+            var countryChoice = CdtSelectMenu.Show(
                 ["US", "CA", "MX", "All (US + CA + MX)", "← Cancel"],
                 s => s switch
                 {
@@ -53,7 +55,7 @@ internal static class ExportDashboard
             if (curatedOnly)  args.Add("--curated-only");
             if (uncompressed) args.Add("--uncompressed");
 
-            DashboardRenderer.RenderHeader($"Export › {target.Key}");
+            HeaderBar.Render($"Export › {target.Key}");
 
             var exitCode = await ExportCommand.RunAsync([.. args]);
 
@@ -62,7 +64,7 @@ internal static class ExportDashboard
                 ? "[green]  ✓ Export complete[/]"
                 : $"[red]  ✗ Exited with code {exitCode}[/]");
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+            FooterBar.PressAnyKey();
             Console.ReadKey(intercept: true);
         }
 

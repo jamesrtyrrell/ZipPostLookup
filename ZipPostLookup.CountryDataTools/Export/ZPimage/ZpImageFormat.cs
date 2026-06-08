@@ -47,8 +47,13 @@ namespace ZipPostLookup.CountryDataTools.Export.ZPimage;
 ///   <c>codeLen u16</c>+code, <c>nameLen u16</c>+name.</item>
 /// <item><c>Mphf</c> — <c>n u32</c>, then the displacement array <c>g i32[n]</c>
 ///   (see <see cref="MinimalPerfectHash"/>).</item>
-/// <item><c>Directory</c> — <c>exactCount</c> × <see cref="DirectoryEntryBytes"/>, indexed by
-///   MPHF slot: <c>packedCode u64</c>, <c>firstRecord u32</c>, <c>count u16</c>, <c>reserved u16</c>.</item>
+/// <item><c>Directory</c> — <c>exactCount</c> × <see cref="DirectoryEntryBytes"/> (16 B), indexed by
+///   MPHF slot: <c>packedCode u64</c>, then <c>firstRecord u32</c> (bit31 = Inline, bit30 =
+///   InlineIsDefault, low 30 bits = record id). For a single-record code in a u16 image (Inline set)
+///   the remaining bytes hold the inlined record: <c>tzIndex u8</c> @12, <c>adminIndex u8</c> @13,
+///   <c>nameIndex u16</c> @14. For a multi-record code (Inline clear) bytes @12–13 are unused and
+///   <c>count u16</c> sits @14. The inlined record is also present in <c>Records</c> (postings,
+///   GetAll, and reverse lookups index it there); the directory copy only shortcuts <c>GetByCode</c>.</item>
 /// <item><c>Records</c> — <c>recordCount</c> × <see cref="RecordBytes"/>:
 ///   <c>nameIndex u32</c>, <c>tzIndex u8</c>, <c>adminIndex u8</c>, <c>flags u8</c>, <c>reserved u8</c>.
 ///   A code's records are stored contiguously; the default entry is first.</item>
@@ -73,11 +78,16 @@ internal static class ZpImageFormat
     /// <summary>
     /// Current image format version.
     /// <para>v3: the MPHF evaluation changed — a single seed-independent FNV pass reused for both
-    /// reductions, and modulo replaced by fastrange (see <see cref="MinimalPerfectHash"/>). The
-    /// section layout is unchanged, but v2 readers would resolve wrong slots, so the version is
-    /// bumped and the reader rejects mismatches.</para>
+    /// reductions, and modulo replaced by fastrange (see <see cref="MinimalPerfectHash"/>).</para>
+    /// <para>v4: <b>fused directory</b>. The Directory entry is unchanged in size (16 bytes) but the
+    /// <c>firstRecord</c>/<c>count</c>/<c>reserved</c> fields are repacked so a single-record code
+    /// (<c>count == 1</c>) in a u16 image inlines its record's name/timezone/admin into the directory
+    /// entry. <c>GetByCode</c> then materialises straight from the directory without a second fetch
+    /// into the Records section. The record still lives in Records (postings, GetAll, reverse lookups
+    /// are unchanged). u32 images never inline. v3 readers would misread the directory, so the
+    /// version is bumped and the reader rejects mismatches.</para>
     /// </summary>
-    public const ushort CurrentVersion = 3;
+    public const ushort CurrentVersion = 4;
 
     /// <summary>Fixed header size in bytes, before the section table.</summary>
     public const int HeaderBytes = 32;
@@ -109,6 +119,26 @@ internal static class ZpImageFormat
     public const int RecordAdminOffset = 3;
     /// <summary>Offset of flags (u8) within a record.</summary>
     public const int RecordFlagsOffset = 4;
+
+    // ── v4 Directory entry field offsets (entry stays DirectoryEntryBytes = 16) ──
+    // [0..8) packedCode u64 · [8..12) firstRecord u32 (bit31 Inline, bit30 InlineIsDefault,
+    // low 30 bits record id) · [12] inline tzIndex · [13] inline adminIndex ·
+    // [14..16) inline nameIndex (u16) OR record count.
+    /// <summary>Offset of the firstRecord u32 (carries the inline flags in its high bits).</summary>
+    public const int DirFirstOffset       = 8;
+    /// <summary>Offset of the inline timezone index (inline entries only).</summary>
+    public const int DirInlineTzOffset    = 12;
+    /// <summary>Offset of the inline admin index (inline entries only).</summary>
+    public const int DirInlineAdminOffset = 13;
+    /// <summary>Offset of the u16 that is the inline nameIndex (inline) or the record count (multi).</summary>
+    public const int DirCountOrNameOffset = 14;
+
+    /// <summary>firstRecord bit31 — this directory entry inlines its single record.</summary>
+    public const uint DirInlineFlag    = 0x8000_0000u;
+    /// <summary>firstRecord bit30 — the inline record is the default entry.</summary>
+    public const uint DirInlineDefault = 0x4000_0000u;
+    /// <summary>Mask for the low 30 bits of firstRecord that hold the record id.</summary>
+    public const uint DirRecordIdMask  = 0x3FFF_FFFFu;
 
     /// <summary>Record flag bits.</summary>
     [Flags]
