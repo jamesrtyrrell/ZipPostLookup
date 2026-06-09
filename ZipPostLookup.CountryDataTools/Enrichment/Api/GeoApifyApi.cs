@@ -33,7 +33,7 @@ internal sealed class GeoApifyApi : IEnrichmentApi
     public int? DailyLimit   => _dailyLimit;
     public int? MonthlyLimit => null;
 
-    public async Task<(ApiLookupResult? Result, FetchOutcome Outcome)> LookupAsync(
+    public async Task<FetchResult> LookupAsync(
         string country, string code, string? stateAbbr, CancellationToken ct = default)
     {
         var cc  = country.ToLowerInvariant();
@@ -55,7 +55,7 @@ internal sealed class GeoApifyApi : IEnrichmentApi
                 return (null, FetchOutcome.RateLimited);
 
             if (!response.IsSuccessStatusCode)
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, $"HTTP {(int)response.StatusCode}");
 
             var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
 
@@ -76,7 +76,7 @@ internal sealed class GeoApifyApi : IEnrichmentApi
                 iana = tzName.GetString();
 
             if (string.IsNullOrWhiteSpace(rawCity) && string.IsNullOrWhiteSpace(rawStateName))
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, "missing city and state");
 
             var stateMatch = StateResolver.Resolve(rawStateCode) ?? StateResolver.Resolve(rawStateName);
             var admin1Code = stateMatch?.StateCode ?? rawStateCode.ToUpperInvariant();
@@ -94,12 +94,12 @@ internal sealed class GeoApifyApi : IEnrichmentApi
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
         catch (Exception ex)
         {
             await Console.Error.WriteLineAsync($"[GeoApify] Unexpected error for {code}: {ex.Message}");
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
     }
 }

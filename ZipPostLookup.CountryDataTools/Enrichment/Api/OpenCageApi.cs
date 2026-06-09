@@ -34,7 +34,7 @@ internal sealed class OpenCageApi : IEnrichmentApi
     public int?                   DailyLimit         => _dailyLimit;
     public int?                   MonthlyLimit       => null;
 
-    public async Task<(ApiLookupResult? Result, FetchOutcome Outcome)> LookupAsync(
+    public async Task<FetchResult> LookupAsync(
         string country, string code, string? stateAbbr, CancellationToken ct = default)
     {
         var cc  = country.ToLowerInvariant();
@@ -54,7 +54,7 @@ internal sealed class OpenCageApi : IEnrichmentApi
                 return (null, FetchOutcome.RateLimited);
 
             if (!response.IsSuccessStatusCode)
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, $"HTTP {(int)response.StatusCode}");
 
             var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
 
@@ -68,7 +68,7 @@ internal sealed class OpenCageApi : IEnrichmentApi
             var r = results[0];
 
             if (!r.TryGetProperty("components", out var components))
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, "missing components");
 
             // Place name: _normalized_city covers city/town/village/municipality in priority order
             var rawCity = components.TryGetProperty("_normalized_city", out var nc) ? nc.GetString() ?? "" : "";
@@ -81,7 +81,7 @@ internal sealed class OpenCageApi : IEnrichmentApi
             var rawStateName = components.TryGetProperty("state",      out var sn) ? sn.GetString() ?? "" : "";
 
             if (string.IsNullOrWhiteSpace(rawCity) && string.IsNullOrWhiteSpace(rawStateCode))
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, "empty city and state");
 
             var lat = 0.0;
             var lon = 0.0;
@@ -115,12 +115,12 @@ internal sealed class OpenCageApi : IEnrichmentApi
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
         catch (Exception ex)
         {
             await Console.Error.WriteLineAsync($"[OpenCage] Unexpected error for {code}: {ex.Message}");
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
     }
 

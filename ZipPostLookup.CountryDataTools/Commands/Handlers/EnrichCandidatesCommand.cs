@@ -165,6 +165,23 @@ public static class EnrichCandidatesCommand
         var checkpoint = new List<(string Zip, ApiLookupResult? Result, string? ApiName, FetchOutcome Outcome)>();
         var enrichStopwatch = System.Diagnostics.Stopwatch.StartNew();
 
+        // Run-scoped transient error log in <repo>/Logs. Entries are appended as they
+        // arrive (not buffered to end-of-run) so the record survives a crash, kill, or
+        // mid-run Escape — the codes themselves are left in place for retry either way.
+        var transientCount = 0;
+        string? transientLogPath = null;
+        try
+        {
+            var logDir = Path.Combine(db.RepoRoot, "Logs");
+            Directory.CreateDirectory(logDir);
+            transientLogPath = Path.Combine(logDir, $"enrich-transient_{runId}.log");
+        }
+        catch (Exception ex)
+        {
+            await Console.Error.WriteLineAsync(
+                $"  ✗ Could not prepare transient log directory: {ex.Message}");
+        }
+
         // Build the round-robin router once for the entire batch
         var apiKeys = ApiKeysConfig.TryLoad(db.RepoRoot);
         var apis = EnrichmentApiFactory.GetApisForCountry(country, http, apiKeys);
@@ -221,13 +238,34 @@ public static class EnrichCandidatesCommand
 
                     // Record every API called for this code (router may have tried several
                     // on TransientError before finding a result or exhausting all options).
-                    foreach (var (calledName, calledOutcome) in router.LastCallLog)
+                    foreach (var (calledName, calledOutcome, calledDetail) in router.LastCallLog)
                     {
                         var calledApi = apis.FirstOrDefault(a => a.Name == calledName);
                         await ApiUsageRepository.RecordCallAsync(conn, calledName, calledApi?.DailyLimit, calledApi?.MonthlyLimit);
                         counters.IncrementDailyUsage(calledName);
                         if (calledOutcome == FetchOutcome.TransientError)
+                        {
                             counters.IncrementTransient(calledName);
+
+                            // Log every per-API transient as it occurs — even when another API
+                            // later recovers the code (so 'Skipped' stays 0 but the failure is real).
+                            if (transientLogPath != null)
+                            {
+                                var reason = string.IsNullOrWhiteSpace(calledDetail) ? "no detail" : calledDetail;
+                                var logLine =
+                                    $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}  {country.ToUpperInvariant()}  {code,-10}  transient via {calledName,-14}  {reason}";
+                                try
+                                {
+                                    await File.AppendAllLinesAsync(transientLogPath, [logLine]);
+                                    transientCount++;
+                                }
+                                catch (Exception ex)
+                                {
+                                    await Console.Error.WriteLineAsync(
+                                        $"  ✗ Failed to append transient log: {ex.Message}");
+                                }
+                            }
+                        }
                     }
 
                     statusMarkup = fetchOutcome switch
@@ -246,7 +284,8 @@ public static class EnrichCandidatesCommand
                             break;
                         case FetchOutcome.TransientError:
                             counters.Skipped++;
-                            // Per-API transient counts recorded in LastCallLog loop above.
+                            // Per-API transients (incl. these all-failed codes) are logged in
+                            // the LastCallLog loop above.
                             break;
                         case FetchOutcome.Found:
                             checkpoint.Add((code, apiResult, apiName, FetchOutcome.Found));
@@ -327,6 +366,14 @@ public static class EnrichCandidatesCommand
         else
             Console.WriteLine("Enrichment complete:");
         EnrichCandidatesDisplay.PrintSummary(counters);
+
+        // Transient failures were appended to the run log as they occurred; point the user at it.
+        if (transientCount > 0 && transientLogPath != null)
+        {
+            Console.WriteLine();
+            AnsiConsole.MarkupLine(
+                $"  [grey]{transientCount} transient error(s) logged to[/] {Markup.Escape(transientLogPath)}");
+        }
 
         int remaining = zips.Count - batch.Count;
         if (remaining > 0)

@@ -17,6 +17,6 @@ internal interface IEnrichmentApi
     /// </summary>
     int? MonthlyLimit { get; }
 
-    Task<(ApiLookupResult? Result, FetchOutcome Outcome)> LookupAsync(
+    Task<FetchResult> LookupAsync(
         string country, string code, string? stateAbbr, CancellationToken ct = default);
 }

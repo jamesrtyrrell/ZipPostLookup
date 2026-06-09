@@ -9,7 +9,7 @@ namespace ZipPostLookup.CountryDataTools.Enrichment.Api;
 /// Returns timezone and coordinates only — no place name or admin data.
 /// Useful as a fallback for codes that are missing timezone and lat/lng.
 /// Query format: "{postalCode}, {countryFullName}" to avoid cross-country mis-matches.
-/// A 401/422 response (bad key or quota exhausted) removes this API from rotation.
+/// A 401/403/422 response (bad/blocked key or quota exhausted) removes this API from rotation.
 /// No-results are returned as HTTP 204 — treated as NotFound.
 /// </summary>
 internal sealed class AbstractApi : IEnrichmentApi
@@ -43,7 +43,7 @@ internal sealed class AbstractApi : IEnrichmentApi
     public int?                   DailyLimit         => _dailyLimit;
     public int?                   MonthlyLimit       => null;
 
-    public async Task<(ApiLookupResult? Result, FetchOutcome Outcome)> LookupAsync(
+    public async Task<FetchResult> LookupAsync(
         string country, string code, string? stateAbbr, CancellationToken ct = default)
     {
         if (!_countryName.TryGetValue(country, out var countryName))
@@ -60,8 +60,9 @@ internal sealed class AbstractApi : IEnrichmentApi
             if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
                 return (null, FetchOutcome.NotFound);
 
-            // Bad key or quota exhausted — drop from rotation
+            // Bad key, blocked, or quota exhausted — drop from rotation
             if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized
+                                    or System.Net.HttpStatusCode.Forbidden
                                     or System.Net.HttpStatusCode.UnprocessableEntity)
                 return (null, FetchOutcome.RateLimited);
 
@@ -69,7 +70,7 @@ internal sealed class AbstractApi : IEnrichmentApi
                 return (null, FetchOutcome.RateLimited);
 
             if (!response.IsSuccessStatusCode)
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, $"HTTP {(int)response.StatusCode}");
 
             var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
 
@@ -78,7 +79,7 @@ internal sealed class AbstractApi : IEnrichmentApi
             var lon = json.TryGetProperty("longitude", out var lonEl) && lonEl.TryGetDouble(out var lonD) ? lonD : 0.0;
 
             if (string.IsNullOrWhiteSpace(iana) || !iana.Contains('/'))
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, "missing or invalid timezone in response");
 
             return (new ApiLookupResult
             {
@@ -90,12 +91,12 @@ internal sealed class AbstractApi : IEnrichmentApi
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
         catch (Exception ex)
         {
             await Console.Error.WriteLineAsync($"[AbstractAPI] Unexpected error for {code}: {ex.Message}");
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
     }
 }

@@ -6,7 +6,7 @@ internal sealed class RoundRobinEnrichmentRouter
 {
     private readonly List<IEnrichmentApi> _active;
     private readonly Dictionary<IEnrichmentApi, int> _callCounts = [];
-    private readonly List<(string ApiName, FetchOutcome Outcome)> _lastCallLog = [];
+    private readonly List<(string ApiName, FetchOutcome Outcome, string? Detail)> _lastCallLog = [];
     private int _index;
 
     public RoundRobinEnrichmentRouter(IReadOnlyList<IEnrichmentApi> apis)
@@ -22,7 +22,7 @@ internal sealed class RoundRobinEnrichmentRouter
     /// Cleared at the start of each LookupAsync. Use this to record usage and transient
     /// errors for every API tried, not just the one that ultimately succeeded.
     /// </summary>
-    public IReadOnlyList<(string ApiName, FetchOutcome Outcome)> LastCallLog => _lastCallLog;
+    public IReadOnlyList<(string ApiName, FetchOutcome Outcome, string? Detail)> LastCallLog => _lastCallLog;
 
     /// <summary>
     /// Pre-populates the call counter for an API from a persisted source (e.g. data.ApiUsage).
@@ -76,9 +76,9 @@ internal sealed class RoundRobinEnrichmentRouter
 
             _callCounts[api] = _callCounts.GetValueOrDefault(api) + 1;
             triedThisCode.Add(api);
-            var (result, outcome) = await api.LookupAsync(country, code, stateAbbr, ct);
+            var fetch = await api.LookupAsync(country, code, stateAbbr, ct);
 
-            if (outcome == FetchOutcome.RateLimited)
+            if (fetch.Outcome == FetchOutcome.RateLimited)
             {
                 // RateLimited: remove from rotation and try next. Not added to LastCallLog
                 // because the original behaviour was to not record rate-limit calls in usage.
@@ -87,13 +87,13 @@ internal sealed class RoundRobinEnrichmentRouter
                 continue;
             }
 
-            _lastCallLog.Add((api.Name, outcome));
+            _lastCallLog.Add((api.Name, fetch.Outcome, fetch.Detail));
             _index = (_index + 1) % _active.Count;
 
-            if (outcome == FetchOutcome.TransientError)
+            if (fetch.Outcome == FetchOutcome.TransientError)
                 continue;   // temporary failure — try next API for this code
 
-            return (result, api.Name, outcome);
+            return (fetch.Result, api.Name, fetch.Outcome);
         }
 
         return (null, null, FetchOutcome.TransientError);

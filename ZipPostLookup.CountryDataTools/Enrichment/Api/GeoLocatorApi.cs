@@ -29,7 +29,7 @@ internal sealed class GeoLocatorApi : IEnrichmentApi
     public int? DailyLimit   => null;
     public int? MonthlyLimit => null;
 
-    public async Task<(ApiLookupResult? Result, FetchOutcome Outcome)> LookupAsync(
+    public async Task<FetchResult> LookupAsync(
         string country, string code, string? stateAbbr, CancellationToken ct = default)
     {
         var url = $"{BaseUrl}?q={Uri.EscapeDataString(code)}&lang=en&keys=fsa";
@@ -41,11 +41,16 @@ internal sealed class GeoLocatorApi : IEnrichmentApi
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 return (null, FetchOutcome.NotFound);
 
+            // 401/403 (bad/blocked) — drop from rotation for the rest of the run.
+            if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized
+                                    or System.Net.HttpStatusCode.Forbidden)
+                return (null, FetchOutcome.RateLimited);
+
             if ((int)response.StatusCode == 429)
                 return (null, FetchOutcome.RateLimited);
 
             if (!response.IsSuccessStatusCode)
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, $"HTTP {(int)response.StatusCode}");
 
             var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
 
@@ -71,7 +76,7 @@ internal sealed class GeoLocatorApi : IEnrichmentApi
             var lon = fsa.Value.TryGetProperty("lng", out var lonEl) ? lonEl.GetDouble() : 0.0;
 
             if (string.IsNullOrWhiteSpace(rawProvince))
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, "missing province");
 
             var admin1Code = _caRules.ResolveAdmin1CodeFromName(rawProvince) ?? rawProvince.ToUpperInvariant();
             var admin1Name = rawProvince;
@@ -98,12 +103,12 @@ internal sealed class GeoLocatorApi : IEnrichmentApi
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
         catch (Exception ex)
         {
             await Console.Error.WriteLineAsync($"[GeoLocator] Unexpected error for {code}: {ex.Message}");
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
     }
 }

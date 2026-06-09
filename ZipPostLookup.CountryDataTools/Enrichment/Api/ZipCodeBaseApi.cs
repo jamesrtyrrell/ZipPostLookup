@@ -33,7 +33,7 @@ internal sealed class ZipCodeBaseApi : IEnrichmentApi
     public int?                 DailyLimit         => null;
     public int?                 MonthlyLimit       => _monthlyLimit;
 
-    public async Task<(ApiLookupResult? Result, FetchOutcome Outcome)> LookupAsync(
+    public async Task<FetchResult> LookupAsync(
         string country, string code, string? stateAbbr, CancellationToken ct = default)
     {
         var cc  = country.ToUpperInvariant();
@@ -51,7 +51,7 @@ internal sealed class ZipCodeBaseApi : IEnrichmentApi
                 return (null, FetchOutcome.RateLimited);
 
             if (!response.IsSuccessStatusCode)
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, $"HTTP {(int)response.StatusCode}");
 
             var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
 
@@ -104,12 +104,12 @@ internal sealed class ZipCodeBaseApi : IEnrichmentApi
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
         catch (Exception ex)
         {
             await Console.Error.WriteLineAsync($"[ZipCodeBase] Unexpected error for {code}: {ex.Message}");
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
     }
 }

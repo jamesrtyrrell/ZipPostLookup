@@ -20,7 +20,7 @@ internal sealed class ZippopotamusApi : IEnrichmentApi
     public int? DailyLimit   => null;
     public int? MonthlyLimit => null;
 
-    public async Task<(ApiLookupResult? Result, FetchOutcome Outcome)> LookupAsync(
+    public async Task<FetchResult> LookupAsync(
         string country, string code, string? stateAbbr, CancellationToken ct = default)
     {
         var cc = CountryRulesFactory.For(country).GetZippopotamusCountryCode(country, stateAbbr);
@@ -33,16 +33,21 @@ internal sealed class ZippopotamusApi : IEnrichmentApi
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 return (null, FetchOutcome.NotFound);
 
+            // 401/403 (bad/blocked) — drop from rotation for the rest of the run.
+            if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized
+                                    or System.Net.HttpStatusCode.Forbidden)
+                return (null, FetchOutcome.RateLimited);
+
             if ((int)response.StatusCode == 429)
                 return (null, FetchOutcome.RateLimited);
 
             if (!response.IsSuccessStatusCode)
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, $"HTTP {(int)response.StatusCode}");
 
             var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
 
             if (!json.TryGetProperty("places", out var places) || places.GetArrayLength() == 0)
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, "empty or invalid response body");
 
             var place = places[0];
 
@@ -61,7 +66,7 @@ internal sealed class ZippopotamusApi : IEnrichmentApi
             var iana = (lat != 0 || lon != 0) ? TimeZoneLookup.GetTimeZone(lat, lon).Result : "";
 
             if (string.IsNullOrWhiteSpace(iana) || !iana.Contains('/'))
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, "missing or invalid timezone in response");
 
             var stateMatch  = StateResolver.Resolve(rawState) ?? StateResolver.Resolve(rawStateName);
             var admin1Code  = stateMatch?.StateCode ?? rawState.ToUpperInvariant();
@@ -79,12 +84,12 @@ internal sealed class ZippopotamusApi : IEnrichmentApi
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
         catch (Exception ex)
         {
             await Console.Error.WriteLineAsync($"[Zippopotam.us] Unexpected error for {code}: {ex.Message}");
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
     }
 

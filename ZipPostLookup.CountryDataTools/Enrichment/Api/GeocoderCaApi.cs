@@ -30,7 +30,7 @@ internal sealed class GeocoderCaApi : IEnrichmentApi
     public int? DailyLimit   => 500;
     public int? MonthlyLimit => null;
 
-    public async Task<(ApiLookupResult? Result, FetchOutcome Outcome)> LookupAsync(
+    public async Task<FetchResult> LookupAsync(
         string country, string code, string? stateAbbr, CancellationToken ct = default)
     {
         // Strip embedded space: "H1L 6P2" → "H1L6P2"
@@ -41,18 +41,23 @@ internal sealed class GeocoderCaApi : IEnrichmentApi
         {
             var response = await _http.GetAsync(url, ct);
 
+            // 401/403 (bad/blocked) — drop from rotation for the rest of the run.
+            if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized
+                                    or System.Net.HttpStatusCode.Forbidden)
+                return (null, FetchOutcome.RateLimited);
+
             if ((int)response.StatusCode == 429)
                 return (null, FetchOutcome.RateLimited);
 
             if (!response.IsSuccessStatusCode)
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, $"HTTP {(int)response.StatusCode}");
 
             var xml  = await response.Content.ReadAsStringAsync(ct);
             var doc  = XDocument.Parse(xml);
             var root = doc.Root; // <geodata>
 
             if (root == null)
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, "missing geodata root");
 
             // Check for API-level error
             var errorCode = root.Element("error")?.Element("code")?.Value?.Trim();
@@ -61,7 +66,7 @@ internal sealed class GeocoderCaApi : IEnrichmentApi
             if (errorCode is "005" or "007" or "008")
                 return (null, FetchOutcome.NotFound);             // bad format / no result
             if (errorCode != null)
-                return (null, FetchOutcome.TransientError);       // unknown error
+                return (null, FetchOutcome.TransientError, "unknown error in response");       // unknown error
 
             var lattStr  = root.Element("latt")?.Value?.Trim();
             var longtStr = root.Element("longt")?.Value?.Trim();
@@ -92,12 +97,12 @@ internal sealed class GeocoderCaApi : IEnrichmentApi
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Xml.XmlException)
         {
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
         catch (Exception ex)
         {
             await Console.Error.WriteLineAsync($"[Geocoder.ca] Unexpected error for {code}: {ex.Message}");
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
     }
 }

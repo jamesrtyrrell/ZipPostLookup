@@ -18,7 +18,7 @@ internal sealed class ZiptasticApi : IEnrichmentApi
     public int? DailyLimit   => null;
     public int? MonthlyLimit => null;
 
-    public async Task<(ApiLookupResult? Result, FetchOutcome Outcome)> LookupAsync(
+    public async Task<FetchResult> LookupAsync(
         string country, string code, string? stateAbbr, CancellationToken ct = default)
     {
         var url = $"https://ziptasticapi.com/{Uri.EscapeDataString(code)}";
@@ -30,11 +30,16 @@ internal sealed class ZiptasticApi : IEnrichmentApi
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 return (null, FetchOutcome.NotFound);
 
+            // 401/403 (bad/blocked) — drop from rotation for the rest of the run.
+            if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized
+                                    or System.Net.HttpStatusCode.Forbidden)
+                return (null, FetchOutcome.RateLimited);
+
             if ((int)response.StatusCode == 429)
                 return (null, FetchOutcome.RateLimited);
 
             if (!response.IsSuccessStatusCode)
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, $"HTTP {(int)response.StatusCode}");
 
             var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
 
@@ -46,7 +51,7 @@ internal sealed class ZiptasticApi : IEnrichmentApi
             var rawState = json.TryGetProperty("state", out var s) ? s.GetString() ?? "" : "";
 
             if (string.IsNullOrWhiteSpace(rawCity) && string.IsNullOrWhiteSpace(rawState))
-                return (null, FetchOutcome.TransientError);
+                return (null, FetchOutcome.TransientError, "empty city and state in response body");
 
             var stateMatch = StateResolver.Resolve(rawState);
             var admin1Code = stateMatch?.StateCode ?? rawState.ToUpperInvariant();
@@ -62,12 +67,12 @@ internal sealed class ZiptasticApi : IEnrichmentApi
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
         catch (Exception ex)
         {
             await Console.Error.WriteLineAsync($"[Ziptastic] Unexpected error for {code}: {ex.Message}");
-            return (null, FetchOutcome.TransientError);
+            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
         }
     }
 

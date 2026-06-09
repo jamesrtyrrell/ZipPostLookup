@@ -176,7 +176,7 @@ public static class EnrichDirectCommand
 
                     // Record every API called for this code (router may have tried several
                     // on TransientError before finding a result or exhausting all options).
-                    foreach (var (calledName, calledOutcome) in router.LastCallLog)
+                    foreach (var (calledName, calledOutcome, _) in router.LastCallLog)
                     {
                         var calledApi = apis.FirstOrDefault(a => a.Name == calledName);
                         await ApiUsageRepository.RecordCallAsync(
