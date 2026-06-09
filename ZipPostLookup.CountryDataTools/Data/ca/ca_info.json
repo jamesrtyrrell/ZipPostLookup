@@ -17,7 +17,7 @@
   "CodeRanges": true,
   "Curated": true,
   "CurationStatus": "Curated",
-  "LastUpdated": "2026-06-08",
+  "LastUpdated": "2026-06-09",
   "CodeFormat": "A1A 1A1",
   "CodeRegex": "^[A-Z]\\d[A-Z] \\d[A-Z]\\d$",
   "Description": "Canadian provinces and territories with postal abbreviations and capitals.",
@@ -54,7 +54,7 @@
       "Capital": "Quebec City",
       "CapitalLocal": "Qu\u00E9bec",
       "ZipCount": 226783,
-      "NameCount": 229777
+      "NameCount": 230226
     },
     {
       "Type": "province",
@@ -62,7 +62,7 @@
       "Code": "NS",
       "Capital": "Halifax",
       "ZipCount": 30038,
-      "NameCount": 31550
+      "NameCount": 31554
     },
     {
       "Type": "province",
@@ -71,7 +71,7 @@
       "Code": "NB",
       "Capital": "Fredericton",
       "ZipCount": 61078,
-      "NameCount": 61744
+      "NameCount": 61774
     },
     {
       "Type": "province",
@@ -95,7 +95,7 @@
       "Code": "PE",
       "Capital": "Charlottetown",
       "ZipCount": 4327,
-      "NameCount": 4395
+      "NameCount": 4402
     },
     {
       "Type": "province",
@@ -119,7 +119,7 @@
       "Code": "NL",
       "Capital": "St. John\u0027s",
       "ZipCount": 11978,
-      "NameCount": 12416
+      "NameCount": 12426
     },
     {
       "Type": "territory",

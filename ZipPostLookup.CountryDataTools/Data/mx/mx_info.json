@@ -15,7 +15,7 @@
   "CodeRanges": false,
   "Curated": true,
   "CurationStatus": "Curated",
-  "LastUpdated": "2026-06-08",
+  "LastUpdated": "2026-06-09",
   "CodeFormat": "12345",
   "CodeRegex": "^\\d{5}$",
   "Description": "Mexican states and their identifiers. \u0027iso\u0027 is the 2-3 character SEPOMEX/commonly-used abbreviation used in postal data. \u0027iso3\u0027 is the ISO 3166-2 three-letter code. \u0027iso2\u0027 is the full ISO 3166-2 identifier (e.g. MX-AGU). \u0027inegi\u0027 is the numeric INEGI state code used in SEPOMEX zip code data - the first two digits of a 5-digit MX zip code identify the state.",

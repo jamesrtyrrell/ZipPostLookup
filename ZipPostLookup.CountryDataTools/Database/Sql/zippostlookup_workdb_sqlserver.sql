@@ -251,6 +251,19 @@ CREATE TABLE [data].[ReferenceAdmins] (
 ) ON [PRIMARY]
 GO
 
+-- Gold-certified codes: curated + admin1 + timezone + lat/lng all present.
+-- ZpCodes certified as ground-truth source of truth. PK (CountryId, ZpCode) — fast EXISTS check.
+-- ChecksVersion tracks which integrity check set signed off (invalidate on new checks if needed).
+CREATE TABLE [data].[GoldCode] (
+    [CountryId]     [nvarchar](2)       NOT NULL,
+    [ZpCode]        [nvarchar](20)      NOT NULL,
+    [GoldAt]        [datetimeoffset](7) NOT NULL CONSTRAINT [DF_GoldCode_GoldAt]        DEFAULT (SYSUTCDATETIME()),
+    [ChecksVersion] [int]               NOT NULL CONSTRAINT [DF_GoldCode_ChecksVersion] DEFAULT (1),
+    CONSTRAINT [PK_GoldCode] PRIMARY KEY CLUSTERED ([CountryId] ASC, [ZpCode] ASC),
+    CONSTRAINT [FK_GoldCode_Country] FOREIGN KEY ([CountryId]) REFERENCES [data].[CountryInfo] ([CountryId])
+) ON [PRIMARY]
+GO
+
 -- Status values mirror CandidateStatus enum: Pending | Discrepancy | Clean | Rejected | Unfound
 CREATE TABLE [codes].[Candidate] (
     [CandidateId]       [bigint]            IDENTITY(1,1) NOT NULL,
@@ -725,4 +738,23 @@ IF NOT EXISTS (SELECT 1 FROM [codes].[AdminLevels] WHERE CountryId = 'CA' AND Le
 IF NOT EXISTS (SELECT 1 FROM [codes].[AdminLevels] WHERE CountryId = 'MX' AND LevelNumber = 1)
     INSERT INTO [codes].[AdminLevels] (CountryId, LevelNumber, LevelName, CodeType, Aliases)
     VALUES ('MX', 1, 'Estado', NULL, N'[]');
+GO
+
+-- ============================================================================
+-- Migration: add data.GoldCode table (existing installs before 2026-06-09).
+-- Run on any DB created before this date. Safe to re-run.
+-- ============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables
+               WHERE  schema_id = SCHEMA_ID('data') AND name = 'GoldCode')
+BEGIN
+    CREATE TABLE [data].[GoldCode] (
+        [CountryId]     [nvarchar](2)       NOT NULL,
+        [ZpCode]        [nvarchar](20)      NOT NULL,
+        [GoldAt]        [datetimeoffset](7) NOT NULL CONSTRAINT [DF_GoldCode_GoldAt]        DEFAULT (SYSUTCDATETIME()),
+        [ChecksVersion] [int]               NOT NULL CONSTRAINT [DF_GoldCode_ChecksVersion] DEFAULT (1),
+        CONSTRAINT [PK_GoldCode] PRIMARY KEY CLUSTERED ([CountryId] ASC, [ZpCode] ASC),
+        CONSTRAINT [FK_GoldCode_Country] FOREIGN KEY ([CountryId]) REFERENCES [data].[CountryInfo] ([CountryId])
+    );
+    PRINT 'data.GoldCode: table created.';
+END
 GO

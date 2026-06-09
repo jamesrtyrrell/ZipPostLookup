@@ -46,6 +46,7 @@ internal static class ZpCodeEditorDashboard
         public bool    TimezoneChecked { get; set; }
         public bool    NameChecked     { get; set; }
         public bool    Flagged         { get; set; }
+        public bool    IsGold          { get; set; }
     }
 
     private sealed class CurationStats
@@ -57,6 +58,7 @@ internal static class ZpCodeEditorDashboard
         public int     Remaining            { get; set; }
         public decimal PctComplete          { get; set; }
         public int     OrphanAltNames       { get; set; }
+        public int     GoldCount            { get; set; }
     }
 
     // ── Entry point ────────────────────────────────────────────────────────────
@@ -295,7 +297,11 @@ internal static class ZpCodeEditorDashboard
                             CommonQueries.MarkCodeAsCurated,
                             new { CountryId = country, ZpCode = zpCode }));
                     rows = await LoadDetailRowsAsync(factory, country, zpCode) ?? rows;
-                    if (rows.All(r => r.TimezoneChecked && r.NameChecked)) return;
+                    if (rows.All(r => r.TimezoneChecked && r.NameChecked))
+                    {
+                        await TryCertifyGoldAsync(factory, country, zpCode);
+                        return;
+                    }
                     break;
 
                 case ConsoleKey.T:
@@ -304,7 +310,11 @@ internal static class ZpCodeEditorDashboard
                             CommonQueries.MarkCodeTimezoneChecked,
                             new { CountryId = country, ZpCode = zpCode }));
                     rows = await LoadDetailRowsAsync(factory, country, zpCode) ?? rows;
-                    if (rows.All(r => r.TimezoneChecked && r.NameChecked)) return;
+                    if (rows.All(r => r.TimezoneChecked && r.NameChecked))
+                    {
+                        await TryCertifyGoldAsync(factory, country, zpCode);
+                        return;
+                    }
                     break;
 
                 case ConsoleKey.N:
@@ -313,7 +323,11 @@ internal static class ZpCodeEditorDashboard
                             CommonQueries.MarkCodeNameChecked,
                             new { CountryId = country, ZpCode = zpCode }));
                     rows = await LoadDetailRowsAsync(factory, country, zpCode) ?? rows;
-                    if (rows.All(r => r.TimezoneChecked && r.NameChecked)) return;
+                    if (rows.All(r => r.TimezoneChecked && r.NameChecked))
+                    {
+                        await TryCertifyGoldAsync(factory, country, zpCode);
+                        return;
+                    }
                     break;
 
                 case ConsoleKey.E when rows.Count > 0:
@@ -608,6 +622,37 @@ internal static class ZpCodeEditorDashboard
         }
     }
 
+    private static async Task TryCertifyGoldAsync(
+        IWorkDbConnectionFactory factory, string country, string zpCode)
+    {
+        try
+        {
+            using var conn = factory.CreateConnection();
+            var reason = await conn.ExecuteScalarAsync<string?>(
+                CommonQueries.CheckGoldEligibility,
+                new { CountryId = country, ZpCode = zpCode });
+            if (reason is null)
+            {
+                await conn.ExecuteAsync(
+                    CommonQueries.SetGoldCode,
+                    new { CountryId = country, ZpCode = zpCode, ChecksVersion = 1 });
+                AnsiConsole.MarkupLine("[bold yellow]  ⭐ Gold certified[/]");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[grey]  (Not gold-eligible: {Markup.Escape(reason)})[/]");
+            }
+            AnsiConsole.MarkupLine("[grey]  Press any key…[/]");
+            Console.ReadKey(intercept: true);
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[grey]  (Gold check skipped: {Markup.Escape(ex.Message)})[/]");
+            AnsiConsole.MarkupLine("[grey]  Press any key…[/]");
+            Console.ReadKey(intercept: true);
+        }
+    }
+
     // ── Rendering ─────────────────────────────────────────────────────────────
 
     private static void RenderBrowsePage(
@@ -705,9 +750,11 @@ internal static class ZpCodeEditorDashboard
 
     private static Table BuildDetailTable(List<DetailRow> rows, int selectedIndex)
     {
+        var isGold = rows.Any(r => r.IsGold);
         var table = new Table()
             .Border(TableBorder.Square)
             .AddColumn(new TableColumn("").Padding(0, 0, 0, 0))
+            .AddColumn(new TableColumn("[grey]★[/]").Centered())
             .AddColumn(new TableColumn("[grey]D[/]").Centered())
             .AddColumn(new TableColumn("[grey]Code[/]"))
             .AddColumn(new TableColumn("[grey]Place Name[/]"))
@@ -719,15 +766,18 @@ internal static class ZpCodeEditorDashboard
             .AddColumn(new TableColumn("[grey]AltNameOf[/]"))
             .AddColumn(new TableColumn("[grey]Admin[/]"));
 
+        if (isGold) table.Title("[bold yellow]⭐ Gold[/]");
+
         for (var i = 0; i < rows.Count; i++)
         {
             var r   = rows[i];
             var sel = i == selectedIndex;
             var ind = sel ? "[bold green]❯[/]" : " ";
 
-            var def = r.IsDefault       ? "[cyan]✓[/]"  : "[grey]–[/]";
-            var tz  = r.TimezoneChecked ? "[green]✓[/]" : "[red]✗[/]";
-            var nm  = r.NameChecked     ? "[green]✓[/]" : "[red]✗[/]";
+            var gold = r.IsGold         ? "[bold yellow]★[/]" : " ";
+            var def  = r.IsDefault       ? "[cyan]✓[/]"       : "[grey]–[/]";
+            var tz   = r.TimezoneChecked ? "[green]✓[/]"      : "[red]✗[/]";
+            var nm   = r.NameChecked     ? "[green]✓[/]"      : "[red]✗[/]";
 
             var code = r.Flagged
                 ? $"[red]{Markup.Escape(r.ZpCode)}[/]"
@@ -748,10 +798,10 @@ internal static class ZpCodeEditorDashboard
                 : "[grey]—[/]";
 
             if (sel)
-                table.AddRow(ind, def, $"[bold]{code}[/]", $"[bold]{name}[/]",
+                table.AddRow(ind, gold, def, $"[bold]{code}[/]", $"[bold]{name}[/]",
                     tz, nm, zone, lat, lng, alt, adm);
             else
-                table.AddRow(ind, def, code, name, tz, nm, zone, lat, lng, alt, adm);
+                table.AddRow(ind, gold, def, code, name, tz, nm, zone, lat, lng, alt, adm);
         }
 
         return table;
@@ -825,6 +875,9 @@ internal static class ZpCodeEditorDashboard
         if (stats.OrphanAltNames > 0)
             table.AddRow("[grey]Orphans[/]", $"[yellow]{stats.OrphanAltNames:N0}[/]");
 
+        if (stats.GoldCount > 0)
+            table.AddRow("[grey]Gold ★[/]", $"[bold yellow]{stats.GoldCount:N0}[/]");
+
         return table;
     }
 
@@ -849,12 +902,19 @@ internal static class ZpCodeEditorDashboard
                 CommonQueries.GetOrphanAltNameCount,
                 new { CountryId = country });
 
+            var goldCount = await conn.ExecuteScalarAsync<int>(
+                CommonQueries.GetGoldCodeCount,
+                new { CountryId = country });
+
             var page = (await conn.QueryAsync<BrowseRow>(
                 flaggedMode ? CommonQueries.GetFlaggedBrowseRowsPage : CommonQueries.GetBrowseRowsPage,
                 new { CountryId = country, Offset = offset, PageSize })).ToList();
 
             if (stats is not null)
+            {
                 stats.OrphanAltNames = orphanCount;
+                stats.GoldCount      = goldCount;
+            }
 
             return (page, totalCount, stats);
         }

@@ -25,6 +25,7 @@ namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 ///   8. AltNameOf rows marked IsDefault=1 — alt-name returned as primary result.
 ///   9. Curated rows with blank PlaceName — would export an empty name.
 ///  10. TimezoneChecked=1 but Timezone blank — claims verified but exports empty string.
+///  11. Gold code regressions — gold-certified codes that no longer meet all conditions.
 ///
 /// Writes a Markdown report to DataAnalysis/{cc}-db-integrity-{date}.md.
 /// </summary>
@@ -47,6 +48,7 @@ public static class CdtDbIntegrityCommand
         List<OrphanRow>      AltDefaultRows,
         List<InvalidCodeRow> BlankPlaceNames,
         List<InvalidCodeRow> BlankTimezones,
+        List<string>         GoldRegressions,
         bool              AdminCheckSupported);
 
     // ── Entry point ────────────────────────────────────────────────────────────
@@ -184,12 +186,27 @@ public static class CdtDbIntegrityCommand
             new { CountryId = cc })).ToList();
         Console.WriteLine($" — {blankTimezones.Count:N0} row(s)");
 
+        // ── Check 11: Gold codes that no longer meet gold conditions ──────────
+        Console.Write("  ▸ Gold code regressions");
+        var goldRegressions = new List<string>();
+        try
+        {
+            goldRegressions = (await conn.QueryAsync<string>(
+                CommonQueries.GetGoldCodesFailingConditions,
+                new { CountryId = cc })).ToList();
+        }
+        catch
+        {
+            // data.GoldCode table may not exist yet — run migration first
+        }
+        Console.WriteLine($" — {goldRegressions.Count:N0} code(s)");
+
         Console.WriteLine();
 
         var results = new DbCheckResults(
             adminMismatches, missingAdmin1Count, orphans, dupes, invalidCodes,
             noDefaultCodes, altDefaultRows, blankPlaceNames, blankTimezones,
-            adminSupported);
+            goldRegressions, adminSupported);
 
         // ── Print summary table ────────────────────────────────────────────────
         PrintSummaryTable(cc, results);
@@ -216,7 +233,8 @@ public static class CdtDbIntegrityCommand
             || noDefaultCodes.Count > 0
             || altDefaultRows.Count > 0
             || blankPlaceNames.Count > 0
-            || blankTimezones.Count > 0;
+            || blankTimezones.Count > 0
+            || goldRegressions.Count > 0;
 
         return (hasIssues ? 1 : 0, results, output);
     }
@@ -268,6 +286,10 @@ public static class CdtDbIntegrityCommand
             $"{r.BlankTimezones.Count:N0}",
             StatusIcon(r.BlankTimezones.Count));
 
+        table.AddRow("Gold code regressions",
+            $"{r.GoldRegressions.Count:N0}",
+            StatusIcon(r.GoldRegressions.Count));
+
         AnsiConsole.Write(table);
         AnsiConsole.WriteLine();
     }
@@ -297,6 +319,7 @@ public static class CdtDbIntegrityCommand
         sb.AppendLine($"| Alt-name rows marked IsDefault | {r.AltDefaultRows.Count:N0} | {(r.AltDefaultRows.Count == 0 ? "✓" : "⚠")} |");
         sb.AppendLine($"| Curated blank place names | {r.BlankPlaceNames.Count:N0} | {(r.BlankPlaceNames.Count == 0 ? "✓" : "⚠")} |");
         sb.AppendLine($"| Checked but blank timezones | {r.BlankTimezones.Count:N0} | {(r.BlankTimezones.Count == 0 ? "✓" : "⚠")} |");
+        sb.AppendLine($"| Gold code regressions | {r.GoldRegressions.Count:N0} | {(r.GoldRegressions.Count == 0 ? "✓" : "⚠")} |");
 
         sb.AppendLine();
 
@@ -471,6 +494,26 @@ public static class CdtDbIntegrityCommand
         }
         sb.AppendLine();
 
+        // ── Gold code regressions ─────────────────────────────────────────────
+        sb.AppendLine("## Gold Code Regressions");
+        sb.AppendLine();
+        if (r.GoldRegressions.Count == 0)
+        {
+            sb.AppendLine("_None — all gold-certified codes still meet gold conditions._");
+        }
+        else
+        {
+            sb.AppendLine($"_{r.GoldRegressions.Count:N0} gold-certified code(s) no longer meet all gold conditions (curated default row, admin1, timezone, lat/lng). Run `db integrity cdt-db` to review; revoke or re-curate these codes._");
+            sb.AppendLine();
+            sb.AppendLine("| ZpCode |");
+            sb.AppendLine("|---|");
+            foreach (var z in r.GoldRegressions.Take(200))
+                sb.AppendLine($"| {z} |");
+            if (r.GoldRegressions.Count > 200)
+                sb.AppendLine("| … |");
+        }
+        sb.AppendLine();
+
         return sb.ToString();
     }
 
@@ -518,6 +561,7 @@ public static class CdtDbIntegrityCommand
                 · Alt-name rows marked default (AltNameOf + IsDefault=1 — wrong primary result)
                 · Curated blank place names    (NULL/empty PlaceName on curated rows)
                 · Checked but blank timezones  (TimezoneChecked=1 but Timezone is blank)
+                · Gold code regressions        (gold-certified codes that lost qualifying conditions)
 
               --country XX   Country code (US, CA, MX).  Default: US
               --all          Run for all three countries in sequence.

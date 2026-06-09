@@ -1,0 +1,22 @@
+# CODEOWNERS
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Global owner — all files require review from @jamesrtyrrell
+* @jamesrtyrrell
+
+# ── Library (shipped NuGet packages) ─────────────────────────────────────────
+/ZipPostLookup/                    @jamesrtyrrell
+/ZipPostLookup.Legacy/             @jamesrtyrrell
+
+# ── Developer tooling (not packaged) ─────────────────────────────────────────
+/ZipPostLookup.CountryDataTools/   @jamesrtyrrell
+
+# ── Tests and benchmarks ──────────────────────────────────────────────────────
+/ZipPostLookup.Tests/              @jamesrtyrrell
+/ZipPostLookup.Benchmarks/         @jamesrtyrrell
+
+# ── CI / release pipeline ────────────────────────────────────────────────────
+/.github/                          @jamesrtyrrell
+
+# ── Embedded data (any CSV or ZPI image change triggers review) ───────────────
+/ZipPostLookup/Data/               @jamesrtyrrell

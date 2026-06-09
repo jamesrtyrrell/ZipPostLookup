@@ -1,7 +1,9 @@
+using Dapper;
 using Spectre.Console;
 using Z.Dapper.Plus;
 using ZipPostLookup.Core;
 using ZipPostLookup.CountryDataTools.Database;
+using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
 using ZipPostLookup.CountryDataTools.DSV;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
@@ -149,6 +151,14 @@ public static class ImportReferenceDataCommand
             Console.WriteLine($"  --force: clearing existing data.reference rows for {countryCode}…");
             await db.Reference.DeleteAllAsync(countryCode);
             Console.WriteLine($"  Existing rows cleared.");
+            try
+            {
+                using var goldConn = db.GetFactory().CreateConnection();
+                await goldConn.ExecuteAsync(CommonQueries.RevokeAllGoldCodesForCountry,
+                    new { CountryId = countryCode });
+                Console.WriteLine($"  Gold certifications cleared.");
+            }
+            catch { /* data.GoldCode may not exist yet — run MigrateAddGoldCodeTable */ }
         }
 
         // Check that a reference CSV exists on disk before attempting the load
@@ -174,8 +184,16 @@ public static class ImportReferenceDataCommand
         var count = await db.Reference.GetCountAsync(countryCode);
         Console.WriteLine($"  ✓ data.reference: {count:N0} rows loaded for {countryCode}");
 
-        // var updated = await infoRepo.GetAsync(countryCode);
-        // Console.WriteLine($"  ✓ data.country_info.CodeCount: {updated?.CodeCount ?? count:N0}");
+        try
+        {
+            using var goldConn = db.GetFactory().CreateConnection();
+            var certified = await goldConn.ExecuteAsync(CommonQueries.BulkCertifyGoldCode,
+                new { CountryId = countryCode });
+            Console.WriteLine(certified > 0
+                ? $"  ✓ Gold: {certified:N0} code(s) certified"
+                : $"  ✓ Gold: no codes eligible yet");
+        }
+        catch { /* data.GoldCode may not exist yet — run MigrateAddGoldCodeTable */ }
 
         return 0;
     }

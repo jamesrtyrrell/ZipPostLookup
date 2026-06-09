@@ -367,6 +367,18 @@ public static class EnrichCandidatesCommand
             Console.WriteLine("Enrichment complete:");
         EnrichCandidatesDisplay.PrintSummary(counters);
 
+        try
+        {
+            var certified = await conn.ExecuteAsync(CommonQueries.BulkCertifyGoldCode,
+                new { CountryId = country.ToUpperInvariant() });
+            if (certified > 0)
+                AnsiConsole.MarkupLine($"  [bold yellow]⭐ Gold: {certified:N0} new code(s) certified[/]");
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"  [grey](Gold certification skipped: {Markup.Escape(ex.Message)})[/]");
+        }
+
         // Transient failures were appended to the run log as they occurred; point the user at it.
         if (transientCount > 0 && transientLogPath != null)
         {
