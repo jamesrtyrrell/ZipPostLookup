@@ -3,7 +3,7 @@
 Fast, extensible in-memory postal code lookup for .NET.  
 Built-in data for the **United States** (<!-- zpl:us:codes -->43,498<!-- /zpl:us:codes --> ZIP codes), **Canada** (~<!-- zpl:ca:codes -->900,686<!-- /zpl:ca:codes --> postal codes, <!-- zpl:ca:entries -->431k<!-- /zpl:ca:entries --> compressed entries via FSA range compression), and **Mexico** (<!-- zpl:mx:codes -->32,893<!-- /zpl:mx:codes --> postal codes). All three countries are fully curated ✅.
 
-Code Counts and status, last updated on: **(<!-- zpl:updated -->2026-06-08 20:59:24<!-- /zpl:updated -->)**
+Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-08 20:59:24<!-- /zpl:updated -->)**
 
 ---
 
@@ -12,8 +12,8 @@ Code Counts and status, last updated on: **(<!-- zpl:updated -->2026-06-08 20:59
 ```bash
 dotnet add package ZipPostLookup
 ```
-### Legacy Systems 
-For netstandard2.0: Covering .NET Framework 4.6.1+ / .NET Core 2+ / .NET 5–7 
+### Legacy Systems
+Targets netstandard2.0, covering .NET Framework 4.6.1+ / .NET Core 2+ / .NET 5–7
 
 ```bash
 dotnet add package ZipPostLookup.Legacy
@@ -42,46 +42,46 @@ Console.WriteLine(entry.GetLocalTime());
 
 All static methods on `ZipPostLookup` target the built-in US registry. `GetByCode` / `GetByZip`, `TryGetByCode` / `TryGetByZip`, `GetAllByCode` / `GetAllByZip`, and `GetByName` / `GetByCity` are **identical overloads** — use whichever reads more naturally for your context.
 
-| Method                          | Returns                                    | Description                                                                |
-|---------------------------------|--------------------------------------------|----------------------------------------------------------------------------|
-| `GetByCode(code)`               | `CodeEntry?`                               | Default entry for a postal code, or `null` if not found                    |
-| `GetByZip(zip)`                 | `CodeEntry?`                               | Overload — identical to `GetByCode`                                        |
-| `TryGetByCode(code, out entry)` | `bool`                                     | Try-Parse pattern — preferred for user-supplied input                      |
-| `TryGetByZip(zip, out entry)`   | `bool`                                     | Overload — identical to `TryGetByCode`                                     |
-| `GetAllByCode(code)`            | `IReadOnlyList<CodeEntry>`                 | All entries for a postal code (some codes have multiple place names)       |
-| `GetAllByZip(zip)`              | `IReadOnlyList<CodeEntry>`                 | Overload — identical to `GetAllByCode`                                     |
-| `GetClosest(zip)`               | `CodeEntry?`                               | Nearest zip by numeric distance when no exact match exists                 |
-| `GetByName(name)`               | `IReadOnlyList<CodeEntry>`                 | All entries for a place name (case-insensitive)                            |
-| `GetByCity(city)`               | `IReadOnlyList<CodeEntry>`                 | Overload — identical to `GetByName`                                        |
-| `GetByState(code)`              | `IReadOnlyList<CodeEntry>`                 | All entries for an admin level 1 code (e.g. `"NY"`, `"ON"`)               |
-| `GetByStateName(name)`          | `IReadOnlyList<CodeEntry>`                 | All entries for an admin level 1 name                                      |
-| `GetByAdmin(value, levelName)`  | `IReadOnlyList<CodeEntry>`                 | All entries for a named admin level — resolves aliases from country schema |
-| `GetByTimeZone(tz)`             | `IReadOnlyList<CodeEntry>`                 | All entries for an IANA timezone identifier                                |
-| `GetBatch(batch)`               | `IReadOnlyDictionary<string, CodeEntry?>` | Look up multiple codes at once; efficient when duplicates are expected     |
-| `GetRandom()`                   | `CodeEntry`                                | Random entry using `Random.Shared`                                         |
-| `GetRandom(random)`             | `CodeEntry`                                | Random entry using a provided `Random` instance                            |
-| `GetAll()`                      | `IReadOnlyList<CodeEntry>`                 | All entries sorted by postal code                                          |
-| `GetCountryInfo(country)`       | `CountryInfo?`                             | Country metadata (code count, curation status, format rules)               |
+| Method                          | Returns                                   | Description                                                                    |
+|---------------------------------|-------------------------------------------|--------------------------------------------------------------------------------|
+| `GetByCode(code)`               | `CodeEntry?`                              | Default entry for a postal code, or `null` if not found                        |
+| `GetByZip(zip)`                 | `CodeEntry?`                              | Overload — identical to `GetByCode`                                            |
+| `TryGetByCode(code, out entry)` | `bool`                                    | Try-Parse pattern — preferred for user-supplied input                          |
+| `TryGetByZip(zip, out entry)`   | `bool`                                    | Overload — identical to `TryGetByCode`                                         |
+| `GetAllByCode(code)`            | `IReadOnlyList<CodeEntry>`                | All entries for a postal code (some codes have multiple place names)           |
+| `GetAllByZip(zip)`              | `IReadOnlyList<CodeEntry>`                | Overload — identical to `GetAllByCode`                                         |
+| `GetClosest(zip)`               | `CodeEntry?`                              | Nearest ZIP code by numeric distance when no exact match exists                |
+| `GetByName(name)`               | `IReadOnlyList<CodeEntry>`                | All entries for a place name (case-insensitive)                                |
+| `GetByCity(city)`               | `IReadOnlyList<CodeEntry>`                | Overload — identical to `GetByName`                                            |
+| `GetByState(code)`              | `IReadOnlyList<CodeEntry>`                | All entries for an admin level 1 code (e.g. `"NY"`, `"ON"`)                    |
+| `GetByStateName(name)`          | `IReadOnlyList<CodeEntry>`                | All entries for an admin level 1 name                                          |
+| `GetByAdmin(value, levelName)`  | `IReadOnlyList<CodeEntry>`                | All entries for a named admin level — resolves aliases from the country schema |
+| `GetByTimeZone(tz)`             | `IReadOnlyList<CodeEntry>`                | All entries for an IANA timezone identifier                                    |
+| `GetBatch(batch)`               | `IReadOnlyDictionary<string, CodeEntry?>` | Look up multiple codes at once; efficient when duplicates are expected         |
+| `GetRandom()`                   | `CodeEntry`                               | Random entry using `Random.Shared`                                             |
+| `GetRandom(random)`             | `CodeEntry`                               | Random entry using a provided `Random` instance                                |
+| `GetAll()`                      | `IReadOnlyList<CodeEntry>`                | All entries sorted by postal code                                              |
+| `GetCountryInfo(country)`       | `CountryInfo?`                            | Country metadata (code count, curation status, format rules)                   |
 
 ---
 
 ## CodeEntry Properties
 
-| Property              | Type             | Description                                                          |
-|-----------------------|------------------|----------------------------------------------------------------------|
+| Property              | Type             | Description                                                        |
+|-----------------------|------------------|--------------------------------------------------------------------|
 | `ZpCode`              | `string`         | Postal code — e.g. `"10001"` (US), `"M5V3L9"` (CA), `"06600"` (MX) |
-| `PlaceName`           | `string`         | Primary place name — city, locality, colonia, or community           |
-| `Timezone`            | `string`         | IANA timezone identifier                                             |
-| `IsDefault`           | `bool`           | `true` if primary entry when multiple place names share a code       |
-| `Admins`              | `AdminLevel[]`   | Administrative subdivision levels — ordered largest to smallest      |
-| `Admin1`              | `string?`        | Value of the first admin level (state/province/estado name)          |
-| `Admin1Code`          | `string?`        | Code of the first admin level (`"NY"`, `"ON"`, `"JAL"`)              |
-| `Admin2`              | `string?`        | Value of the second admin level (county, municipio, etc.)            |
-| `Admin2Code`          | `string?`        | Code of the second admin level                                       |
-| `Admin3`              | `string?`        | Value of the third admin level                                       |
-| `Admin3Code`          | `string?`        | Code of the third admin level                                        |
-| `GetAdmin(levelName)` | `AdminLevel?`    | Lookup by level name or alias, e.g. `GetAdmin("Province")`           |
-| `GetLocalTime()`      | `DateTimeOffset` | Current local time in this entry's timezone                          |
+| `PlaceName`           | `string`         | Primary place name — city, locality, colonia, or community         |
+| `Timezone`            | `string`         | IANA timezone identifier                                           |
+| `IsDefault`           | `bool`           | `true` if primary entry when multiple place names share a code     |
+| `Admins`              | `AdminLevel[]`   | Administrative subdivision levels — ordered largest to smallest    |
+| `Admin1`              | `string?`        | Value of the first admin level (state/province/estado name)        |
+| `Admin1Code`          | `string?`        | Code of the first admin level (`"NY"`, `"ON"`, `"JAL"`)            |
+| `Admin2`              | `string?`        | Value of the second admin level (county, municipio, etc.)          |
+| `Admin2Code`          | `string?`        | Code of the second admin level                                     |
+| `Admin3`              | `string?`        | Value of the third admin level                                     |
+| `Admin3Code`          | `string?`        | Code of the third admin level                                      |
+| `GetAdmin(levelName)` | `AdminLevel?`    | Lookup by level name or alias, e.g. `GetAdmin("Province")`         |
+| `GetLocalTime()`      | `DateTimeOffset` | Current local time in this entry's timezone                        |
 
 Administrative subdivisions are stored as an `AdminLevel[]` array (ordered largest to smallest), each with `Value`, `Code`, and `LevelName` (`"State"`, `"Province"`, `"Estado"`). `GetByAdmin` and `GetAdmin` resolve level name aliases from the country schema.
 
@@ -154,7 +154,7 @@ ZipPostRegistry na2 = ZipPostLookup.CreateRegistry("us", "ca");
 
 ## Binary Image Lookup (net8.0+)
 
-On .NET 8 and later, `ZpImageLookup` loads a pre-built Brotli-compressed binary image instead of parsing CSV rows. It implements `IZipPostLookup` and is a drop-in replacement with 19–432× faster startup and 7–10× less startup memory.
+On .NET 8 and later, `ZpImageLookup` loads a pre-built Brotli-compressed binary image instead of parsing CSV rows. It implements `IZipPostLookup` and is a drop-in replacement with 19–432× faster startup and 7–10× less memory at startup.
 
 ```csharp
 using ZipPostLookup.ZPImage;
@@ -225,7 +225,7 @@ var entry    = registry.GetByCode("09001");
 // Via the static facade
 CountryInfo? us = ZipPostLookup.GetCountryInfo(CountryCode.US);
 Console.WriteLine(us?.CountryName);     // United States
-Console.WriteLine(us?.CodeCount);       // 43265
+Console.WriteLine(us?.CodeCount);       // 43,498
 Console.WriteLine(us?.CurationStatus); // Curated
 
 // All countries in the embedded data
@@ -245,7 +245,7 @@ On .NET 8+, all indexes use `FrozenDictionary`. The `.zpi.br` frozen image loads
 | MX      |             654 ms |     **22 ms** |     30x |
 | CA      |          17,844 ms |     **41 ms** |    432x |
 
-`GetByCode` runs at ~6.2 ns (hit) / ~35 ns (miss) on .NET 8+ — 4.9x faster than Zip2City on hot-path lookups with zero allocations on hits. `GetBatch` is more efficient than a sequential loop when duplicate codes are expected; see [ZipPostLookup.Benchmarks/README.MD](ZipPostLookup.Benchmarks/README.MD) for full results including batch lookup guidance, international lookups, and ZPI vs CSV comparisons.
+`GetByCode` runs at ~6.2 ns (hit) / ~35 ns (miss) on .NET 8+ — 4.9x faster than Zip2City on hot-path lookups with zero allocations on hits. `GetBatch` is more efficient than a sequential loop when duplicate codes are expected; see [ZipPostLookup.Benchmarks/README.MD](https://github.com/jamesrtyrrell/ZipPostLookup/blob/main/ZipPostLookup.Benchmarks/README.MD) for full results including batch lookup guidance, international lookups, and ZPI vs CSV comparisons.
 
 ---
 
@@ -259,16 +259,16 @@ On .NET 8+, all indexes use `FrozenDictionary`. The `.zpi.br` frozen image loads
 
 \* Distinct codes are the number of unique Zip/Postal codes in the country's set.
 
-Code Counts and status, last updated on: **(<!-- zpl:updated -->2026-06-08 20:59:24<!-- /zpl:updated -->)**
+Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-08 20:59:24<!-- /zpl:updated -->)**
 
 ---
 
 ## Contributing Data
 
-New country data is prepared using the companion [ZipPostLookup.CountryDataTools](ZipPostLookup.CountryDataTools/README.MD) CLI. The general flow: obtain a GeoNames or OSM source file → validate and fix with `validate` / `fix` → import with `ingest candidate` → enrich timezone discrepancies → export with `export --all`. Run `snapshot` to regenerate all three countries' CSV and ZPI artifacts in one step. Mark exported files as `EmbeddedResource` in `ZipPostLookup.csproj` and add tests covering at minimum: a known code lookup, an admin/state lookup, a timezone lookup, and a `GetAll` count assertion.
+New country data is prepared using the companion [ZipPostLookup.CountryDataTools](https://github.com/jamesrtyrrell/ZipPostLookup/blob/main/ZipPostLookup.CountryDataTools/README.MD) CLI. The general flow: obtain a GeoNames or OSM source file → validate and fix with `validate` / `fix` → import with `ingest candidate` → resolve timezone discrepancies → export with `export --all`. Run `snapshot` to regenerate all three countries' CSV and ZPI artifacts in one step. Mark exported files as `EmbeddedResource` in `ZipPostLookup.csproj` and add tests covering at minimum: a known code lookup, an admin/state lookup, a timezone lookup, and a `GetAll` count assertion.
 
 ---
 
 ## License
 
-MIT
+[MIT](https://github.com/jamesrtyrrell/LICENSE.md)
