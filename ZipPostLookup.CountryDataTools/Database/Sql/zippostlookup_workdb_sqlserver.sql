@@ -1,6 +1,15 @@
 -- ============================================================================
 -- ZipPostLookupWorkDB  –  Full build script
 -- Generated: 2026-06-03  (all identifiers PascalCase)
+-- Reconciled 2026-06-11 against the live DB (Current_db_created.sql):
+--   · data.Reference: added AltNameOf + Flagged columns
+--   · codes.Discrepancies / codes.ValidationErrors: Code/Name -> ZpCode/PlaceName
+--   · codes.Discrepancies: added Notes column (gold-alias reviewer hints)
+--   · indexes + ZipCoverage/PendingDiscrepancies views: postal Code/Name -> ZpCode/PlaceName
+--   · PlaceName standardised on NVARCHAR(200) across all tables
+--   · removed dead objects: data.GetReferenceAdminsJson, data.GetReferenceByCodeWithAdmins,
+--     data.GetReferenceWithAdmins procs + pipeline.DiscrepancyFieldSummary view
+--   · added Flagged / AltNameOf / Notes migration blocks for existing installs
 -- ============================================================================
 
 USE [ZipPostLookupWorkDB]
@@ -232,6 +241,8 @@ CREATE TABLE [data].[Reference] (
                     WHEN [TimezoneChecked] = (1) AND [NameChecked] = (1) THEN (1)
                     ELSE (0)
                   END)) PERSISTED,
+    [AltNameOf]         [nvarchar](100)     NULL,
+    [Flagged]           [bit]               NOT NULL  CONSTRAINT [DF_Reference_Flagged]          DEFAULT (0),
     CONSTRAINT [PK_Reference] PRIMARY KEY CLUSTERED ([ReferenceId] ASC),
     CONSTRAINT [FK_Reference_Country] FOREIGN KEY ([CountryId]) REFERENCES [data].[CountryInfo] ([CountryId])
 ) ON [PRIMARY]
@@ -304,8 +315,8 @@ CREATE TABLE [codes].[Discrepancies] (
     [DiscrepancyId]     [bigint]            IDENTITY(1,1) NOT NULL,
     [CountryId]         [nvarchar](2)       NOT NULL,
     [RunId]             [nvarchar](50)      NOT NULL,
-    [Code]              [nvarchar](20)      NOT NULL,
-    [Name]              [nvarchar](100)     NOT NULL,
+    [ZpCode]            [nvarchar](20)      NOT NULL,
+    [PlaceName]         [nvarchar](100)     NOT NULL,
     [AdminLevelId]      [int]               NULL,
     [FieldName]         [nvarchar](100)     NOT NULL,
     [RefValue]          [nvarchar](max)     NULL,
@@ -315,9 +326,10 @@ CREATE TABLE [codes].[Discrepancies] (
     [Process]           [bit]               NOT NULL  CONSTRAINT [DF_Discrepancies_Process]   DEFAULT (0),
     [CreatedAt]         [datetimeoffset](7) NOT NULL  CONSTRAINT [DF_Discrepancies_CreatedAt] DEFAULT (SYSUTCDATETIME()),
     [ResolvedAt]        [datetimeoffset](7) NULL,
+    [Notes]             [nvarchar](500)     NULL,
     CONSTRAINT [PK_Discrepancies] PRIMARY KEY CLUSTERED ([DiscrepancyId] ASC),
     CONSTRAINT [UQ_Discrepancies_Field] UNIQUE NONCLUSTERED
-        ([CountryId] ASC, [RunId] ASC, [Code] ASC, [Name] ASC, [FieldName] ASC),
+        ([CountryId] ASC, [RunId] ASC, [ZpCode] ASC, [PlaceName] ASC, [FieldName] ASC),
     CONSTRAINT [FK_Discrepancies_Country]    FOREIGN KEY ([CountryId])    REFERENCES [data].[CountryInfo] ([CountryId]),
     CONSTRAINT [FK_Discrepancies_Run]        FOREIGN KEY ([RunId])        REFERENCES [pipeline].[Runs]    ([RunId]),
     CONSTRAINT [FK_Discrepancies_AdminLevel] FOREIGN KEY ([AdminLevelId]) REFERENCES [data].[AdminLevels] ([AdminLevelId])
@@ -329,8 +341,8 @@ CREATE TABLE [codes].[ValidationErrors] (
     [CountryId]         [nvarchar](2)       NOT NULL,
     [RunId]             [nvarchar](50)      NOT NULL,
     [RecordNumber]      [int]               NULL,
-    [Code]              [nvarchar](20)      NULL,
-    [Name]              [nvarchar](100)     NULL,
+    [ZpCode]            [nvarchar](20)      NULL,
+    [PlaceName]         [nvarchar](100)     NULL,
     [ErrorType]         [nvarchar](100)     NOT NULL,
     [ErrorMessage]      [nvarchar](max)     NOT NULL,
     [Severity]          [nvarchar](50)      NOT NULL  CONSTRAINT [DF_ValidationErrors_Severity]  DEFAULT ('Error'),
@@ -377,16 +389,51 @@ END
 GO
 
 -- ============================================================================
+-- Migration: add AltNameOf + Flagged to data.Reference (existing installs).
+-- Run on any DB created before 2026-06-07. Safe to re-run.
+-- AltNameOf links an alternate place name to its canonical row; Flagged excludes
+-- a code from every export query.
+-- ============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns
+               WHERE  object_id = OBJECT_ID(N'data.Reference') AND name = N'AltNameOf')
+BEGIN
+    ALTER TABLE [data].[Reference] ADD [AltNameOf] [nvarchar](100) NULL;
+    PRINT 'data.Reference: AltNameOf column added.';
+END
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns
+               WHERE  object_id = OBJECT_ID(N'data.Reference') AND name = N'Flagged')
+BEGIN
+    ALTER TABLE [data].[Reference] ADD [Flagged] [bit] NOT NULL
+        CONSTRAINT [DF_Reference_Flagged] DEFAULT (0);
+    PRINT 'data.Reference: Flagged column added.';
+END
+GO
+
+-- ============================================================================
+-- Migration: add Notes to codes.Discrepancies (existing installs).
+-- Run on any DB created before 2026-06-10. Safe to re-run.
+-- Notes carries reviewer hints set at import time (e.g. gold-alias warnings).
+-- ============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns
+               WHERE  object_id = OBJECT_ID(N'codes.Discrepancies') AND name = N'Notes')
+BEGIN
+    ALTER TABLE [codes].[Discrepancies] ADD [Notes] [nvarchar](500) NULL;
+    PRINT 'codes.Discrepancies: Notes column added.';
+END
+GO
+
+-- ============================================================================
 -- SECTION 6: INDEXES
 -- ============================================================================
 
 CREATE NONCLUSTERED INDEX [IX_Candidate_Country_Status]
     ON [codes].[Candidate] ([CountryId], [Status])
-    INCLUDE ([Code], [Name]);
+    INCLUDE ([ZpCode], [PlaceName]);
 GO
 
 CREATE NONCLUSTERED INDEX [IX_Candidate_Country_Code]
-    ON [codes].[Candidate] ([CountryId], [Code]);
+    ON [codes].[Candidate] ([CountryId], [ZpCode]);
 GO
 
 CREATE NONCLUSTERED INDEX [IX_CandidateAdmins_Candidate_Level]
@@ -401,7 +448,7 @@ GO
 
 CREATE NONCLUSTERED INDEX [IX_Discrepancies_Process_Country]
     ON [codes].[Discrepancies] ([Process], [CountryId])
-    INCLUDE ([RunId], [Code], [Name], [FieldName], [AcceptIncoming]);
+    INCLUDE ([RunId], [ZpCode], [PlaceName], [FieldName], [AcceptIncoming]);
 GO
 
 CREATE NONCLUSTERED INDEX [IX_Discrepancies_Country_Run_Field]
@@ -415,13 +462,13 @@ CREATE NONCLUSTERED INDEX [IX_Discrepancies_AdminLevel]
 GO
 
 CREATE NONCLUSTERED INDEX [IX_Reference_Country_Code]
-    ON [data].[Reference] ([CountryId], [Code])
-    INCLUDE ([ReferenceId], [Name], [Timezone], [IsDefault], [Lat], [Lng]);
+    ON [data].[Reference] ([CountryId], [ZpCode])
+    INCLUDE ([ReferenceId], [PlaceName], [Timezone], [IsDefault], [Lat], [Lng]);
 GO
 
 CREATE NONCLUSTERED INDEX [IX_Reference_Curated]
     ON [data].[Reference] ([Curated], [CountryId])
-    INCLUDE ([Code], [Name]);
+    INCLUDE ([ZpCode], [PlaceName]);
 GO
 
 CREATE NONCLUSTERED INDEX [IX_ReferenceAdmins_Ref_Level]
@@ -439,12 +486,12 @@ CREATE NONCLUSTERED INDEX [IX_Runs_Status]
 GO
 
 CREATE NONCLUSTERED INDEX [IX_Decisions_Country_Code]
-    ON [pipeline].[Decisions] ([CountryId], [Code], [Name]);
+    ON [pipeline].[Decisions] ([CountryId], [ZpCode], [PlaceName]);
 GO
 
 CREATE NONCLUSTERED INDEX [IX_ValidationErrors_Country_Run]
     ON [codes].[ValidationErrors] ([CountryId], [RunId])
-    INCLUDE ([Code], [Name], [ErrorType], [Severity]);
+    INCLUDE ([ZpCode], [PlaceName], [ErrorType], [Severity]);
 GO
 
 
@@ -455,22 +502,22 @@ GO
 CREATE VIEW [pipeline].[ZipCoverage] AS
     SELECT
         r.CountryId,
-        r.Code,
+        r.ZpCode,
         COUNT(*)                                            AS NameCount,
         SUM(CASE WHEN r.Lat <> '---' AND r.Lat <> ''
                  THEN 1 ELSE 0 END)                         AS HasCoords,
         SUM(CASE WHEN r.TimezoneChecked = 1
                  THEN 1 ELSE 0 END)                         AS TimezoneVerified
     FROM [data].[Reference] r
-    GROUP BY r.CountryId, r.Code;
+    GROUP BY r.CountryId, r.ZpCode;
 GO
 
 CREATE VIEW [pipeline].[PendingDiscrepancies] AS
     SELECT
         d.CountryId,
         d.RunId,
-        d.Code,
-        d.Name,
+        d.ZpCode,
+        d.PlaceName,
         d.FieldName,
         d.RefValue,
         d.InValue,
@@ -497,87 +544,10 @@ CREATE VIEW [pipeline].[CountrySummary] AS
     GROUP BY ci.CountryId, ci.CountryName, ci.CodeCount, ci.DataCurated, ci.CurationStatus;
 GO
 
-CREATE VIEW [pipeline].[DiscrepancyFieldSummary] AS
-    SELECT
-        CountryId,
-        RunId,
-        FieldName,
-        COUNT(*)                                                               AS TotalCount,
-        SUM(CASE WHEN Process = 0                         THEN 1 ELSE 0 END)  AS UnresolvedCount,
-        SUM(CASE WHEN Process = 1 AND AcceptIncoming = 1  THEN 1 ELSE 0 END)  AS AcceptedCount,
-        SUM(CASE WHEN Process = 1 AND AcceptIncoming = 0  THEN 1 ELSE 0 END)  AS RejectedCount
-    FROM [codes].[Discrepancies]
-    GROUP BY CountryId, RunId, FieldName;
-GO
-
 
 -- ============================================================================
 -- SECTION 8: STORED PROCEDURES
 -- ============================================================================
-
-CREATE OR ALTER PROCEDURE [data].[GetReferenceAdminsJson]
-    @ReferenceId BIGINT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SELECT (
-        SELECT al.LevelNumber, al.LevelName, ra.Value, ra.Code
-        FROM [data].[ReferenceAdmins] ra
-        INNER JOIN [data].[AdminLevels] al ON ra.AdminLevelId = al.AdminLevelId
-        WHERE ra.ReferenceId = @ReferenceId
-        ORDER BY al.LevelNumber
-        FOR JSON PATH
-    ) AS AdminLevelsJson;
-END;
-GO
-
-CREATE OR ALTER PROCEDURE [data].[GetReferenceByCodeWithAdmins]
-    @CountryId NVARCHAR(2),
-    @Code      NVARCHAR(20)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SELECT
-        r.ReferenceId, r.CountryId, r.Code, r.Name,
-        r.Timezone, r.IsDefault, r.Lat, r.Lng,
-        r.TimezoneChecked, r.NameChecked,
-        (
-            SELECT al.LevelNumber, al.LevelName, ra.Value, ra.Code
-            FROM [data].[ReferenceAdmins] ra
-            INNER JOIN [data].[AdminLevels] al ON ra.AdminLevelId = al.AdminLevelId
-            WHERE ra.ReferenceId = r.ReferenceId
-            ORDER BY al.LevelNumber
-            FOR JSON PATH
-        ) AS AdminLevelsJson
-    FROM [data].[Reference] r
-    WHERE r.CountryId = @CountryId
-      AND r.Code      = @Code
-    ORDER BY r.IsDefault DESC, r.Name;
-END;
-GO
-
-CREATE OR ALTER PROCEDURE [data].[GetReferenceWithAdmins]
-    @CountryId NVARCHAR(2)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SELECT
-        r.ReferenceId, r.CountryId, r.Code, r.Name,
-        r.Timezone, r.IsDefault, r.Lat, r.Lng,
-        r.TimezoneChecked, r.NameChecked,
-        (
-            SELECT al.LevelNumber, al.LevelName, ra.Value, ra.Code
-            FROM [data].[ReferenceAdmins] ra
-            INNER JOIN [data].[AdminLevels] al ON ra.AdminLevelId = al.AdminLevelId
-            WHERE ra.ReferenceId = r.ReferenceId
-            ORDER BY al.LevelNumber
-            FOR JSON PATH
-        ) AS AdminLevelsJson
-    FROM [data].[Reference] r
-    WHERE r.CountryId = @CountryId
-    ORDER BY r.Code, r.IsDefault DESC, r.Name;
-END;
-GO
 
 -- Deletes all pipeline and reference data for a country in FK-safe order.
 CREATE OR ALTER PROCEDURE [pipeline].[ResetCountry]

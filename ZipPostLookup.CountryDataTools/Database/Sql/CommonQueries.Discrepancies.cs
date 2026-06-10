@@ -29,18 +29,6 @@ public static partial class CommonQueries
                 AND ZpCode    = @ZpCode
                 AND PlaceName = @PlaceName";
 
-    public static readonly string GetDiscrepancyFieldSummary =
-        @"SELECT FieldName,
-                    COUNT(*) AS Total,
-                    COUNT(CASE WHEN Process = 0 THEN 1 END) AS Unresolved,
-                    COUNT(CASE WHEN Process = 1 AND AcceptIncoming = 1 THEN 1 END) AS Accepted,
-                    COUNT(CASE WHEN Process = 1 AND AcceptIncoming = 0 THEN 1 END) AS Rejected
-              FROM codes.Discrepancies
-              WHERE CountryId = @CountryId
-                AND RunId     = @RunId
-              GROUP BY FieldName
-              ORDER BY Unresolved DESC, Total DESC";
-
     public static readonly string GetDistinctNamesFromDiscrepancies =
         @"SELECT DISTINCT PlaceName FROM codes.Discrepancies
               WHERE CountryId = @CountryId AND RunId = @RunId
