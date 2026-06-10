@@ -76,18 +76,9 @@ public static class IntegrityCheckCommand
         return (await RunForCountryAsync(db, country.ToUpperInvariant(), testCount, output)).ExitCode;
     }
 
-    private static async Task<int> RunAllAsync(WorkDbContext db, int testCount)
-    {
-        var exitCode = 0;
-        foreach (var cc in new[] { "US", "CA", "MX" })
-        {
-            Console.WriteLine();
-            AnsiConsole.Write(new Rule($"[bold]{cc}[/]").LeftJustified());
-            var r = await RunForCountryAsync(db, cc, testCount, null);
-            if (r.ExitCode != 0) exitCode = r.ExitCode;
-        }
-        return exitCode;
-    }
+    private static Task<int> RunAllAsync(WorkDbContext db, int testCount) =>
+        CountryRunner.ForEachWithRuleAsync(async cc =>
+            (await RunForCountryAsync(db, cc, testCount, null)).ExitCode);
 
     public static async Task<(int ExitCode, IntegrityCheckSummary? Summary, string? ReportPath)> RunForCountryAsync(
         WorkDbContext db, string cc, int testCount, string? output)
@@ -571,32 +562,16 @@ public static class IntegrityCheckCommand
         out string? output,
         out bool all)
     {
-        country   = "";
-        testCount = 1000;
-        output    = null;
-        all       = false;
+        country   = args.OptionValue("--country", rejectFlagValue: true) ?? "";
+        output    = args.OptionValue("--output");
+        all       = args.HasFlag("--all");
 
-        for (int i = 0; i < args.Length; i++)
+        testCount = 1000;
+        var rawTests = args.OptionValue("--tests");
+        if (rawTests is not null && (!int.TryParse(rawTests, out testCount) || testCount < 1))
         {
-            switch (args[i].ToLowerInvariant())
-            {
-                case "--country" when i + 1 < args.Length && !args[i + 1].StartsWith('-'):
-                    country = args[++i];
-                    break;
-                case "--all":
-                    all = true;
-                    break;
-                case "--tests" when i + 1 < args.Length:
-                    if (!int.TryParse(args[++i], out testCount) || testCount < 1)
-                    {
-                        Console.Error.WriteLine("  --tests must be a positive integer.");
-                        return false;
-                    }
-                    break;
-                case "--output" when i + 1 < args.Length:
-                    output = args[++i];
-                    break;
-            }
+            Console.Error.WriteLine("  --tests must be a positive integer.");
+            return false;
         }
 
         return all || !string.IsNullOrWhiteSpace(country);

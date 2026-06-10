@@ -943,23 +943,24 @@ public static class CommonQueries
               'America/Shiprock'
           );";
 
-    // Remove US reference rows whose ZIP code is outside the USPS-assigned range 00501–99950.
-    // Range mirrors UsCountryRules.IsOutOfBoundsUs — keep both in sync if the boundary changes.
+    // Remove US reference rows whose ZIP code is outside the USPS-assigned range.
+    // Bounds are supplied as @MinZip/@MaxZip params — the single source of truth is
+    // UsCountryRules.MinUsZip/MaxUsZip (callers pass them in; no magic numbers here).
     // Run PurgeOutOfRangeUsAdmins first to satisfy the FK constraint, then PurgeOutOfRangeUs.
     public static readonly string PurgeOutOfRangeUsAdmins =
         @"DELETE ra FROM data.ReferenceAdmins ra
           JOIN data.Reference r ON r.ReferenceId = ra.ReferenceId
           WHERE r.CountryId = 'US'
             AND TRY_CAST(r.ZpCode AS INT) IS NOT NULL
-            AND (TRY_CAST(r.ZpCode AS INT) < 501
-              OR TRY_CAST(r.ZpCode AS INT) > 99950)";
+            AND (TRY_CAST(r.ZpCode AS INT) < @MinZip
+              OR TRY_CAST(r.ZpCode AS INT) > @MaxZip)";
 
     public static readonly string PurgeOutOfRangeUs =
         @"DELETE FROM data.Reference
           WHERE CountryId = 'US'
             AND TRY_CAST(ZpCode AS INT) IS NOT NULL
-            AND (TRY_CAST(ZpCode AS INT) < 501
-              OR TRY_CAST(ZpCode AS INT) > 99950)";
+            AND (TRY_CAST(ZpCode AS INT) < @MinZip
+              OR TRY_CAST(ZpCode AS INT) > @MaxZip)";
 
     // Count of US reference rows outside the valid range — preview before purge.
     public static readonly string CountOutOfRangeUs =
@@ -967,8 +968,8 @@ public static class CommonQueries
           FROM   data.Reference
           WHERE  CountryId = 'US'
             AND  TRY_CAST(ZpCode AS INT) IS NOT NULL
-            AND  (TRY_CAST(ZpCode AS INT) < 501
-               OR TRY_CAST(ZpCode AS INT) > 99950)";
+            AND  (TRY_CAST(ZpCode AS INT) < @MinZip
+               OR TRY_CAST(ZpCode AS INT) > @MaxZip)";
 
     // Delete ReferenceAdmins for rows that became true duplicates after timezone normalisation.
     // A row is a true duplicate when its (CountryId, ZpCode, PlaceName) already has an IsDefault=1 row

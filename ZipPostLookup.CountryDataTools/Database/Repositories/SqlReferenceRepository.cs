@@ -1,4 +1,3 @@
-using System.Data;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Z.Dapper.Plus;
@@ -115,19 +114,6 @@ public sealed class SqlReferenceRepository : IReferenceRepository
 
 
 
-    }
-
-    /// <inheritdoc/>
-    public async Task<IReadOnlyList<DataReference>> GetByZipAsync(
-        string countryCode, string zip)
-    {
-        using var conn = _factory.CreateConnection();
-        var rows = await conn.QueryAsync<DataReference>(
-            "data.GetReferenceByCodeWithAdmins",
-            new { CountryId = countryCode.ToUpperInvariant(), Code = zip },
-            commandType: CommandType.StoredProcedure);
-
-        return rows.ToList();
     }
 
     /// <inheritdoc/>

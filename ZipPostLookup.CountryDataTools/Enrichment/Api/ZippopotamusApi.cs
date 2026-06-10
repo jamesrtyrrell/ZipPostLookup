@@ -1,107 +1,68 @@
-using System.Net.Http.Json;
+using System.Net;
 using System.Text.Json;
 using GeoTimeZone;
-using ZipPostLookup.CountryDataTools.Pipeline;
 using ZipPostLookup.CountryDataTools.Validation;
 
 namespace ZipPostLookup.CountryDataTools.Enrichment.Api;
 
-internal sealed class ZippopotamusApi : IEnrichmentApi
+internal sealed class ZippopotamusApi : EnrichmentApiBase
 {
     private static readonly HashSet<string> _countries =
         new(StringComparer.OrdinalIgnoreCase) { "US", "CA", "MX" };
 
-    private readonly HttpClient _http;
+    public ZippopotamusApi(HttpClient http) : base(http) { }
 
-    public ZippopotamusApi(HttpClient http) => _http = http;
+    public override string Name => "Zippopotam.us";
+    public override IReadOnlySet<string> SupportedCountries => _countries;
 
-    public string Name => "Zippopotam.us";
-    public IReadOnlySet<string> SupportedCountries => _countries;
-    public int? DailyLimit   => null;
-    public int? MonthlyLimit => null;
-
-    public async Task<FetchResult> LookupAsync(
-        string country, string code, string? stateAbbr, CancellationToken ct = default)
+    protected override string? BuildUrl(string country, string code, string? stateAbbr)
     {
         var cc = CountryRulesFactory.For(country).GetZippopotamusCountryCode(country, stateAbbr);
-        var url = $"https://api.zippopotam.us/{cc}/{Uri.EscapeDataString(code)}";
-
-        try
-        {
-            var response = await _http.GetAsync(url, ct);
-
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                return (null, FetchOutcome.NotFound);
-
-            // 401/403 (bad/blocked) — drop from rotation for the rest of the run.
-            if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized
-                                    or System.Net.HttpStatusCode.Forbidden)
-                return (null, FetchOutcome.RateLimited);
-
-            if ((int)response.StatusCode == 429)
-                return (null, FetchOutcome.RateLimited);
-
-            if (!response.IsSuccessStatusCode)
-                return (null, FetchOutcome.TransientError, $"HTTP {(int)response.StatusCode}");
-
-            var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
-
-            if (!json.TryGetProperty("places", out var places) || places.GetArrayLength() == 0)
-                return (null, FetchOutcome.TransientError, "empty or invalid response body");
-
-            var place = places[0];
-
-            var rawCity      = place.TryGetProperty("place name",        out var cn) ? cn.GetString() ?? "" : "";
-            var rawState     = place.TryGetProperty("state abbreviation", out var sa) ? sa.GetString() ?? "" : "";
-            var rawStateName = place.TryGetProperty("state",              out var sn) ? sn.GetString() ?? "" : "";
-
-            double lat = 0, lon = 0;
-            if (place.TryGetProperty("latitude", out var latEl))
-                double.TryParse(latEl.GetString(), System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out lat);
-            if (place.TryGetProperty("longitude", out var lonEl))
-                double.TryParse(lonEl.GetString(), System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out lon);
-
-            var iana = (lat != 0 || lon != 0) ? TimeZoneLookup.GetTimeZone(lat, lon).Result : "";
-
-            if (string.IsNullOrWhiteSpace(iana) || !iana.Contains('/'))
-                return (null, FetchOutcome.TransientError, "missing or invalid timezone in response");
-
-            var stateMatch  = StateResolver.Resolve(rawState) ?? StateResolver.Resolve(rawStateName);
-            var admin1Code  = stateMatch?.StateCode ?? rawState.ToUpperInvariant();
-            var admin1Name  = stateMatch?.StateName ?? rawStateName;
-
-            return (new ApiLookupResult
-            {
-                PlaceName  = TitleCase(rawCity),
-                Admin1Code = admin1Code,
-                Admin1Name = admin1Name,
-                Timezone   = iana,
-                Lat        = lat,
-                Lon        = lon,
-            }, FetchOutcome.Found);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
-        {
-            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
-        }
-        catch (Exception ex)
-        {
-            await Console.Error.WriteLineAsync($"[Zippopotam.us] Unexpected error for {code}: {ex.Message}");
-            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
-        }
+        return $"https://api.zippopotam.us/{cc}/{Uri.EscapeDataString(code)}";
     }
 
-    private static string TitleCase(string input)
+    protected override FetchResult? MapStatus(HttpResponseMessage response) =>
+        response.StatusCode == HttpStatusCode.NotFound
+            ? new FetchResult(null, FetchOutcome.NotFound)
+            : null;
+
+    protected override async Task<FetchResult> ParseAsync(
+        HttpResponseMessage response, string country, string code, CancellationToken ct)
     {
-        if (string.IsNullOrEmpty(input)) return input;
-        var words = input.Split(' ');
-        for (int i = 0; i < words.Length; i++)
+        var json = await ReadJsonAsync(response, ct);
+
+        if (!json.TryGetProperty("places", out var places) || places.GetArrayLength() == 0)
+            return (null, FetchOutcome.TransientError, "empty or invalid response body");
+
+        var place = places[0];
+
+        var rawCity      = place.TryGetProperty("place name",        out var cn) ? cn.GetString() ?? "" : "";
+        var rawState     = place.TryGetProperty("state abbreviation", out var sa) ? sa.GetString() ?? "" : "";
+        var rawStateName = place.TryGetProperty("state",              out var sn) ? sn.GetString() ?? "" : "";
+
+        double lat = 0, lon = 0;
+        if (place.TryGetProperty("latitude", out var latEl))
+            double.TryParse(latEl.GetString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out lat);
+        if (place.TryGetProperty("longitude", out var lonEl))
+            double.TryParse(lonEl.GetString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out lon);
+
+        var iana = (lat != 0 || lon != 0) ? TimeZoneLookup.GetTimeZone(lat, lon).Result : "";
+
+        if (string.IsNullOrWhiteSpace(iana) || !iana.Contains('/'))
+            return (null, FetchOutcome.TransientError, "missing or invalid timezone in response");
+
+        var (admin1Code, admin1Name) = ResolveAdmin1(rawState, rawStateName);
+
+        return (new ApiLookupResult
         {
-            if (words[i].Length == 0) continue;
-            words[i] = char.ToUpperInvariant(words[i][0]) + words[i][1..].ToLowerInvariant();
-        }
-        return string.Join(' ', words);
+            PlaceName  = TitleCase(rawCity),
+            Admin1Code = admin1Code,
+            Admin1Name = admin1Name,
+            Timezone   = iana,
+            Lat        = lat,
+            Lon        = lon,
+        }, FetchOutcome.Found);
     }
 }

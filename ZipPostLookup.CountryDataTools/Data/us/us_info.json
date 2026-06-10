@@ -15,7 +15,7 @@
   "CodeRanges": false,
   "Curated": true,
   "CurationStatus": "Curated",
-  "LastUpdated": "2026-06-09",
+  "LastUpdated": "2026-06-10",
   "CodeFormat": "12345",
   "CodeRegex": "^\\d{5}([- ]\\d{4})?$",
   "Description": "US states, territories and associated areas. USPS codes are the authoritative postal codes used in data.reference. ANSI codes are the numeric FIPS codes per ANSI INCITS 38:2009. UM (U.S. Minor Outlying Islands) covers multiple individual islands listed under the \u0027islands\u0027 property.",
@@ -207,7 +207,7 @@
       "Code": "MI",
       "Ansi": "26",
       "ZipCount": 1192,
-      "NameCount": 1774
+      "NameCount": 1777
     },
     {
       "Name": "Minnesota",

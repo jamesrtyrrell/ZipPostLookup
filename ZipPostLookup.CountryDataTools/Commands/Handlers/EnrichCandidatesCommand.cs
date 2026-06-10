@@ -1,6 +1,7 @@
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Dapper.Contrib.Extensions;
+using ZipPostLookup.CountryDataTools.Database;
 using ZipPostLookup.CountryDataTools.Database.Repositories;
 using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
@@ -65,20 +66,10 @@ public static class EnrichCandidatesCommand
         }
 
         if (all)
-        {
-            var exitCode = 0;
-            foreach (var cc in new[] { "US", "CA", "MX" })
-            {
-                Console.WriteLine();
-                AnsiConsole.Write(new Rule($"[bold]{cc}[/]").LeftJustified());
-                // Run ID auto-detected per country; --run ignored in --all mode
-                var result = await RunAsync(["--country", cc,
-                    "--limit", limit.ToString(),
-                    .. (dryRun ? new[]{ "--dry-run" } : Array.Empty<string>())]);
-                if (result != 0) exitCode = result;
-            }
-            return exitCode;
-        }
+            // Run ID auto-detected per country; --run ignored in --all mode
+            return await CountryRunner.ForEachWithRuleAsync(cc => RunAsync(["--country", cc,
+                "--limit", limit.ToString(),
+                .. (dryRun ? new[]{ "--dry-run" } : Array.Empty<string>())]));
 
         // Resolve run ID: --run > activeRunId in workdb.json > latest run in pipeline.Runs.
         // Always validate the candidate ID actually exists for this country — workdb.json
@@ -162,24 +153,21 @@ public static class EnrichCandidatesCommand
         {
             SpecialCodes = specialCodeSet.Count
         };
-        var checkpoint = new List<(string Zip, ApiLookupResult? Result, string? ApiName, FetchOutcome Outcome)>();
-        var enrichStopwatch = System.Diagnostics.Stopwatch.StartNew();
-
-        // Run-scoped transient error log in <repo>/Logs. Entries are appended as they
-        // arrive (not buffered to end-of-run) so the record survives a crash, kill, or
-        // mid-run Escape — the codes themselves are left in place for retry either way.
-        var transientCount = 0;
-        string? transientLogPath = null;
+        // Run-scoped unfound log in <repo>/Logs — records codes downgraded to unfound for an
+        // over-long place name (>100 chars), appended as they arrive so the record survives a
+        // crash/kill/Escape. The codes themselves stay in place for retry.
+        var unfoundCount = 0;
+        string? unfoundLogPath = null;
         try
         {
             var logDir = Path.Combine(db.RepoRoot, "Logs");
             Directory.CreateDirectory(logDir);
-            transientLogPath = Path.Combine(logDir, $"enrich-transient_{runId}.log");
+            unfoundLogPath = Path.Combine(logDir, $"enrich-unfound_{runId}.log");
         }
         catch (Exception ex)
         {
             await Console.Error.WriteLineAsync(
-                $"  ✗ Could not prepare transient log directory: {ex.Message}");
+                $"  ✗ Could not prepare unfound log directory: {ex.Message}");
         }
 
         // Build the round-robin router once for the entire batch
@@ -199,168 +187,49 @@ public static class EnrichCandidatesCommand
                 periodUsage.GetValueOrDefault(api.Name, 0),
                 api.DailyLimit ?? api.MonthlyLimit);
 
-        // Buffer Console.Error for the duration of the Live block — see EnrichDirectCommand for rationale.
-        using var deferredError = new DeferredConsoleError();
-
-        bool userCancelled = false;
-
-        // Live display — overwrites in place; no Console.Write inside this block.
-        await AnsiConsole.Live(
-            EnrichCandidatesDisplay.BuildLiveRenderable(0, batch.Count, "[grey]Starting...[/]", counters))
-            .AutoClear(true)
-            .StartAsync(async ctx =>
+        var userCancelled = await EnrichmentEngine.RunAsync(new EnrichmentRun
         {
-            for (int i = 0; i < batch.Count; i++)
+            Conn          = conn,
+            Country       = country,
+            Rules         = rules,
+            Batch         = batch,
+            Counters      = counters,
+            Router        = router,
+            Apis          = apis,
+            DelayMs       = DelayMs,
+            IsDirectMode  = false,
+            GetStateAsync = async code => await GetCandidateStateAsync(conn, country, runId, code),
+            PersistAsync  = async (c, tx, items) =>
             {
-                var code   = batch[i];
-                var isLast = i == batch.Count - 1;
-
-                ctx.UpdateTarget(EnrichCandidatesDisplay.BuildLiveRenderable(
-                    i + 1, batch.Count, $"ZIP {Markup.Escape(code),-10}  [grey]fetching...[/]", counters, enrichStopwatch.Elapsed));
-
-                var candidateState = await GetCandidateStateAsync(conn, country, runId, code);
-
-                string statusMarkup;
-
-                // Armed Forces zips have no geographic location — skip API, assign theatre timezone.
-                var af = rules.GetArmedForcesEnrichment(candidateState);
-                if (af != null)
+                foreach (var item in items)
                 {
-                    var afResult = new ApiLookupResult { Admin1Code = af.Value.Code, Admin1Name = af.Value.Name, Timezone = af.Value.Timezone };
-                    statusMarkup = $"ZIP {Markup.Escape(code),-10}  [grey]Armed Forces ({Markup.Escape(candidateState ?? "")}) → {af.Value.Timezone}[/]";
-                    checkpoint.Add((code, afResult, "Armed Forces", FetchOutcome.Found));
-                    counters.IncrementResolved("Armed Forces");
-                }
-                else
-                {
-                    var (apiResult, apiName, fetchOutcome) = await router.LookupAsync(
-                        country, rules.GetApiLookupCode(code), candidateState);
-                    
-                    
-                    // Record every API called for this code (router may have tried several
-                    // on TransientError before finding a result or exhausting all options).
-                    foreach (var (calledName, calledOutcome, calledDetail) in router.LastCallLog)
-                    {
-                        var calledApi = apis.FirstOrDefault(a => a.Name == calledName);
-                        await ApiUsageRepository.RecordCallAsync(conn, calledName, calledApi?.DailyLimit, calledApi?.MonthlyLimit);
-                        counters.IncrementDailyUsage(calledName);
-                        if (calledOutcome == FetchOutcome.TransientError)
-                        {
-                            counters.IncrementTransient(calledName);
-                            var logOn = false;
-                            // Log every per-API transient as it occurs — even when another API
-                            // later recovers the code (so 'Skipped' stays 0 but the failure is real).
-                            if (transientLogPath != null && logOn)
-                            {
-                                var reason = string.IsNullOrWhiteSpace(calledDetail) ? "no detail" : calledDetail;
-                                var logLine = $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}  {country.ToUpperInvariant()}  {code,-10}  transient via {calledName,-14}  {reason}";
-                                try
-                                {
-                                    await File.AppendAllLinesAsync(transientLogPath, [logLine]);
-                                    transientCount++;
-                                }
-                                catch (Exception ex)
-                                {
-                                    await Console.Error.WriteLineAsync(
-                                        $"  ✗ Failed to append transient log: {ex.Message}");
-                                }
-                            }
-                        }
-                    }
+                    if (item.Outcome == FetchOutcome.NotFound)
+                        await MarkUnfoundAsync(c, country, runId, item.Zip, tx);
+                    else
+                        await ResolveDiscrepanciesAsync(c, country, runId, item.Zip, item.Result!, item.ApiName!, tx);
 
-                    var displayName = apiResult?.PlaceName is { Length: > 40 } n
-                        ? n[..37] + "..."
-                        : apiResult?.PlaceName ?? "";
-                    statusMarkup = fetchOutcome switch
+                    if (item.Outcome == FetchOutcome.Found)
                     {
-                        FetchOutcome.NotFound       => $"ZIP {Markup.Escape(code),-10}  [yellow]→ 404 not found[/]",
-                        FetchOutcome.TransientError => $"ZIP {Markup.Escape(code),-10}  [red]→ transient error (all APIs)[/]",
-                        FetchOutcome.Found          => $"ZIP {Markup.Escape(code),-10}  [green]→ {Markup.Escape(displayName)}, {Markup.Escape(apiResult!.Admin1Code)}[/]  [grey]{apiResult.Timezone ?? "no tz"}[/]  [grey]via {Markup.Escape(apiName!)}[/]",
-                        _                           => $"ZIP {Markup.Escape(code),-10}",
-                    };
-
-                    switch (fetchOutcome)
-                    {
-                        case FetchOutcome.NotFound:
-                            checkpoint.Add((code, null, null, FetchOutcome.NotFound));
-                            counters.Unfound++;
-                            break;
-                        case FetchOutcome.TransientError:
-                            counters.Skipped++;
-                            // Per-API transients (incl. these all-failed codes) are logged in
-                            // the LastCallLog loop above.
-                            break;
-                        case FetchOutcome.Found:
-                            checkpoint.Add((code, apiResult, apiName, FetchOutcome.Found));
-                            counters.IncrementResolved(apiName!);
-                            break;
+                        var newName = await ReferenceEnrichmentHelper.UpdateReferenceAsync(
+                            c, country, item.Zip, item.Result!, tx, rules.ResolveAdmin1(item.Zip));
+                        if (newName) counters.NewNamesInserted++;
                     }
                 }
-
-                ctx.UpdateTarget(EnrichCandidatesDisplay.BuildLiveRenderable(
-                    i + 1, batch.Count, statusMarkup, counters, enrichStopwatch.Elapsed));
-
-                // Drain any keys pressed during the API call — catch Escape for graceful stop.
-                while (Console.KeyAvailable)
-                    if (Console.ReadKey(intercept: true).Key == ConsoleKey.Escape)
-                        userCancelled = true;
-
-                // Flush every 10 actionable results, on the last item, or when user stops.
-                if (checkpoint.Count > 0 && (checkpoint.Count % 10 == 0 || isLast || userCancelled))
+            },
+            OnLongPlaceNameAsync = async (code, api, name) =>
+            {
+                if (unfoundLogPath is null) return;
+                var line = $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}  {country.ToUpperInvariant()}  {code,-10}  unfound (name too long: {name.Length} chars)  via {api,-14}  {name}";
+                try
                 {
-                    ctx.UpdateTarget(EnrichCandidatesDisplay.BuildLiveRenderable(
-                        i + 1, batch.Count,
-                        $"[grey]Saving checkpoint ({checkpoint.Count} item(s))...[/]", counters, enrichStopwatch.Elapsed));
-
-                    string flushStatus;
-                    await using (var tx = conn.BeginTransaction())
-                    {
-                        try
-                        {
-                            foreach (var (cpZip, cpResult, cpApiName, cpOutcome) in checkpoint)
-                            {
-                                if (cpOutcome == FetchOutcome.NotFound)
-                                    await MarkUnfoundAsync(conn, country, runId, cpZip, tx);
-                                else
-                                    await ResolveDiscrepanciesAsync(conn, country, runId, cpZip, cpResult!, cpApiName!, tx);
-
-                                if (cpOutcome == FetchOutcome.Found)
-                                {
-                                    var newName = await ReferenceEnrichmentHelper.UpdateReferenceAsync(
-                                        conn, country, cpZip, cpResult!, tx,
-                                        rules.ResolveAdmin1(cpZip));
-                                    if (newName) counters.NewNamesInserted++;
-                                }
-                            }
-                            tx.Commit();
-                            flushStatus = statusMarkup + "  [grey]✓ saved[/]";
-                        }
-                        catch (Exception ex)
-                        {
-                            tx.Rollback();
-                            flushStatus = $"[red]⚠ Checkpoint failed: {Markup.Escape(ex.Message)}[/]";
-                        }
-                    }
-
-                    ctx.UpdateTarget(EnrichCandidatesDisplay.BuildLiveRenderable(
-                        i + 1, batch.Count, flushStatus, counters, enrichStopwatch.Elapsed));
-                    checkpoint.Clear();
+                    await File.AppendAllLinesAsync(unfoundLogPath, [line]);
+                    unfoundCount++;
                 }
-
-                if (userCancelled) break;
-
-                if (!isLast)
+                catch (Exception ex)
                 {
-                    // Interruptible delay — poll every 100 ms so Escape is detected promptly.
-                    for (int ms = 0; ms < DelayMs && !userCancelled; ms += 100)
-                    {
-                        await Task.Delay(Math.Min(100, DelayMs - ms));
-                        while (Console.KeyAvailable)
-                            if (Console.ReadKey(intercept: true).Key == ConsoleKey.Escape)
-                                userCancelled = true;
-                    }
+                    await Console.Error.WriteLineAsync($"  ✗ Failed to append unfound log: {ex.Message}");
                 }
-            }
+            },
         });
 
         Console.WriteLine();
@@ -370,24 +239,18 @@ public static class EnrichCandidatesCommand
             Console.WriteLine("Enrichment complete:");
         EnrichCandidatesDisplay.PrintSummary(counters);
 
-        try
-        {
-            var certified = await conn.ExecuteAsync(CommonQueries.BulkCertifyGoldCode,
-                new { CountryId = country.ToUpperInvariant() });
-            if (certified > 0)
-                AnsiConsole.MarkupLine($"  [bold yellow]⭐ Gold: {certified:N0} new code(s) certified[/]");
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"  [grey](Gold certification skipped: {Markup.Escape(ex.Message)})[/]");
-        }
+        var gold = await GoldCertifier.CertifyAsync(conn, country);
+        if (gold.Failed)
+            AnsiConsole.MarkupLine($"  [grey](Gold certification skipped: {Markup.Escape(gold.Error!)})[/]");
+        else if (gold.Certified > 0)
+            AnsiConsole.MarkupLine($"  [bold yellow]⭐ Gold: {gold.Certified:N0} new code(s) certified[/]");
 
-        // Transient failures were appended to the run log as they occurred; point the user at it.
-        if (transientCount > 0 && transientLogPath != null)
+        // Over-long names downgraded to unfound were appended to the run log; point the user at it.
+        if (unfoundCount > 0 && unfoundLogPath != null)
         {
             Console.WriteLine();
             AnsiConsole.MarkupLine(
-                $"  [grey]{transientCount} transient error(s) logged to[/] {Markup.Escape(transientLogPath)}");
+                $"  [grey]{unfoundCount} over-long name(s) logged as unfound to[/] {Markup.Escape(unfoundLogPath)}");
         }
 
         int remaining = zips.Count - batch.Count;
@@ -520,28 +383,11 @@ public static class EnrichCandidatesCommand
         string[] args, out string country, out string runId,
         out int limit, out bool dryRun, out bool all)
     {
-        country = "";
-        runId   = "";
-        limit   = 100;
-        dryRun  = false;
-        all     = false;
-
-        for (int i = 0; i < args.Length; i++)
-        {
-            switch (args[i].ToLowerInvariant())
-            {
-                case "--country" when i + 1 < args.Length && !args[i + 1].StartsWith('-'):
-                    country = args[++i]; break;
-                case "--all":
-                    all = true; break;
-                case "--run" when i + 1 < args.Length:
-                    runId = args[++i]; break;
-                case "--limit" when i + 1 < args.Length:
-                    if (int.TryParse(args[++i], out var n) && n > 0) limit = n; break;
-                case "--dry-run":
-                    dryRun = true; break;
-            }
-        }
+        country = args.OptionValue("--country", rejectFlagValue: true) ?? "";
+        runId   = args.OptionValue("--run") ?? "";
+        limit   = args.IntOption("--limit", 100, min: 1);
+        dryRun  = args.HasFlag("--dry-run");
+        all     = args.HasFlag("--all");
 
         return all || !string.IsNullOrWhiteSpace(country);
     }

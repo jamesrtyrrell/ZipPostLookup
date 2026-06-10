@@ -1,90 +1,49 @@
-using System.Net.Http.Json;
+using System.Net;
 using System.Text.Json;
-using ZipPostLookup.CountryDataTools.Pipeline;
 
 namespace ZipPostLookup.CountryDataTools.Enrichment.Api;
 
-internal sealed class ZiptasticApi : IEnrichmentApi
+internal sealed class ZiptasticApi : EnrichmentApiBase
 {
     private static readonly HashSet<string> _countries =
         new(StringComparer.OrdinalIgnoreCase) { "US" };
 
-    private readonly HttpClient _http;
+    public ZiptasticApi(HttpClient http) : base(http) { }
 
-    public ZiptasticApi(HttpClient http) => _http = http;
+    public override string Name => "Ziptastic";
+    public override IReadOnlySet<string> SupportedCountries => _countries;
 
-    public string Name => "Ziptastic";
-    public IReadOnlySet<string> SupportedCountries => _countries;
-    public int? DailyLimit   => null;
-    public int? MonthlyLimit => null;
+    protected override string? BuildUrl(string country, string code, string? stateAbbr) =>
+        $"https://ziptasticapi.com/{Uri.EscapeDataString(code)}";
 
-    public async Task<FetchResult> LookupAsync(
-        string country, string code, string? stateAbbr, CancellationToken ct = default)
+    protected override FetchResult? MapStatus(HttpResponseMessage response) =>
+        response.StatusCode == HttpStatusCode.NotFound
+            ? new FetchResult(null, FetchOutcome.NotFound)
+            : null;
+
+    protected override async Task<FetchResult> ParseAsync(
+        HttpResponseMessage response, string country, string code, CancellationToken ct)
     {
-        var url = $"https://ziptasticapi.com/{Uri.EscapeDataString(code)}";
+        var json = await ReadJsonAsync(response, ct);
 
-        try
+        // Error response: { "error_code": "...", "error_message": "..." }
+        if (json.TryGetProperty("error_code", out _))
+            return (null, FetchOutcome.NotFound);
+
+        var rawCity  = json.TryGetProperty("city",  out var c) ? c.GetString() ?? "" : "";
+        var rawState = json.TryGetProperty("state", out var s) ? s.GetString() ?? "" : "";
+
+        if (string.IsNullOrWhiteSpace(rawCity) && string.IsNullOrWhiteSpace(rawState))
+            return (null, FetchOutcome.TransientError, "empty city and state in response body");
+
+        var (admin1Code, admin1Name) = ResolveAdmin1(rawState, rawState);
+
+        return (new ApiLookupResult
         {
-            var response = await _http.GetAsync(url, ct);
-
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                return (null, FetchOutcome.NotFound);
-
-            // 401/403 (bad/blocked) — drop from rotation for the rest of the run.
-            if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized
-                                    or System.Net.HttpStatusCode.Forbidden)
-                return (null, FetchOutcome.RateLimited);
-
-            if ((int)response.StatusCode == 429)
-                return (null, FetchOutcome.RateLimited);
-
-            if (!response.IsSuccessStatusCode)
-                return (null, FetchOutcome.TransientError, $"HTTP {(int)response.StatusCode}");
-
-            var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
-
-            // Error response: { "error_code": "...", "error_message": "..." }
-            if (json.TryGetProperty("error_code", out _))
-                return (null, FetchOutcome.NotFound);
-
-            var rawCity  = json.TryGetProperty("city",  out var c) ? c.GetString() ?? "" : "";
-            var rawState = json.TryGetProperty("state", out var s) ? s.GetString() ?? "" : "";
-
-            if (string.IsNullOrWhiteSpace(rawCity) && string.IsNullOrWhiteSpace(rawState))
-                return (null, FetchOutcome.TransientError, "empty city and state in response body");
-
-            var stateMatch = StateResolver.Resolve(rawState);
-            var admin1Code = stateMatch?.StateCode ?? rawState.ToUpperInvariant();
-            var admin1Name = stateMatch?.StateName ?? rawState;
-
-            return (new ApiLookupResult
-            {
-                PlaceName  = TitleCase(rawCity),
-                Admin1Code = admin1Code,
-                Admin1Name = admin1Name,
-                Timezone   = null,   // Ziptastic does not return coordinates or timezone
-            }, FetchOutcome.Found);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
-        {
-            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
-        }
-        catch (Exception ex)
-        {
-            await Console.Error.WriteLineAsync($"[Ziptastic] Unexpected error for {code}: {ex.Message}");
-            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
-        }
-    }
-
-    private static string TitleCase(string input)
-    {
-        if (string.IsNullOrEmpty(input)) return input;
-        var words = input.Split(' ');
-        for (int i = 0; i < words.Length; i++)
-        {
-            if (words[i].Length == 0) continue;
-            words[i] = char.ToUpperInvariant(words[i][0]) + words[i][1..].ToLowerInvariant();
-        }
-        return string.Join(' ', words);
+            PlaceName  = TitleCase(rawCity),
+            Admin1Code = admin1Code,
+            Admin1Name = admin1Name,
+            Timezone   = null,   // Ziptastic does not return coordinates or timezone
+        }, FetchOutcome.Found);
     }
 }

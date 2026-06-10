@@ -49,20 +49,13 @@ public static class AnalyseCommand
         }
 
         if (all)
-        {
-            var exitCode = 0;
-            foreach (var cc in new[] { "US", "CA", "MX" })
+            return await CountryRunner.ForEachWithRuleAsync(cc =>
             {
-                Console.WriteLine();
-                AnsiConsole.Write(new Rule($"[bold]{cc}[/]").LeftJustified());
                 var ccOutput = string.IsNullOrWhiteSpace(output)
                     ? ""
                     : Path.Combine(output, $"{cc.ToLowerInvariant()}-analysis-{DateTime.UtcNow:yyyyMMdd}.md");
-                var result = await RunForCountryAsync(db, cc, ccOutput);
-                if (result != 0) exitCode = result;
-            }
-            return exitCode;
-        }
+                return RunForCountryAsync(db, cc, ccOutput);
+            });
 
         return await RunForCountryAsync(db, country.ToUpperInvariant(), output);
     }
@@ -174,25 +167,9 @@ public static class AnalyseCommand
 
     private static bool TryParseArgs(string[] args, out string country, out string output, out bool all)
     {
-        country = "";
-        output  = "";
-        all     = false;
-
-        for (var i = 0; i < args.Length; i++)
-        {
-            switch (args[i].ToLowerInvariant())
-            {
-                case "--country" when i + 1 < args.Length && !args[i + 1].StartsWith('-'):
-                    country = args[++i];
-                    break;
-                case "--all":
-                    all = true;
-                    break;
-                case "--output" when i + 1 < args.Length:
-                    output = args[++i];
-                    break;
-            }
-        }
+        country = args.OptionValue("--country", rejectFlagValue: true) ?? "";
+        output  = args.OptionValue("--output") ?? "";
+        all     = args.HasFlag("--all");
 
         return all || !string.IsNullOrWhiteSpace(country);
     }

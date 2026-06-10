@@ -85,30 +85,6 @@ public sealed class SqlRunRepository : IRunRepository
     }
 
     /// <inheritdoc/>
-    public async Task FailRunAsync(string runId, string? notes = null)
-    {
-        using var conn = _factory.CreateConnection();
-
-        var existing = await conn.GetAsync<PipelineRuns>(runId);
-        if (existing == null) { return; }
-
-        existing.Status = nameof(RunStatus.Failed);
-        existing.CompletedAt = DateTimeOffset.UtcNow;
-        existing.Notes = notes ?? existing.Notes;
-
-        await conn.UpdateAsync(existing);
-    }
-
-    /// <inheritdoc/>
-    public async Task<RunSummary?> GetLatestRunAsync(string countryCode)
-    {
-        using var conn = _factory.CreateConnection();
-        return await conn.QueryFirstOrDefaultAsync<RunSummary>(
-            CommonQueries.GetLatestRun,
-            new { CountryId = countryCode.ToUpperInvariant() });
-    }
-
-    /// <inheritdoc/>
     public async Task<IReadOnlyList<RunSummary>> GetRunsAsync(string countryCode)
     {
         using var conn = _factory.CreateConnection();

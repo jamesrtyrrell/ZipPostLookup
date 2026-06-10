@@ -283,8 +283,13 @@ public static class WorkDbCommand
         // ── Purge out-of-bounds US ZIP codes (US only) ───────────────────────
         if (db.CountryCode.Equals("US", StringComparison.OrdinalIgnoreCase))
         {
+            var oobBounds = new
+            {
+                MinZip = Validation.Us.UsCountryRules.MinUsZip,
+                MaxZip = Validation.Us.UsCountryRules.MaxUsZip,
+            };
             var oobCount = await Dapper.SqlMapper.ExecuteScalarAsync<int>(
-                conn, CommonQueries.CountOutOfRangeUs);
+                conn, CommonQueries.CountOutOfRangeUs, oobBounds);
 
             if (oobCount > 0)
             {
@@ -297,9 +302,9 @@ public static class WorkDbCommand
                     try
                     {
                         var adminsDeleted = await Dapper.SqlMapper.ExecuteAsync(
-                            conn, CommonQueries.PurgeOutOfRangeUsAdmins, transaction: purgeTx);
+                            conn, CommonQueries.PurgeOutOfRangeUsAdmins, oobBounds, transaction: purgeTx);
                         var rowsDeleted = await Dapper.SqlMapper.ExecuteAsync(
-                            conn, CommonQueries.PurgeOutOfRangeUs, transaction: purgeTx);
+                            conn, CommonQueries.PurgeOutOfRangeUs, oobBounds, transaction: purgeTx);
                         purgeTx.Commit();
                         AnsiConsole.MarkupLine(
                             $"  [green]✓ {rowsDeleted:N0} reference row(s) deleted ({adminsDeleted:N0} admin row(s)).[/]");

@@ -75,17 +75,8 @@ public static class CdtDbIntegrityCommand
         }
 
         if (all)
-        {
-            var exitCode = 0;
-            foreach (var cc in new[] { "US", "CA", "MX" })
-            {
-                Console.WriteLine();
-                AnsiConsole.Write(new Rule($"[bold]{cc}[/]").LeftJustified());
-                var r = await RunForCountryAsync(db, cc.ToUpperInvariant(), null);
-                if (r.ExitCode != 0) exitCode = r.ExitCode;
-            }
-            return exitCode;
-        }
+            return await CountryRunner.ForEachWithRuleAsync(async cc =>
+                (await RunForCountryAsync(db, cc.ToUpperInvariant(), null)).ExitCode);
 
         return (await RunForCountryAsync(db, country.ToUpperInvariant(), output)).ExitCode;
     }
@@ -522,25 +513,9 @@ public static class CdtDbIntegrityCommand
     private static bool TryParseArgs(
         string[] args, out string country, out bool all, out string? output)
     {
-        country = "US";
-        all     = false;
-        output  = null;
-
-        for (var i = 0; i < args.Length; i++)
-        {
-            switch (args[i].ToLowerInvariant())
-            {
-                case "--country" when i + 1 < args.Length:
-                    country = args[++i].ToUpperInvariant();
-                    break;
-                case "--all":
-                    all = true;
-                    break;
-                case "--output" when i + 1 < args.Length:
-                    output = args[++i];
-                    break;
-            }
-        }
+        country = (args.OptionValue("--country") ?? "US").ToUpperInvariant();
+        all     = args.HasFlag("--all");
+        output  = args.OptionValue("--output");
 
         return all || !string.IsNullOrWhiteSpace(country);
     }

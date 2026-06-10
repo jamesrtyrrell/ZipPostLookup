@@ -4,95 +4,53 @@ namespace ZipPostLookup.CountryDataTools.Enrichment.Api;
 
 internal static class EnrichmentApiFactory
 {
+    // Key-less APIs, in rotation-priority order.
+    private static readonly Func<HttpClient, IEnrichmentApi>[] _freeApis =
+    [
+        http => new ZippopotamusApi(http),
+        http => new GeoLocatorApi(http),
+        http => new GeocoderCaApi(http),
+        http => new ZiptasticApi(http),
+    ];
+
+    // Key-based APIs: (apikeys.json entry name, factory). Ordered after the free APIs.
+    private static readonly (string ConfigKey, Func<HttpClient, ApiKeyEntry, IEnrichmentApi> Create)[] _keyedApis =
+    [
+        ("geoApify",        (http, e) => new GeoApifyApi(http, e.Key, e.DailyLimit)),
+        ("geocodio",        (http, e) => new GeocodioApi(http, e.Key, e.DailyLimit)),
+        ("abstractApi",     (http, e) => new AbstractTimezoneApi(http, e.Key, e.DailyLimit)),
+        ("openCageDataApi", (http, e) => new OpenCageApi(http, e.Key, e.DailyLimit)),
+        ("zipCodeBase",     (http, e) => new ZipCodeBaseApi(http, e.Key, e.MonthlyLimit)),
+    ];
+
     public static IReadOnlyList<IEnrichmentApi> GetApisForCountry(
         string country, HttpClient http, ApiKeysConfig? apiKeys = null)
     {
         var result = new List<IEnrichmentApi>();
 
-        var zippopotam = new ZippopotamusApi(http);
-        if (zippopotam.SupportedCountries.Contains(country))
-            result.Add(zippopotam);
-
-        var geoLocator = new GeoLocatorApi(http);
-        if (geoLocator.SupportedCountries.Contains(country))
-            result.Add(geoLocator);
-
-        var geocoderCa = new GeocoderCaApi(http);
-        if (geocoderCa.SupportedCountries.Contains(country))
-            result.Add(geocoderCa);
-
-        var ziptastic = new ZiptasticApi(http);
-        if (ziptastic.SupportedCountries.Contains(country))
-            result.Add(ziptastic);
-
-        var geoEntry = apiKeys?.TryGetEntry("geoApify");
-        if (geoEntry != null)
+        foreach (var make in _freeApis)
         {
-            if (!geoEntry.IsConfigured)
-                Console.Error.WriteLine(
-                    "  ⚠  apikeys.json: geoApify key is not configured — replace the placeholder value.");
-            else
-            {
-                var geoApify = new GeoApifyApi(http, geoEntry.Key, geoEntry.DailyLimit);
-                if (geoApify.SupportedCountries.Contains(country))
-                    result.Add(geoApify);
-            }
+            var api = make(http);
+            if (api.SupportedCountries.Contains(country))
+                result.Add(api);
         }
 
-        var geocodioEntry = apiKeys?.TryGetEntry("geocodio");
-        if (geocodioEntry != null)
+        foreach (var (configKey, create) in _keyedApis)
         {
-            if (!geocodioEntry.IsConfigured)
-                Console.Error.WriteLine(
-                    "  ⚠  apikeys.json: geocodio key is not configured — replace the placeholder value.");
-            else
-            {
-                var geocodio = new GeocodioApi(http, geocodioEntry.Key, geocodioEntry.DailyLimit);
-                if (geocodio.SupportedCountries.Contains(country))
-                    result.Add(geocodio);
-            }
-        }
+            var entry = apiKeys?.TryGetEntry(configKey);
+            if (entry is null)
+                continue;
 
-        var abstractApiEntry = apiKeys?.TryGetEntry("abstractApi");
-        if (abstractApiEntry != null)
-        {
-            if (!abstractApiEntry.IsConfigured)
-                Console.Error.WriteLine(
-                    "  ⚠  apikeys.json: abstractApi key is not configured — replace the placeholder value.");
-            else
+            if (!entry.IsConfigured)
             {
-                var abstractApi = new AbstractApi(http, abstractApiEntry.Key, abstractApiEntry.DailyLimit);
-                if (abstractApi.SupportedCountries.Contains(country))
-                    result.Add(abstractApi);
+                Console.Error.WriteLine(
+                    $"  ⚠  apikeys.json: {configKey} key is not configured — replace the placeholder value.");
+                continue;
             }
-        }
 
-        var openCageEntry = apiKeys?.TryGetEntry("openCageDataApi");
-        if (openCageEntry != null)
-        {
-            if (!openCageEntry.IsConfigured)
-                Console.Error.WriteLine(
-                    "  ⚠  apikeys.json: openCageDataApi key is not configured — replace the placeholder value.");
-            else
-            {
-                var openCage = new OpenCageApi(http, openCageEntry.Key, openCageEntry.DailyLimit);
-                if (openCage.SupportedCountries.Contains(country))
-                    result.Add(openCage);
-            }
-        }
-
-        var zipCodeBaseEntry = apiKeys?.TryGetEntry("zipCodeBase");
-        if (zipCodeBaseEntry != null)
-        {
-            if (!zipCodeBaseEntry.IsConfigured)
-                Console.Error.WriteLine(
-                    "  ⚠  apikeys.json: zipCodeBase key is not configured — replace the placeholder value.");
-            else
-            {
-                var zipCodeBase = new ZipCodeBaseApi(http, zipCodeBaseEntry.Key, zipCodeBaseEntry.MonthlyLimit);
-                if (zipCodeBase.SupportedCountries.Contains(country))
-                    result.Add(zipCodeBase);
-            }
+            var api = create(http, entry);
+            if (api.SupportedCountries.Contains(country))
+                result.Add(api);
         }
 
         return result;

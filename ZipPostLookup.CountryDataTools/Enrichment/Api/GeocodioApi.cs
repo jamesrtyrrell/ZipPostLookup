@@ -1,6 +1,5 @@
-using System.Net.Http.Json;
+using System.Net;
 using System.Text.Json;
-using ZipPostLookup.CountryDataTools.Pipeline;
 
 namespace ZipPostLookup.CountryDataTools.Enrichment.Api;
 
@@ -10,7 +9,7 @@ namespace ZipPostLookup.CountryDataTools.Enrichment.Api;
 /// Supports US, CA, MX. Returns timezone via the fields=timezone append.
 /// A 401/403 response removes this API from the session rotation.
 /// </summary>
-internal sealed class GeocodioApi : IEnrichmentApi
+internal sealed class GeocodioApi : EnrichmentApiBase
 {
     private static readonly HashSet<string> _countries =
         new(StringComparer.OrdinalIgnoreCase) { "US", "CA", "MX" };
@@ -26,101 +25,76 @@ internal sealed class GeocodioApi : IEnrichmentApi
 
     private const string BaseUrl = "https://api.geocod.io/v2/geocode";
 
-    private readonly HttpClient _http;
-    private readonly string     _apiKey;
-    private readonly int?       _dailyLimit;
+    private readonly string _apiKey;
+    private readonly int?   _dailyLimit;
 
-    public GeocodioApi(HttpClient http, string apiKey, int? dailyLimit = null)
+    public GeocodioApi(HttpClient http, string apiKey, int? dailyLimit = null) : base(http)
     {
-        _http       = http;
         _apiKey     = apiKey;
         _dailyLimit = dailyLimit;
     }
 
-    public string                 Name               => "Geocodio";
-    public IReadOnlySet<string>   SupportedCountries => _countries;
-    public int?                   DailyLimit         => _dailyLimit;
-    public int?                   MonthlyLimit       => null;
+    public override string               Name               => "Geocodio";
+    public override IReadOnlySet<string> SupportedCountries => _countries;
+    public override int?                 DailyLimit         => _dailyLimit;
 
-    public async Task<FetchResult> LookupAsync(
-        string country, string code, string? stateAbbr, CancellationToken ct = default)
+    protected override string? BuildUrl(string country, string code, string? stateAbbr)
     {
         if (!_countryParam.TryGetValue(country, out var countryParam))
+            return null;
+
+        return $"{BaseUrl}?q={Uri.EscapeDataString(code)}" +
+               $"&country={countryParam}&fields=timezone&api_key={_apiKey}";
+    }
+
+    // 422 = query could not be parsed — treat as not found.
+    protected override FetchResult? MapStatus(HttpResponseMessage response) =>
+        response.StatusCode == HttpStatusCode.UnprocessableEntity
+            ? new FetchResult(null, FetchOutcome.NotFound)
+            : null;
+
+    protected override async Task<FetchResult> ParseAsync(
+        HttpResponseMessage response, string country, string code, CancellationToken ct)
+    {
+        var json = await ReadJsonAsync(response, ct);
+
+        if (!json.TryGetProperty("results", out var results) || results.GetArrayLength() == 0)
             return (null, FetchOutcome.NotFound);
 
-        var url = $"{BaseUrl}?q={Uri.EscapeDataString(code)}" +
-                  $"&country={countryParam}&fields=timezone&api_key={_apiKey}";
+        var r = results[0];
 
-        try
+        string rawCity = "", rawStateCode = "";
+        if (r.TryGetProperty("address_components", out var ac))
         {
-            var response = await _http.GetAsync(url, ct);
-
-            // Bad/missing key — drop from rotation.
-            if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized
-                                    or System.Net.HttpStatusCode.Forbidden)
-                return (null, FetchOutcome.RateLimited);
-
-            if ((int)response.StatusCode == 429)
-                return (null, FetchOutcome.RateLimited);
-
-            // 422 = query could not be parsed — treat as not found.
-            if (response.StatusCode == System.Net.HttpStatusCode.UnprocessableEntity)
-                return (null, FetchOutcome.NotFound);
-
-            if (!response.IsSuccessStatusCode)
-                return (null, FetchOutcome.TransientError, $"HTTP {(int)response.StatusCode}");
-
-            var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
-
-            if (!json.TryGetProperty("results", out var results) || results.GetArrayLength() == 0)
-                return (null, FetchOutcome.NotFound);
-
-            var r = results[0];
-
-            string rawCity = "", rawStateCode = "";
-            if (r.TryGetProperty("address_components", out var ac))
-            {
-                rawCity      = ac.TryGetProperty("city",           out var c)  ? c.GetString() ?? "" : "";
-                rawStateCode = ac.TryGetProperty("state_province", out var sp) ? sp.GetString() ?? "" : "";
-            }
-
-            var lat = 0.0;
-            var lng = 0.0;
-            if (r.TryGetProperty("location", out var loc))
-            {
-                if (loc.TryGetProperty("lat", out var latEl) && latEl.TryGetDouble(out var latD)) lat = latD;
-                if (loc.TryGetProperty("lng", out var lngEl) && lngEl.TryGetDouble(out var lngD)) lng = lngD;
-            }
-
-            string? iana = null;
-            if (r.TryGetProperty("timezone", out var tz) && tz.TryGetProperty("name", out var tzName))
-                iana = tzName.GetString();
-
-            if (string.IsNullOrWhiteSpace(rawCity) && string.IsNullOrWhiteSpace(rawStateCode))
-                return (null, FetchOutcome.TransientError, "empty city and state");
-
-            var stateMatch = StateResolver.Resolve(rawStateCode);
-            var admin1Code = stateMatch?.StateCode ?? rawStateCode.ToUpperInvariant();
-            var admin1Name = stateMatch?.StateName ?? rawStateCode;
-
-            return (new ApiLookupResult
-            {
-                PlaceName  = rawCity,
-                Admin1Code = admin1Code,
-                Admin1Name = admin1Name,
-                Timezone   = iana,
-                Lat        = lat,
-                Lon        = lng,
-            }, FetchOutcome.Found);
+            rawCity      = ac.TryGetProperty("city",           out var c)  ? c.GetString() ?? "" : "";
+            rawStateCode = ac.TryGetProperty("state_province", out var sp) ? sp.GetString() ?? "" : "";
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+
+        var lat = 0.0;
+        var lng = 0.0;
+        if (r.TryGetProperty("location", out var loc))
         {
-            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
+            if (loc.TryGetProperty("lat", out var latEl) && latEl.TryGetDouble(out var latD)) lat = latD;
+            if (loc.TryGetProperty("lng", out var lngEl) && lngEl.TryGetDouble(out var lngD)) lng = lngD;
         }
-        catch (Exception ex)
+
+        string? iana = null;
+        if (r.TryGetProperty("timezone", out var tz) && tz.TryGetProperty("name", out var tzName))
+            iana = tzName.GetString();
+
+        if (string.IsNullOrWhiteSpace(rawCity) && string.IsNullOrWhiteSpace(rawStateCode))
+            return (null, FetchOutcome.TransientError, "empty city and state");
+
+        var (admin1Code, admin1Name) = ResolveAdmin1(rawStateCode, rawStateCode);
+
+        return (new ApiLookupResult
         {
-            await Console.Error.WriteLineAsync($"[Geocodio] Unexpected error for {code}: {ex.Message}");
-            return (null, FetchOutcome.TransientError, $"{ex.GetType().Name}: {ex.Message}");
-        }
+            PlaceName  = rawCity,
+            Admin1Code = admin1Code,
+            Admin1Name = admin1Name,
+            Timezone   = iana,
+            Lat        = lat,
+            Lon        = lng,
+        }, FetchOutcome.Found);
     }
 }

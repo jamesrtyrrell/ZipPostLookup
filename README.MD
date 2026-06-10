@@ -1,9 +1,9 @@
 ﻿# ZipPostLookup
 
 Fast, extensible in-memory postal code lookup for .NET.  
-Built-in data for the **United States** (<!-- zpl:us:codes -->43,498<!-- /zpl:us:codes --> ZIP codes), **Canada** (~<!-- zpl:ca:codes -->900,686<!-- /zpl:ca:codes --> postal codes, <!-- zpl:ca:entries -->435k<!-- /zpl:ca:entries --> compressed entries via FSA range compression), and **Mexico** (<!-- zpl:mx:codes -->32,893<!-- /zpl:mx:codes --> postal codes). All three countries are fully curated ✅.
+Built-in data for the **United States** (<!-- zpl:us:codes -->43,498<!-- /zpl:us:codes --> ZIP codes), **Canada** (~<!-- zpl:ca:codes -->900,686<!-- /zpl:ca:codes --> postal codes, <!-- zpl:ca:entries -->596k<!-- /zpl:ca:entries --> compressed entries via FSA range compression), and **Mexico** (<!-- zpl:mx:codes -->32,893<!-- /zpl:mx:codes --> postal codes). All three countries are fully curated ✅.
 
-Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-09 04:27:03<!-- /zpl:updated -->)**
+Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-10 13:02:18<!-- /zpl:updated -->)**
 
 ---
 
@@ -280,12 +280,12 @@ On .NET 8+, all indexes use `FrozenDictionary`. The `.zpi.br` frozen image loads
 | Country |                                        Distinct Codes* | Admin Levels |                Timezones                | Status     |
 |---------|-------------------------------------------------------:|:------------:|:---------------------------------------:|------------|
 | US      |  **<!-- zpl:us:codes -->43,498<!-- /zpl:us:codes -->** |    State     | <!-- zpl:us:tz -->53<!-- /zpl:us:tz --> | ✅ Curated  |
-| CA      | **<!-- zpl:ca:codes -->900,686<!-- /zpl:ca:codes -->** |   Province   | <!-- zpl:ca:tz -->22<!-- /zpl:ca:tz --> | ✅ Curated  |
+| CA      | **<!-- zpl:ca:codes -->900,686<!-- /zpl:ca:codes -->** |   Province   | <!-- zpl:ca:tz -->24<!-- /zpl:ca:tz --> | ✅ Curated  |
 | MX      |  **<!-- zpl:mx:codes -->32,893<!-- /zpl:mx:codes -->** |    Estado    | <!-- zpl:mx:tz -->17<!-- /zpl:mx:tz --> | ✅ Curated  |
 
 \* Distinct codes are the number of unique Zip/Postal codes in the country's set.
 
-Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-09 04:27:03<!-- /zpl:updated -->)**
+Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-10 13:02:18<!-- /zpl:updated -->)**
 
 ---
 

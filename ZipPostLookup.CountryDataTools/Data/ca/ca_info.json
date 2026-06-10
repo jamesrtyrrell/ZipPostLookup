@@ -17,7 +17,7 @@
   "CodeRanges": true,
   "Curated": true,
   "CurationStatus": "Curated",
-  "LastUpdated": "2026-06-09",
+  "LastUpdated": "2026-06-10",
   "CodeFormat": "A1A 1A1",
   "CodeRegex": "^[A-Z]\\d[A-Z] \\d[A-Z]\\d$",
   "Description": "Canadian provinces and territories with postal abbreviations and capitals.",
@@ -44,7 +44,7 @@
       "Code": "ON",
       "Capital": "Toronto",
       "ZipCount": 298725,
-      "NameCount": 304427
+      "NameCount": 310735
     },
     {
       "Type": "province",
@@ -54,7 +54,7 @@
       "Capital": "Quebec City",
       "CapitalLocal": "Qu\u00E9bec",
       "ZipCount": 226783,
-      "NameCount": 230226
+      "NameCount": 234033
     },
     {
       "Type": "province",
@@ -79,7 +79,7 @@
       "Code": "MB",
       "Capital": "Winnipeg",
       "ZipCount": 27054,
-      "NameCount": 27054
+      "NameCount": 27153
     },
     {
       "Type": "province",
@@ -87,7 +87,7 @@
       "Code": "BC",
       "Capital": "Victoria",
       "ZipCount": 122490,
-      "NameCount": 122490
+      "NameCount": 123819
     },
     {
       "Type": "province",
@@ -103,7 +103,7 @@
       "Code": "SK",
       "Capital": "Regina",
       "ZipCount": 23794,
-      "NameCount": 23794
+      "NameCount": 23896
     },
     {
       "Type": "province",
@@ -111,7 +111,7 @@
       "Code": "AB",
       "Capital": "Edmonton",
       "ZipCount": 92737,
-      "NameCount": 92737
+      "NameCount": 93573
     },
     {
       "Type": "province",
@@ -127,7 +127,7 @@
       "Code": "NT",
       "Capital": "Yellowknife",
       "ZipCount": 626,
-      "NameCount": 626
+      "NameCount": 628
     },
     {
       "Type": "territory",
@@ -135,7 +135,7 @@
       "Code": "YT",
       "Capital": "Whitehorse",
       "ZipCount": 1056,
-      "NameCount": 1056
+      "NameCount": 1060
     },
     {
       "Type": "territory",

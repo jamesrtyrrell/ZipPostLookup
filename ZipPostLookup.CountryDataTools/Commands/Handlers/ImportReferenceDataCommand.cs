@@ -151,14 +151,11 @@ public static class ImportReferenceDataCommand
             Console.WriteLine($"  --force: clearing existing data.reference rows for {countryCode}…");
             await db.Reference.DeleteAllAsync(countryCode);
             Console.WriteLine($"  Existing rows cleared.");
-            try
+            using (var goldConn = db.GetFactory().CreateConnection())
             {
-                using var goldConn = db.GetFactory().CreateConnection();
-                await goldConn.ExecuteAsync(CommonQueries.RevokeAllGoldCodesForCountry,
-                    new { CountryId = countryCode });
-                Console.WriteLine($"  Gold certifications cleared.");
+                if (await GoldCertifier.TryRevokeAllAsync(goldConn, countryCode))
+                    Console.WriteLine($"  Gold certifications cleared.");
             }
-            catch { /* data.GoldCode may not exist yet — run MigrateAddGoldCodeTable */ }
         }
 
         // Check that a reference CSV exists on disk before attempting the load
@@ -184,16 +181,14 @@ public static class ImportReferenceDataCommand
         var count = await db.Reference.GetCountAsync(countryCode);
         Console.WriteLine($"  ✓ data.reference: {count:N0} rows loaded for {countryCode}");
 
-        try
+        using (var goldConn = db.GetFactory().CreateConnection())
         {
-            using var goldConn = db.GetFactory().CreateConnection();
-            var certified = await goldConn.ExecuteAsync(CommonQueries.BulkCertifyGoldCode,
-                new { CountryId = countryCode });
-            Console.WriteLine(certified > 0
-                ? $"  ✓ Gold: {certified:N0} code(s) certified"
-                : $"  ✓ Gold: no codes eligible yet");
+            var gold = await GoldCertifier.CertifyAsync(goldConn, countryCode);
+            if (!gold.Failed)
+                Console.WriteLine(gold.Certified > 0
+                    ? $"  ✓ Gold: {gold.Certified:N0} code(s) certified"
+                    : $"  ✓ Gold: no codes eligible yet");
         }
-        catch { /* data.GoldCode may not exist yet — run MigrateAddGoldCodeTable */ }
 
         return 0;
     }

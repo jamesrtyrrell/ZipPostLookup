@@ -42,8 +42,13 @@ public sealed class UsCountryRules : ICountryRules
 
     // ── Code ranges ────────────────────────────────────────────────────────────
 
-    // USPS-assigned range. Matches the SQL guard in CommonQueries.PurgeOutOfRangeUs.
-    public static bool IsOutOfBoundsUs(int n) => n < 501 || n > 99950;
+    // USPS-assigned ZIP range. Single source of truth for the bounds — the purge SQL
+    // (CommonQueries.CountOutOfRangeUs / PurgeOutOfRangeUs) is parameterised from these
+    // constants via @MinZip/@MaxZip, so the numbers live in exactly one place.
+    public const int MinUsZip = 501;
+    public const int MaxUsZip = 99950;
+
+    public static bool IsOutOfBoundsUs(int n) => n < MinUsZip || n > MaxUsZip;
 
     public bool IsKnownSpecialCode(string code)
     {
