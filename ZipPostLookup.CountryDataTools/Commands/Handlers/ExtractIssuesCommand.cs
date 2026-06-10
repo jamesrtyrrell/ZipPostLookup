@@ -23,11 +23,11 @@ public static class ExtractIssuesCommand
     {
         if (args.Any(a => a is "-h" or "--help")) { PrintUsage(); return 0; }
 
-        if (!TryParseArgs(args, out var file, out var country, out var extractedFile))
-        {
-            PrintUsage();
-            return 2;
-        }
+        var file          = args.Length > 0 ? args[0] : "";
+        var country       = args.OptionValue("--country") ?? "";
+        var extractedFile = args.OptionValue("--out");
+
+        if (string.IsNullOrEmpty(file)) { PrintUsage(); return 2; }
 
         if (!File.Exists(file))
         {
@@ -116,31 +116,6 @@ public static class ExtractIssuesCommand
     }
 
     // -------------------------------------------------------------------------
-
-    private static bool TryParseArgs(
-        string[] args,
-        out string file,
-        out string country,
-        out string? extractedFile)
-    {
-        file          = "";
-        country       = "";
-        extractedFile = null;
-
-        if (args.Length < 1) return false;
-        file = args[0];
-
-        for (int i = 1; i < args.Length - 1; i++)
-        {
-            switch (args[i].ToLowerInvariant())
-            {
-                case "--country": country       = args[++i]; break;
-                case "--out":     extractedFile = args[++i]; break;
-            }
-        }
-
-        return !string.IsNullOrEmpty(file);
-    }
 
     private static void PrintUsage() =>
         Console.WriteLine(

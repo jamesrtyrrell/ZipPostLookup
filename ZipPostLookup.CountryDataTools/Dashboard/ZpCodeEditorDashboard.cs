@@ -102,11 +102,9 @@ internal static class ZpCodeEditorDashboard
                 AnsiConsole.WriteLine();
             }
 
-            var country = CdtSelectMenu.Show(
-                ["US", "CA", "MX", "← Back"],
-                s => s == "← Back" ? "[grey]← Back[/]" : $"[bold cyan]{s}[/]",
-                escapeReturns: "← Back",
-                title: "Country:");
+            var country = CountryPicker.Show(
+                title: "Country:",
+                cancelLabel: "← Back");
 
             if (country == "← Back") break;
 
@@ -158,14 +156,20 @@ internal static class ZpCodeEditorDashboard
             return;
         }
 
-        var offset        = 0;
-        var selectedIndex = 0;
+        CurationStats? stats = null;
 
-        var (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
-
-        while (true)
-        {
-            if (totalCount == 0)
+        await PaginatedBrowser.RunAsync<BrowseRow>(
+            PageSize,
+            loadPage: async off =>
+            {
+                var (p, t, s) = await LoadBrowsePageAsync(factory, country, off, flaggedMode);
+                stats = s;
+                return (p, t);
+            },
+            render: (p, sel, off, total) =>
+                RenderBrowsePage(country, p, sel, off, total, stats, flaggedMode),
+            onEnter: row => ViewCodeAsync(factory, country, row.ZpCode),
+            onEmpty: async () =>
             {
                 HeaderBar.Render(header);
                 AnsiConsole.Write(BuildCurrentCountryStatsTable(stats, country));
@@ -180,101 +184,31 @@ internal static class ZpCodeEditorDashboard
                         "  [grey]Press [/][bold]O[/][grey] to propagate curation, or any other key to return.[/]");
                     AnsiConsole.WriteLine();
 
-                    var k = Console.ReadKey(intercept: true).Key;
-                    if (k == ConsoleKey.O)
+                    if (Console.ReadKey(intercept: true).Key == ConsoleKey.O)
                     {
                         await RunOrphanFixAsync(factory, country);
-                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, 0, flaggedMode);
-                        offset = 0;
-                        selectedIndex = 0;
-                        continue;
+                        return false;   // reload from 0 and continue browsing
                     }
+                    return true;
                 }
-                else if (flaggedMode)
-                {
-                    AnsiConsole.MarkupLine("[green]  ✓ No flagged codes.[/]");
-                    AnsiConsole.WriteLine();
-                    AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
-                    Console.ReadKey(intercept: true);
-                }
-                else
-                {
-                    AnsiConsole.MarkupLine("[green]  ✓ All codes are curated![/]");
-                    AnsiConsole.WriteLine();
-                    AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
-                    Console.ReadKey(intercept: true);
-                }
-                return;
-            }
 
-            RenderBrowsePage(country, page, selectedIndex, offset, totalCount, stats, flaggedMode);
-
-            var key = Console.ReadKey(intercept: true).Key;
-
-            switch (key)
+                AnsiConsole.MarkupLine(flaggedMode
+                    ? "[green]  ✓ No flagged codes.[/]"
+                    : "[green]  ✓ All codes are curated![/]");
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+                Console.ReadKey(intercept: true);
+                return true;
+            },
+            onKey: async key =>
             {
-                case ConsoleKey.UpArrow:
-                    if (selectedIndex > 0)
-                        selectedIndex--;
-                    else if (offset > 0)
-                    {
-                        offset -= PageSize;
-                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
-                        selectedIndex = page.Count - 1;
-                    }
-                    break;
-
-                case ConsoleKey.DownArrow:
-                    if (selectedIndex < page.Count - 1)
-                        selectedIndex++;
-                    else if (offset + PageSize < totalCount)
-                    {
-                        offset += PageSize;
-                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
-                        selectedIndex = 0;
-                    }
-                    break;
-
-                case ConsoleKey.PageUp:
-                    if (offset > 0)
-                    {
-                        offset = Math.Max(0, offset - PageSize);
-                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
-                        selectedIndex = 0;
-                    }
-                    break;
-
-                case ConsoleKey.PageDown:
-                    if (offset + PageSize < totalCount)
-                    {
-                        offset += PageSize;
-                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
-                        selectedIndex = 0;
-                    }
-                    break;
-
-                case ConsoleKey.O when !flaggedMode && stats?.OrphanAltNames > 0:
+                if (key == ConsoleKey.O && !flaggedMode && stats?.OrphanAltNames > 0)
+                {
                     await RunOrphanFixAsync(factory, country);
-                    (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
-                    selectedIndex = Math.Min(selectedIndex, Math.Max(0, page.Count - 1));
-                    break;
-
-                case ConsoleKey.Enter when page.Count > 0:
-                    await ViewCodeAsync(factory, country, page[selectedIndex].ZpCode);
-                    (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
-                    var maxOffset = totalCount == 0 ? 0 : ((totalCount - 1) / PageSize) * PageSize;
-                    if (offset > maxOffset)
-                    {
-                        offset = maxOffset;
-                        (page, totalCount, stats) = await LoadBrowsePageAsync(factory, country, offset, flaggedMode);
-                    }
-                    selectedIndex = Math.Min(selectedIndex, Math.Max(0, page.Count - 1));
-                    break;
-
-                case ConsoleKey.Escape:
-                    return;
-            }
-        }
+                    return true;   // data changed → reload current page
+                }
+                return false;
+            });
     }
 
     // ── ZpCode detail (ZpCode Editor › {CC} › {ZpCode}) ──────────────────────
@@ -1026,87 +960,25 @@ internal static class ZpCodeEditorDashboard
         IWorkDbConnectionFactory factory, string country, string status)
     {
         var header        = $"ZpCode Editor › {country} › Candidate › {status}";
-        var offset        = 0;
-        var selectedIndex = 0;
-
-        var (page, totalCount) = await LoadCandidatePageAsync(factory, country, status, offset);
-
-        while (true)
-        {
-            HeaderBar.Render(header);
-
-            if (totalCount == 0)
+        await PaginatedBrowser.RunAsync<CandidateBrowseRow>(
+            PageSize,
+            loadPage: off => LoadCandidatePageAsync(factory, country, status, off),
+            render: (p, sel, off, total) =>
             {
+                HeaderBar.Render(header);
+                AnsiConsole.Write(BuildCandidateBrowseTable(p, sel, off, total, status));
+                CdtCommandMenu.Render("  [grey]↑↓ move   PgUp/PgDn page   Enter view   Esc back[/]");
+            },
+            onEnter: row => ViewCandidateCodeAsync(factory, country, row.ZpCode),
+            onEmpty: () =>
+            {
+                HeaderBar.Render(header);
                 AnsiConsole.MarkupLine("[green]  ✓ No codes with this status.[/]");
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
                 Console.ReadKey(intercept: true);
-                return;
-            }
-
-            AnsiConsole.Write(BuildCandidateBrowseTable(page, selectedIndex, offset, totalCount, status));
-            CdtCommandMenu.Render("  [grey]↑↓ move   PgUp/PgDn page   Enter view   Esc back[/]");
-
-            var key = Console.ReadKey(intercept: true).Key;
-
-            switch (key)
-            {
-                case ConsoleKey.UpArrow:
-                    if (selectedIndex > 0)
-                        selectedIndex--;
-                    else if (offset > 0)
-                    {
-                        offset -= PageSize;
-                        (page, totalCount) = await LoadCandidatePageAsync(factory, country, status, offset);
-                        selectedIndex = page.Count - 1;
-                    }
-                    break;
-
-                case ConsoleKey.DownArrow:
-                    if (selectedIndex < page.Count - 1)
-                        selectedIndex++;
-                    else if (offset + PageSize < totalCount)
-                    {
-                        offset += PageSize;
-                        (page, totalCount) = await LoadCandidatePageAsync(factory, country, status, offset);
-                        selectedIndex = 0;
-                    }
-                    break;
-
-                case ConsoleKey.PageUp:
-                    if (offset > 0)
-                    {
-                        offset = Math.Max(0, offset - PageSize);
-                        (page, totalCount) = await LoadCandidatePageAsync(factory, country, status, offset);
-                        selectedIndex = 0;
-                    }
-                    break;
-
-                case ConsoleKey.PageDown:
-                    if (offset + PageSize < totalCount)
-                    {
-                        offset += PageSize;
-                        (page, totalCount) = await LoadCandidatePageAsync(factory, country, status, offset);
-                        selectedIndex = 0;
-                    }
-                    break;
-
-                case ConsoleKey.Enter when page.Count > 0:
-                    await ViewCandidateCodeAsync(factory, country, page[selectedIndex].ZpCode);
-                    (page, totalCount) = await LoadCandidatePageAsync(factory, country, status, offset);
-                    var maxOff = totalCount == 0 ? 0 : ((totalCount - 1) / PageSize) * PageSize;
-                    if (offset > maxOff)
-                    {
-                        offset = maxOff;
-                        (page, totalCount) = await LoadCandidatePageAsync(factory, country, status, offset);
-                    }
-                    selectedIndex = Math.Min(selectedIndex, Math.Max(0, page.Count - 1));
-                    break;
-
-                case ConsoleKey.Escape:
-                    return;
-            }
-        }
+                return Task.FromResult(true);
+            });
     }
 
     private static async Task ViewCandidateCodeAsync(

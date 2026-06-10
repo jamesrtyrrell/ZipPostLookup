@@ -17,8 +17,7 @@ public sealed class SqlCandidateRepository : ICandidateRepository
         => _factory = factory;
 
     /// <inheritdoc/>
-    public async Task InsertBatchAsync(
-        string runId, string countryCode, IReadOnlyList<CodesCandidate> candidates)
+    public async Task InsertBatchAsync(IReadOnlyList<CodesCandidate> candidates)
     {
         if (candidates.Count == 0) { return; }
 

@@ -152,35 +152,13 @@ internal static class SnapshotDashboard
 
     // ── Browse results (← → per-country navigation) ──────────────────────────
 
-    private static void BrowseResults(List<SnapshotPage> pages)
-    {
-        if (pages.Count == 0) return;
-
-        var index = 0;
-        while (true)
-        {
-            var page        = pages[index];
-            var statusLabel = page.AllPassed ? "[green]✓ passed[/]" : "[red]✗ failed[/]";
-            var prevLabel   = index > 0                     ? $"[bold]← {pages[index - 1].Country}[/]" : "[grey]←[/]";
-            var nextLabel   = index < pages.Count - 1       ? $"[bold]{pages[index + 1].Country} →[/]" : "[grey]→[/]";
-
-            HeaderBar.Render($"Snapshot › {page.Country}  {statusLabel}");
-
-            CdtCommandMenu.Render(
-                $"  {prevLabel}    ({index + 1}/{pages.Count})    {nextLabel}    [grey]Esc: back[/]");
-            AnsiConsole.WriteLine();
-
-            PrintSummaryTable(page);
-
-            var key = Console.ReadKey(intercept: true).Key;
-            switch (key)
-            {
-                case ConsoleKey.LeftArrow  when index > 0:               index--; break;
-                case ConsoleKey.RightArrow when index < pages.Count - 1: index++; break;
-                case ConsoleKey.Escape:                                   return;
-            }
-        }
-    }
+    private static void BrowseResults(List<SnapshotPage> pages) =>
+        ReportBrowser.Browse(
+            pages,
+            p => p.Country,
+            p => p.AllPassed ? "[green]✓ passed[/]" : "[red]✗ failed[/]",
+            "Snapshot",
+            PrintSummaryTable);
 
     private static void PrintSummaryTable(SnapshotPage page)
     {

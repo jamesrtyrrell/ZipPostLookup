@@ -59,7 +59,7 @@ internal static class EnrichmentEngine
     /// garbage API response — they are downgraded to unfound (and logged via
     /// <see cref="EnrichmentRun.OnLongPlaceNameAsync"/>) rather than written to the DB.
     /// </summary>
-    public const int MaxPlaceNameLength = 100;
+    public const int MaxPlaceNameLength = 195;
 
     /// <summary>Runs the live enrichment loop. Returns true if the user pressed Escape to stop.</summary>
     public static async Task<bool> RunAsync(EnrichmentRun run)

@@ -31,12 +31,12 @@ public static class ValidateCommand
     {
         if (args.Any(a => a is "-h" or "--help")) { PrintUsage(); return 0; }
 
-        if (!TryParseArgs(args, out var file, out var country,
-                          out var report, out var noPrompts))
-        {
-            PrintUsage();
-            return 2;
-        }
+        var file      = args.Length > 0 ? args[0] : "";
+        var country   = args.OptionValue("--country", rejectFlagValue: true) ?? "";
+        var report    = args.OptionValue("--report");
+        var noPrompts = args.HasFlag("--no-prompts");
+
+        if (string.IsNullOrEmpty(file)) { PrintUsage(); return 2; }
 
         if (!File.Exists(file))
         {
@@ -214,7 +214,7 @@ public static class ValidateCommand
                         var extractedCandidates = extractedRows
                             .Select(r => new CodesCandidate(country, r))
                             .ToList();
-                        await db.Candidates.InsertBatchAsync(runId, country, extractedCandidates);
+                        await db.Candidates.InsertBatchAsync(extractedCandidates);
 
                         // Mark all inserted rows as error status
                         using var conn = db.GetFactory().CreateConnection();
@@ -302,37 +302,6 @@ public static class ValidateCommand
         return choice[0].ToString(); // leading "1", "2", or "3"
     }
 
-
-    private static bool TryParseArgs(
-        string[] args,
-        out string file,
-        out string country,
-        out string? report,
-        out bool noPrompts)
-    {
-        file = "";
-        country = "";
-        report = null;
-        noPrompts = false;
-
-        if (args.Length < 1) return false;
-        file = args[0];
-
-        for (int i = 1; i < args.Length; i++)
-        {
-            switch (args[i].ToLowerInvariant())
-            {
-                case "--country" when i + 1 < args.Length && !args[i + 1].StartsWith('-'):
-                    country = args[++i]; break;
-                case "--report" when i + 1 < args.Length:
-                    report = args[++i]; break;
-                case "--no-prompts":
-                    noPrompts = true; break;
-            }
-        }
-
-        return !string.IsNullOrEmpty(file);
-    }
 
     private static void PrintUsage() =>
         Console.WriteLine(

@@ -32,12 +32,12 @@ public static class EnrichReferenceFromCoordinatesCommand
     {
         if (args.Any(a => a is "-h" or "--help")) { PrintUsage(); return 0; }
 
-        if (!TryParseArgs(args, out var source, out var country,
-                          out var batchSize, out var dryRun))
-        {
-            PrintUsage();
-            return 2;
-        }
+        var source    = args.OptionValue("--source") ?? "";
+        var country   = args.OptionValue("--country", rejectFlagValue: true) ?? "US";
+        var batchSize = args.IntOption("--batch", 1000, min: 1);
+        var dryRun    = args.HasFlag("--dry-run");
+
+        if (string.IsNullOrWhiteSpace(source)) { PrintUsage(); return 2; }
 
         if (!File.Exists(source))
         {
@@ -409,34 +409,6 @@ public static class EnrichReferenceFromCoordinatesCommand
     // -------------------------------------------------------------------------
 
     private static string EscSql(string s) => s.Replace("'", "''");
-
-    private static bool TryParseArgs(
-        string[] args, out string source, out string country,
-        out int batchSize, out bool dryRun)
-    {
-        source = "";
-        country = "US";
-        batchSize = 1000;
-        dryRun = false;
-
-        for (int i = 0; i < args.Length; i++)
-        {
-            switch (args[i].ToLowerInvariant())
-            {
-                case "--source" when i + 1 < args.Length:
-                    source = args[++i]; break;
-                case "--country" when i + 1 < args.Length && !args[i + 1].StartsWith('-'):
-                    country = args[++i]; break;
-                case "--batch" when i + 1 < args.Length:
-                    if (int.TryParse(args[++i], out var b) && b > 0) { batchSize = b; }
-                    break;
-                case "--dry-run":
-                    dryRun = true; break;
-            }
-        }
-
-        return !string.IsNullOrWhiteSpace(source);
-    }
 
     private static void PrintUsage() =>
         Console.WriteLine("""

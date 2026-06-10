@@ -15,16 +15,11 @@ internal static class AnalyseDashboard
             AnsiConsole.MarkupLine("  Analyses curated reference data and writes a Markdown report.");
             AnsiConsole.WriteLine();
 
-            var choice = CdtSelectMenu.Show(
-                ["US", "CA", "MX", "All (US + CA + MX)", "← Back"],
-                s => s switch
-                {
-                    "All (US + CA + MX)" => $"[bold cyan]{"All",-10}[/]  [grey]Run all three, reports in DataAnalysis/[/]",
-                    "← Back"             => "[grey]← Back[/]",
-                    _                    => $"[bold cyan]{s}[/]",
-                },
-                escapeReturns: "← Back",
-                title: "Country:");
+            var choice = CountryPicker.Show(
+                title: "Country:",
+                cancelLabel: "← Back",
+                allLabel: "All (US + CA + MX)",
+                allDescription: "Run all three, reports in DataAnalysis/");
 
             if (choice == "← Back") break;
 
@@ -43,13 +38,7 @@ internal static class AnalyseDashboard
 
             var exitCode = await AnalyseCommand.RunAsync([.. args]);
 
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine(exitCode == 0
-                ? "[green]  ✓ Report written[/]"
-                : $"[red]  ✗ Exited with code {exitCode}[/]");
-            AnsiConsole.WriteLine();
-            FooterBar.PressAnyKey();
-            Console.ReadKey(intercept: true);
+            FooterBar.ShowResultAndPause(exitCode, "Report written");
         }
 
         return 0;

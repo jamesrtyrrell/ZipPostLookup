@@ -1592,7 +1592,7 @@
     "CountryName": "Netherlands",
     "HasPostalCodes": true,
     "Status": "Active",
-    "CodeRegex": "^\\d\\d\\d\\d$",
+    "CodeRegex": "^\\d{4}\\s?[A-Z]{2}$",
     "DataCurated": false,
     "CurationStatus": "NoData",
     "Notes": "The combination of the postal code and the house number gives a unique identifier of the address. The four numbers indicate an area, the two letters indicate a group of some 25 habitations, offices, factories, or post office boxes."

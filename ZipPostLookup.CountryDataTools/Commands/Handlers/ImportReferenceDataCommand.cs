@@ -37,12 +37,10 @@ public static class ImportReferenceDataCommand
     {
         if (args.Any(a => a is "-h" or "--help")) { PrintUsage(); return 0; }
 
-        if (!TryParseArgs(args, out var country, out var all,
-                          out var force, out var infoOnly))
-        {
-            PrintUsage();
-            return 2;
-        }
+        var country  = args.OptionValue("--country", rejectFlagValue: true);
+        var all      = args.HasFlag("--all");
+        var force    = args.HasFlag("--force");
+        var infoOnly = args.HasFlag("--info-only");
 
         if (!all && string.IsNullOrWhiteSpace(country))
         {
@@ -197,40 +195,6 @@ public static class ImportReferenceDataCommand
 
     private static bool BuiltInCsvExists(string countryCode) =>
         EmbeddedCsvLoader.Exists(countryCode);
-
-    private static bool TryParseArgs(
-        string[] args,
-        out string? country,
-        out bool all,
-        out bool force,
-        out bool infoOnly)
-    {
-        country = null;
-        all = false;
-        force = false;
-        infoOnly = false;
-
-        for (int i = 0; i < args.Length; i++)
-        {
-            switch (args[i].ToLowerInvariant())
-            {
-                case "--country" when i + 1 < args.Length && !args[i + 1].StartsWith('-'):
-                    country = args[++i];
-                    break;
-                case "--all":
-                    all = true;
-                    break;
-                case "--force":
-                    force = true;
-                    break;
-                case "--info-only":
-                    infoOnly = true;
-                    break;
-            }
-        }
-
-        return all || !string.IsNullOrWhiteSpace(country);
-    }
 
     private static void PrintUsage() =>
         Console.WriteLine("""

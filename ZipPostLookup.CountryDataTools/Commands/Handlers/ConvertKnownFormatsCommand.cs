@@ -62,12 +62,12 @@ public static class ConvertKnownFormatsCommand
             return 0;
         }
 
-        if (!TryParseArgs(args, out var inputFile, out var countryOverride,
-                          out var outputOverride, out var noPrompts))
-        {
-            PrintUsage();
-            return 2;
-        }
+        var inputFile       = args.Length > 0 ? args[0] : "";
+        var countryOverride = args.OptionValue("--country", rejectFlagValue: true);
+        var outputOverride  = args.OptionValue("--output");
+        var noPrompts       = args.HasFlag("--no-prompts");
+
+        if (string.IsNullOrWhiteSpace(inputFile)) { PrintUsage(); return 2; }
 
         if (!File.Exists(inputFile))
         {
@@ -687,36 +687,6 @@ public static class ConvertKnownFormatsCommand
     // Arg parsing
     // =========================================================================
 
-    private static bool TryParseArgs(
-        string[]   args,
-        out string inputFile,
-        out string? countryOverride,
-        out string? outputOverride,
-        out bool    noPrompts)
-    {
-        inputFile       = args[0];
-        countryOverride = null;
-        outputOverride  = null;
-        noPrompts       = false;
-
-        for (int i = 1; i < args.Length; i++)
-        {
-            switch (args[i].ToLowerInvariant())
-            {
-                case "--country" when i + 1 < args.Length && !args[i + 1].StartsWith('-'):
-                    countryOverride = args[++i];
-                    break;
-                case "--output" when i + 1 < args.Length:
-                    outputOverride = args[++i];
-                    break;
-                case "--no-prompts":
-                    noPrompts = true;
-                    break;
-            }
-        }
-
-        return !string.IsNullOrWhiteSpace(inputFile);
-    }
 
     private static void PrintUsage() =>
         Console.WriteLine("""

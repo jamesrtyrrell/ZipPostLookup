@@ -41,13 +41,7 @@ internal static class ConvertDashboard
 
             var exitCode = await ConvertKnownFormatsCommand.RunAsync([.. args]);
 
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine(exitCode == 0
-                ? "[green]  ✓ Conversion complete[/]"
-                : $"[red]  ✗ Exited with code {exitCode}[/]");
-            AnsiConsole.WriteLine();
-            FooterBar.PressAnyKey();
-            Console.ReadKey(intercept: true);
+            FooterBar.ShowResultAndPause(exitCode, "Conversion complete");
         }
 
         return 0;

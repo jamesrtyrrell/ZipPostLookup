@@ -40,9 +40,9 @@ internal static class NormalizeDashboard
 
             _ = selected.Key switch
             {
-                "normalize-tz"     => await RunNormalizeTzAsync(),
-                "normalize-names"  => await RunNormalizeNamesAsync(),
-                "normalize-admins" => await RunNormalizeAdminsAsync(),
+                "normalize-tz"     => await RunNormalizeAsync("normalize-tz",    ["US", "CA", "MX"], "All (US + CA + MX)", "US + CA + MX in sequence"),
+                "normalize-names"  => await RunNormalizeAsync("normalize-names", ["US", "CA", "MX"], "All (US + CA + MX)", "US + CA + MX in sequence"),
+                "normalize-admins" => await RunNormalizeAsync("normalize-admins", ["US", "MX"],       "All (US + MX)",      "US + MX in sequence"),
                 _                  => 0,
             };
         }
@@ -50,22 +50,19 @@ internal static class NormalizeDashboard
         return 0;
     }
 
-    // ── normalize-tz ──────────────────────────────────────────────────────────
+    // ── shared: country picker → db <sub> ───────────────────────────────────────
 
-    private static async Task<int> RunNormalizeTzAsync()
+    private static async Task<int> RunNormalizeAsync(
+        string sub, IReadOnlyList<string> countries, string allLabel, string allDescription)
     {
-        HeaderBar.Render("Normalize › normalize-tz");
+        HeaderBar.Render($"Normalize › {sub}");
 
-        var choice = CdtSelectMenu.Show(
-            ["US", "CA", "MX", "All (US + CA + MX)", "← Cancel"],
-            s => s switch
-            {
-                "← Cancel"           => "[grey]← Cancel[/]",
-                "All (US + CA + MX)" => $"[bold cyan]{"All",-10}[/]  [grey]US + CA + MX in sequence[/]",
-                _                    => $"[bold cyan]{s}[/]",
-            },
-            escapeReturns: "← Cancel",
-            title: "Country:");
+        var choice = CountryPicker.Show(
+            title: "Country:",
+            cancelLabel: "← Cancel",
+            countries: countries,
+            allLabel: allLabel,
+            allDescription: allDescription);
 
         if (choice == "← Cancel") return 0;
 
@@ -73,59 +70,7 @@ internal static class NormalizeDashboard
             ? ["--all"]
             : ["--country", choice];
 
-        return await RunAndPauseAsync("normalize-tz", extra);
-    }
-
-    // ── normalize-names ───────────────────────────────────────────────────────
-
-    private static async Task<int> RunNormalizeNamesAsync()
-    {
-        HeaderBar.Render("Normalize › normalize-names");
-
-        var choice = CdtSelectMenu.Show(
-            ["US", "CA", "MX", "All (US + CA + MX)", "← Cancel"],
-            s => s switch
-            {
-                "← Cancel"           => "[grey]← Cancel[/]",
-                "All (US + CA + MX)" => $"[bold cyan]{"All",-10}[/]  [grey]US + CA + MX in sequence[/]",
-                _                    => $"[bold cyan]{s}[/]",
-            },
-            escapeReturns: "← Cancel",
-            title: "Country:");
-
-        if (choice == "← Cancel") return 0;
-
-        string[] extra = choice.StartsWith("All")
-            ? ["--all"]
-            : ["--country", choice];
-
-        return await RunAndPauseAsync("normalize-names", extra);
-    }
-
-    // ── normalize-admins ──────────────────────────────────────────────────────
-
-    private static async Task<int> RunNormalizeAdminsAsync()
-    {
-        HeaderBar.Render("Normalize › normalize-admins");
-
-        var choice = CdtSelectMenu.Show(
-            ["US", "MX", "All (US + MX)", "← Cancel"],
-            s => s switch
-            {
-                "← Cancel"      => "[grey]← Cancel[/]",
-                "All (US + MX)" => $"[bold cyan]{"All",-10}[/]  [grey]US + MX in sequence[/]",
-                _               => $"[bold cyan]{s}[/]",
-            },
-            escapeReturns: "← Cancel",
-            title: "Country:");
-
-        if (choice == "← Cancel") return 0;
-
-        string[] extra = choice.StartsWith("All")
-            ? ["--all"]
-            : ["--country", choice];
-
-        return await RunAndPauseAsync("normalize-admins", extra);
+        return await RunAndPauseAsync(sub, extra);
     }
 
     // ── shared run + pause ────────────────────────────────────────────────────
@@ -136,13 +81,7 @@ internal static class NormalizeDashboard
 
         var exitCode = await DbCommand.RunAsync([sub, .. extra]);
 
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine(exitCode == 0
-            ? "[green]  ✓ Done[/]"
-            : $"[red]  ✗ Exited with code {exitCode}[/]");
-        AnsiConsole.WriteLine();
-        FooterBar.PressAnyKey();
-        Console.ReadKey(intercept: true);
+        FooterBar.ShowResultAndPause(exitCode);
         return exitCode;
     }
 }

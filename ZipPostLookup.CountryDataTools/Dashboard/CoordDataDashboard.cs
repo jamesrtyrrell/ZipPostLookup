@@ -17,16 +17,10 @@ internal static class CoordDataDashboard
                     ? ValidationResult.Success()
                     : ValidationResult.Error("[red]Path is required[/]")));
 
-        var countryChoice = CdtSelectMenu.Show(
-            ["US", "CA", "MX", "Any (no filter)", "← Cancel"],
-            s => s switch
-            {
-                "← Cancel"        => "[grey]← Cancel[/]",
-                "Any (no filter)" => "[grey]Any (no filter)[/]",
-                _                 => $"[bold cyan]{s}[/]",
-            },
-            escapeReturns: "← Cancel",
-            title: "Country (optional):");
+        var countryChoice = CountryPicker.Show(
+            title: "Country (optional):",
+            cancelLabel: "← Cancel",
+            anyLabel: "Any (no filter)");
 
         if (countryChoice == "← Cancel") return 0;
 
@@ -47,13 +41,7 @@ internal static class CoordDataDashboard
         HeaderBar.Render("Coord Data › coords");
         var exitCode = await IngestCommand.RunAsync([.. args]);
 
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine(exitCode == 0
-            ? "[green]  ✓ Done[/]"
-            : $"[red]  ✗ Exited with code {exitCode}[/]");
-        AnsiConsole.WriteLine();
-        FooterBar.PressAnyKey();
-        Console.ReadKey(intercept: true);
+        FooterBar.ShowResultAndPause(exitCode);
         return exitCode;
     }
 }

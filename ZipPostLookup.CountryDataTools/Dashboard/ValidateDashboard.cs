@@ -21,11 +21,9 @@ internal static class ValidateDashboard
 
             if (string.IsNullOrWhiteSpace(file)) break;
 
-            var country = CdtSelectMenu.Show(
-                ["US", "CA", "MX", "← Cancel"],
-                s => s == "← Cancel" ? "[grey]← Cancel[/]" : $"[bold cyan]{s}[/]",
-                escapeReturns: "← Cancel",
-                title: "Country:");
+            var country = CountryPicker.Show(
+                title: "Country:",
+                cancelLabel: "← Cancel");
 
             if (country == "← Cancel") continue;
 
@@ -38,13 +36,7 @@ internal static class ValidateDashboard
 
             var exitCode = await ValidateCommand.RunAsync([.. args]);
 
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine(exitCode == 0
-                ? "[green]  ✓ Done[/]"
-                : $"[red]  ✗ Exited with code {exitCode}[/]");
-            AnsiConsole.WriteLine();
-            FooterBar.PressAnyKey();
-            Console.ReadKey(intercept: true);
+            FooterBar.ShowResultAndPause(exitCode);
         }
 
         return 0;

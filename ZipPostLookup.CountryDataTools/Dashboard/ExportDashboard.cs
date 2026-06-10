@@ -32,16 +32,11 @@ internal static class ExportDashboard
 
             HeaderBar.Render($"Export › {target.Key}");
 
-            var countryChoice = CdtSelectMenu.Show(
-                ["US", "CA", "MX", "All (US + CA + MX)", "← Cancel"],
-                s => s switch
-                {
-                    "← Cancel"           => "[grey]← Cancel[/]",
-                    "All (US + CA + MX)" => $"[bold cyan]{"All",-10}[/]  [grey]Run all three in sequence[/]",
-                    _                    => $"[bold cyan]{s}[/]",
-                },
-                escapeReturns: "← Cancel",
-                title: "Country:");
+            var countryChoice = CountryPicker.Show(
+                title: "Country:",
+                cancelLabel: "← Cancel",
+                allLabel: "All (US + CA + MX)",
+                allDescription: "Run all three in sequence");
 
             if (countryChoice == "← Cancel") continue;
 
@@ -59,13 +54,7 @@ internal static class ExportDashboard
 
             var exitCode = await ExportCommand.RunAsync([.. args]);
 
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine(exitCode == 0
-                ? "[green]  ✓ Export complete[/]"
-                : $"[red]  ✗ Exited with code {exitCode}[/]");
-            AnsiConsole.WriteLine();
-            FooterBar.PressAnyKey();
-            Console.ReadKey(intercept: true);
+            FooterBar.ShowResultAndPause(exitCode, "Export complete");
         }
 
         return 0;

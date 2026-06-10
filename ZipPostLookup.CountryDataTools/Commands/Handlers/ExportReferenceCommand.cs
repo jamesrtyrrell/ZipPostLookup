@@ -71,9 +71,21 @@ public static class ExportReferenceCommand
     {
         if (args.Any(a => a is "-h" or "--help")) { PrintUsage(); return 0; }
 
-        if (!TryParseArgs(args, out var country, out var output,
-                          out var curatedOnly, out var target, out var uncompressed, out var fromCsv,
-                          out var all))
+        var country      = args.OptionValue("--country", rejectFlagValue: true) ?? "";
+        var output       = args.OptionValue("--output") ?? "";
+        var curatedOnly  = args.HasFlag("--curated-only");
+        var uncompressed = args.HasFlag("--uncompressed");
+        var all          = args.HasFlag("--all");
+        var hasFromCsv   = args.HasFlag("--from-csv");
+        var fromCsv      = hasFromCsv ? (args.OptionValue("--from-csv") ?? "") : null;
+        var target       = (args.OptionValue("--target") ?? "").ToLowerInvariant() switch
+        {
+            "ref" or "reference" => ExportTarget.Ref,
+            "zpi" or "image"     => ExportTarget.Zpi,
+            _                    => ExportTarget.Main,
+        };
+
+        if (!all && string.IsNullOrWhiteSpace(country))
         {
             PrintUsage();
             return 2;
@@ -827,62 +839,6 @@ public static class ExportReferenceCommand
     // =========================================================================
     // Argument parsing
     // =========================================================================
-
-    private static bool TryParseArgs(
-        string[]          args,
-        out string        country,
-        out string        output,
-        out bool          curatedOnly,
-        out ExportTarget  target,
-        out bool          uncompressed,
-        out string?       fromCsv,
-        out bool          all)
-    {
-        country      = "";
-        output       = "";
-        curatedOnly  = false;
-        target       = ExportTarget.Main;
-        uncompressed = false;
-        fromCsv      = null;
-        all          = false;
-
-        for (var i = 0; i < args.Length; i++)
-        {
-            switch (args[i].ToLowerInvariant())
-            {
-                case "--all":
-                    all = true;
-                    break;
-                case "--country" when i + 1 < args.Length && !args[i + 1].StartsWith('-'):
-                    country = args[++i];
-                    break;
-                case "--output" when i + 1 < args.Length:
-                    output = args[++i];
-                    break;
-                case "--curated-only":
-                    curatedOnly = true;
-                    break;
-                case "--uncompressed":
-                    uncompressed = true;
-                    break;
-                case "--from-csv":
-                    fromCsv = i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal)
-                        ? args[++i]
-                        : "";
-                    break;
-                case "--target" when i + 1 < args.Length:
-                    target = args[++i].ToLowerInvariant() switch
-                    {
-                        "ref" or "reference" => ExportTarget.Ref,
-                        "zpi" or "image"     => ExportTarget.Zpi,
-                        _                    => ExportTarget.Main,
-                    };
-                    break;
-            }
-        }
-
-        return all || !string.IsNullOrWhiteSpace(country);
-    }
 
     private static void PrintUsage() =>
         Console.WriteLine("""

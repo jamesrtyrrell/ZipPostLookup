@@ -47,16 +47,11 @@ internal static class IngestDashboard
     {
         HeaderBar.Render("Ingest › ref");
 
-        var choice = CdtSelectMenu.Show(
-            ["US", "CA", "MX", "All (US + CA + MX)", "← Cancel"],
-            s => s switch
-            {
-                "← Cancel"           => "[grey]← Cancel[/]",
-                "All (US + CA + MX)" => $"[bold cyan]{"All",-10}[/]  [grey]Import all three in sequence[/]",
-                _                    => $"[bold cyan]{s}[/]",
-            },
-            escapeReturns: "← Cancel",
-            title: "Country:");
+        var choice = CountryPicker.Show(
+            title: "Country:",
+            cancelLabel: "← Cancel",
+            allLabel: "All (US + CA + MX)",
+            allDescription: "Import all three in sequence");
 
         if (choice == "← Cancel") return 0;
 
@@ -84,11 +79,9 @@ internal static class IngestDashboard
                     ? ValidationResult.Success()
                     : ValidationResult.Error("[red]Path is required[/]")));
 
-        var country = CdtSelectMenu.Show(
-            ["US", "CA", "MX", "← Cancel"],
-            s => s == "← Cancel" ? "[grey]← Cancel[/]" : $"[bold cyan]{s}[/]",
-            escapeReturns: "← Cancel",
-            title: "Country:");
+        var country = CountryPicker.Show(
+            title: "Country:",
+            cancelLabel: "← Cancel");
 
         if (country == "← Cancel") return 0;
 
@@ -103,13 +96,7 @@ internal static class IngestDashboard
 
         var exitCode = await IngestCommand.RunAsync([.. args]);
 
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine(exitCode == 0
-            ? "[green]  ✓ Done[/]"
-            : $"[red]  ✗ Exited with code {exitCode}[/]");
-        AnsiConsole.WriteLine();
-        FooterBar.PressAnyKey();
-        Console.ReadKey(intercept: true);
+        FooterBar.ShowResultAndPause(exitCode);
         return exitCode;
     }
 }

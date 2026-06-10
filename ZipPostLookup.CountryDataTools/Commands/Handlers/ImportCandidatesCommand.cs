@@ -52,11 +52,10 @@ public static class ImportCandidatesCommand
     {
         if (args.Any(a => a is "-h" or "--help")) { PrintUsage(); return 0; }
 
-        if (!TryParseArgs(args, out var file, out var country))
-        {
-            PrintUsage();
-            return 2;
-        }
+        var file    = args.Length > 0 ? args[0] : "";
+        var country = args.OptionValue("--country") ?? "";
+
+        if (string.IsNullOrEmpty(file)) { PrintUsage(); return 2; }
 
         if (!File.Exists(file))
         {
@@ -596,26 +595,6 @@ public static class ImportCandidatesCommand
     // =========================================================================
     // Argument parsing
     // =========================================================================
-
-    private static bool TryParseArgs(string[] args, out string file, out string country)
-    {
-        file    = "";
-        country = "";
-
-        if (args.Length == 0) { return false; }
-
-        file = args[0];
-
-        for (int i = 1; i < args.Length - 1; i++)
-        {
-            if (args[i].Equals("--country", StringComparison.OrdinalIgnoreCase))
-            {
-                country = args[++i];
-            }
-        }
-
-        return !string.IsNullOrEmpty(file);
-    }
 
     private static void PrintUsage() =>
         Console.WriteLine(

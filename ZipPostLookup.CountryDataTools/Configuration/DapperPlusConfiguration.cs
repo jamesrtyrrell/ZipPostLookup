@@ -114,7 +114,7 @@ public static class DapperPlusConfiguration
     }
 
     // =========================================================================
-    // codes.candidate
+    // [codes].[candidate]
     // =========================================================================
 
     private static void ConfigureCodesCandidate()
@@ -142,7 +142,7 @@ public static class DapperPlusConfiguration
     }
 
     // =========================================================================
-    // codes.candidate_admins
+    // [codes].[candidate]_admins
     // =========================================================================
 
     private static void ConfigureCodesCandidateAdmin()

@@ -72,13 +72,7 @@ internal static class DbDashboard
 
         var exitCode = await DbCommand.RunAsync([sub, .. extra]);
 
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine(exitCode == 0
-            ? "[green]  ✓ Done[/]"
-            : $"[red]  ✗ Exited with code {exitCode}[/]");
-        AnsiConsole.WriteLine();
-        FooterBar.PressAnyKey();
-        Console.ReadKey(intercept: true);
+        FooterBar.ShowResultAndPause(exitCode);
         return exitCode;
     }
 
@@ -91,11 +85,9 @@ internal static class DbDashboard
         AnsiConsole.MarkupLine("  [grey]Tip: add workdb.json to .gitignore — it contains your connection string.[/]");
         AnsiConsole.WriteLine();
 
-        var country = CdtSelectMenu.Show(
-            ["US", "CA", "MX", "← Cancel"],
-            s => s == "← Cancel" ? "[grey]← Cancel[/]" : $"[bold cyan]{s}[/]",
-            escapeReturns: "← Cancel",
-            title: "Country:");
+        var country = CountryPicker.Show(
+            title: "Country:",
+            cancelLabel: "← Cancel");
 
         if (country == "← Cancel") return 0;
 
@@ -118,13 +110,7 @@ internal static class DbDashboard
 
         var exitCode = await DbCommand.RunAsync([.. args]);
 
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine(exitCode == 0
-            ? "[green]  ✓ workdb.json written[/]"
-            : $"[red]  ✗ Init failed (exit {exitCode})[/]");
-        AnsiConsole.WriteLine();
-        FooterBar.PressAnyKey();
-        Console.ReadKey(intercept: true);
+        FooterBar.ShowResultAndPause(exitCode, "workdb.json written", $"Init failed (exit {exitCode})");
         return exitCode;
     }
 
@@ -144,13 +130,7 @@ internal static class DbDashboard
 
         var exitCode = await DbCommand.RunAsync(["newrun", "--source", source]);
 
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine(exitCode == 0
-            ? "[green]  ✓ Run created[/]"
-            : $"[red]  ✗ Failed (exit {exitCode})[/]");
-        AnsiConsole.WriteLine();
-        FooterBar.PressAnyKey();
-        Console.ReadKey(intercept: true);
+        FooterBar.ShowResultAndPause(exitCode, "Run created", $"Failed (exit {exitCode})");
         return exitCode;
     }
 
@@ -173,11 +153,9 @@ internal static class DbDashboard
 
         AnsiConsole.WriteLine();
 
-        var country = CdtSelectMenu.Show(
-            ["US", "CA", "MX", "← Cancel"],
-            s => s == "← Cancel" ? "[grey]← Cancel[/]" : $"[bold cyan]{s}[/]",
-            escapeReturns: "← Cancel",
-            title: "Country:");
+        var country = CountryPicker.Show(
+            title: "Country:",
+            cancelLabel: "← Cancel");
 
         if (country == "← Cancel") return 0;
 
@@ -187,13 +165,7 @@ internal static class DbDashboard
 
         var exitCode = await DbCommand.RunAsync([sub, "--country", country]);
 
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine(exitCode == 0
-            ? "[green]  ✓ Done[/]"
-            : $"[red]  ✗ Exited with code {exitCode}[/]");
-        AnsiConsole.WriteLine();
-        FooterBar.PressAnyKey();
-        Console.ReadKey(intercept: true);
+        FooterBar.ShowResultAndPause(exitCode);
         return exitCode;
     }
 }

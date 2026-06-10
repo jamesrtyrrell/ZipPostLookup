@@ -41,21 +41,20 @@ public sealed record RunSummary(
 // =============================================================================
 // ICandidateRepository
 //
-// Manages codes.candidate — the immutable raw import rows.
+// Manages [codes].[candidate] — the immutable raw import rows.
 // =============================================================================
 
 /// <summary>
-/// Manages <c>codes.candidate</c> — one row per imported code, never modified
+/// Manages <c>[codes].[candidate]</c> — one row per imported code, never modified
 /// after insert. Status is updated as the pipeline processes each row.
 /// </summary>
 public interface ICandidateRepository
 {
     /// <summary>
-    /// Bulk-inserts <paramref name="candidates"/> into codes.candidate and
-    /// codes.candidate_admins for the given run.
+    /// Bulk-inserts <paramref name="candidates"/> into [codes].[candidate] and
+    /// [codes].[candidate]_admins for the given run.
     /// </summary>
-    Task InsertBatchAsync(string runId, string countryCode,
-        IReadOnlyList<CodesCandidate> candidates);
+    Task InsertBatchAsync(IReadOnlyList<CodesCandidate> candidates);
 }
 
 // =============================================================================

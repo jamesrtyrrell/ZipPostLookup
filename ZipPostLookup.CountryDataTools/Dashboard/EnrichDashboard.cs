@@ -44,16 +44,11 @@ internal static class EnrichDashboard
 
             HeaderBar.Render($"Enrich › {selected.Name}");
 
-            var countryChoice = CdtSelectMenu.Show(
-                ["US", "CA", "MX", "All (US + CA + MX)", "← Cancel"],
-                s => s switch
-                {
-                    "← Cancel"           => "[grey]← Cancel[/]",
-                    "All (US + CA + MX)" => $"[bold cyan]{"All",-10}[/]  [grey]US + CA + MX[/]",
-                    _                    => $"[bold cyan]{s}[/]",
-                },
-                escapeReturns: "← Cancel",
-                title: "Country:");
+            var countryChoice = CountryPicker.Show(
+                title: "Country:",
+                cancelLabel: "← Cancel",
+                allLabel: "All (US + CA + MX)",
+                allDescription: "US + CA + MX");
 
             if (countryChoice == "← Cancel") continue;
 

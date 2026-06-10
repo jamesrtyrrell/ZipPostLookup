@@ -32,16 +32,11 @@ internal static class DbIntegrityDashboard
                 return 1;
             }
 
-            var country = CdtSelectMenu.Show(
-                ["US", "CA", "MX", "All (US + CA + MX)", "← Back"],
-                s => s switch
-                {
-                    "← Back"             => "[grey]← Back[/]",
-                    "All (US + CA + MX)" => $"[bold cyan]{"All",-14}[/]  [grey]Run all three, browse results with ← →[/]",
-                    _                    => $"[bold cyan]{s,-14}[/]",
-                },
-                escapeReturns: "← Back",
-                title: "Select country:");
+            var country = CountryPicker.Show(
+                title: "Select country:",
+                cancelLabel: "← Back",
+                allLabel: "All (US + CA + MX)",
+                allDescription: "Run all three, browse results with ← →");
 
             if (country == "← Back") break;
 
@@ -97,36 +92,20 @@ internal static class DbIntegrityDashboard
 
     // ── Results browser (← → navigation across countries) ────────────────────
 
-    private static void BrowseReports(List<ReportPage> pages)
-    {
-        var index = 0;
-
-        while (true)
-        {
-            var page      = pages[index];
-            var prevLabel = index > 0               ? $"[bold]← {pages[index - 1].Country}[/]" : "[grey]←[/]";
-            var nextLabel = index < pages.Count - 1 ? $"[bold]{pages[index + 1].Country} →[/]" : "[grey]→[/]";
-            var status    = page.ExitCode == 0      ? "[green]✓ passed[/]"                      : "[red]✗ issues[/]";
-
-            HeaderBar.Render($"Integrity › CDT DB › {page.Country}  {status}");
-            CdtCommandMenu.Render($"  {prevLabel}    ({index + 1}/{pages.Count})    {nextLabel}    [grey]Esc: back[/]");
-            AnsiConsole.WriteLine();
-
-            if (page.CheckResults is not null)
-                CdtDbIntegrity.PrintSummaryTable(page.Country, page.CheckResults);
-            else
-                AnsiConsole.MarkupLine("[grey]  No results available.[/]");
-
-            if (page.ReportPath is not null)
-                AnsiConsole.MarkupLine($"  [grey]Full report: {Markup.Escape(page.ReportPath)}[/]");
-
-            var key = Console.ReadKey(intercept: true).Key;
-            switch (key)
+    private static void BrowseReports(List<ReportPage> pages) =>
+        ReportBrowser.Browse(
+            pages,
+            p => p.Country,
+            p => p.ExitCode == 0 ? "[green]✓ passed[/]" : "[red]✗ issues[/]",
+            "Integrity › CDT DB",
+            p =>
             {
-                case ConsoleKey.LeftArrow  when index > 0:               index--; break;
-                case ConsoleKey.RightArrow when index < pages.Count - 1: index++; break;
-                case ConsoleKey.Escape:                                   return;
-            }
-        }
-    }
+                if (p.CheckResults is not null)
+                    CdtDbIntegrity.PrintSummaryTable(p.Country, p.CheckResults);
+                else
+                    AnsiConsole.MarkupLine("[grey]  No results available.[/]");
+
+                if (p.ReportPath is not null)
+                    AnsiConsole.MarkupLine($"  [grey]Full report: {Markup.Escape(p.ReportPath)}[/]");
+            });
 }

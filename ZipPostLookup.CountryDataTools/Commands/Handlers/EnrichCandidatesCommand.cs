@@ -32,8 +32,8 @@ namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 ///   5. Set OverrideValue on all discrepancy field rows for this zip
 ///   6. Set AcceptIncoming=1, Process=1 (auto-resolved)
 ///   7. Update [data].[reference] with verified values + TimezoneChecked=1, NameChecked=1
-///   8. If new Name not in [data].[reference] → insert it
-///   9. 404 → mark codes.candidate row as unfound
+///   8. If the new PlaceName not in [data].[reference] → insert it
+///   9. 404 → mark [codes].[candidate] row as unfound
 ///  10. Transient error → leave in place for next run
 ///
 /// Default limit: 100 zips per run. At 2s delay that's ~3 minutes.
@@ -366,7 +366,7 @@ public static class EnrichCandidatesCommand
         SqlConnection conn, string country, string runId, string zip)
     {
         // Admin level 1 code (e.g. state abbreviation) is now stored in
-        // codes.candidate_admins. Used only for Armed Forces territory routing (AA/AE/AP).
+        // [codes].[candidate]_admins. Used only for Armed Forces territory routing (AA/AE/AP).
         var code = await conn.ExecuteScalarAsync<string?>(
             CommonQueries.GetCandidateStateCode,
             new
