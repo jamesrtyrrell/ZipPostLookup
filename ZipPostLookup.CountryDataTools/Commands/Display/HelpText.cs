@@ -40,6 +40,20 @@ public static class HelpText
         Console.WriteLine("                    automatically (for CI/scripting).");
         Console.WriteLine();
 
+        AnsiConsole.MarkupLine("  [bold cyan]fix[/]             <file.csv> --country XX [[--out path.csv]]");
+        Console.WriteLine("                    Auto-resolve fixable issues in a candidate CSV: duplicates,");
+        Console.WriteLine("                    boolean normalisation, casing, timezone conversion. Blocks on");
+        Console.WriteLine("                    structural errors — run 'extractissues' first if any exist.");
+        Console.WriteLine("                    Writes back to the same file unless --out is specified.");
+        Console.WriteLine();
+
+        AnsiConsole.MarkupLine("  [bold cyan]extractissues[/]   <file.csv> --country XX [[--out extracted.csv]]");
+        Console.WriteLine("                    Find all rows with at least one structural error, write them to");
+        Console.WriteLine("                    a sidecar file (default: {basename}-extracted-records.csv),");
+        Console.WriteLine("                    and remove them from the source. Re-validates the cleaned source.");
+        Console.WriteLine("                    Fixable issues are left for 'fix' to resolve.");
+        Console.WriteLine();
+
         AnsiConsole.MarkupLine("  [bold cyan]enrich[/]          Enrich discrepancies or reference data via external sources.");
         Console.WriteLine("    candidates    --country XX [--run ID] [--limit 100] [--dry-run]");
         Console.WriteLine("             or   --all        [--limit 100] [--dry-run]");

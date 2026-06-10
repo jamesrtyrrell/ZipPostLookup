@@ -6,14 +6,13 @@ using ZipPostLookup.CountryDataTools.Database.Repositories;
 using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
 using Spectre.Console;
-using ZipPostLookup.CountryDataTools.Models.Commands;
+using ZipPostLookup.CountryDataTools.Models.Counters;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
 using ZipPostLookup.CountryDataTools.Models.Enums;
-using ZipPostLookup.CountryDataTools.Validation;
+using ZipPostLookup.CountryDataTools.CountryRules;
 using ZipPostLookup.CountryDataTools.Commands.Display;
 using ZipPostLookup.CountryDataTools.Enrichment;
 using ZipPostLookup.CountryDataTools.Enrichment.Api;
-using ZipPostLookup.CountryDataTools.Utilities;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 
@@ -43,16 +42,20 @@ public static class EnrichCandidatesCommand
 {
     private const int DelayMs = 0_800;
 
+    public sealed record Options(string Country = "", string RunId = "", int Limit = 100, bool DryRun = false, bool All = false);
+
     public static async Task<int> RunAsync(string[] args)
     {
         if (args.Any(a => a is "-h" or "--help")) { PrintUsage(); return 0; }
+        if (!TryParseArgs(args, out var opts)) { PrintUsage(); return 2; }
+        return await RunAsync(opts);
+    }
 
-        if (!TryParseArgs(args, out var country, out var runId,
-                          out var limit, out var dryRun, out var all))
-        {
-            PrintUsage();
-            return 2;
-        }
+    public static async Task<int> RunAsync(Options opts)
+    {
+        if (opts.All)
+            // Run ID auto-detected per country; --run ignored in --all mode
+            return await CountryRunner.ForEachWithRuleAsync(cc => RunAsync(opts with { Country = cc, All = false }));
 
         WorkDbContext db;
         try
@@ -65,22 +68,17 @@ public static class EnrichCandidatesCommand
             return 1;
         }
 
-        if (all)
-            // Run ID auto-detected per country; --run ignored in --all mode
-            return await CountryRunner.ForEachWithRuleAsync(cc => RunAsync(["--country", cc,
-                "--limit", limit.ToString(),
-                .. (dryRun ? new[]{ "--dry-run" } : Array.Empty<string>())]));
-
         // Resolve run ID: --run > activeRunId in workdb.json > latest run in pipeline.Runs.
         // Always validate the candidate ID actually exists for this country — workdb.json
         // can become stale if new runs are created without updating it.
+        var runId = opts.RunId;
         var candidateRunId = string.IsNullOrWhiteSpace(runId) ? db.ActiveRunId : runId;
-        runId = await ResolveRunIdAsync(db, candidateRunId, country);
+        runId = await ResolveRunIdAsync(db, candidateRunId, opts.Country);
 
         if (runId == null)
         {
             await Console.Error.WriteLineAsync(
-                $"  ✗ No runs found for {country.ToUpperInvariant()}.");
+                $"  ✗ No runs found for {opts.Country.ToUpperInvariant()}.");
             await Console.Error.WriteLineAsync(
                 "  Use 'workdb newrun --source <file>' to create one, or pass --run explicitly.");
             return 1;
@@ -90,25 +88,25 @@ public static class EnrichCandidatesCommand
         // to pick. In --all mode keep it silent (batch run, no interactive prompt).
         if (runId != candidateRunId)
         {
-            if (all)
+            if (opts.All)
             {
                 AnsiConsole.MarkupLine($"  [grey]Auto-selected run: {Markup.Escape(runId)}[/]");
             }
             else
             {
-                var picked = await PickRunAsync(db, country, candidateRunId);
+                var picked = await PickRunAsync(db, opts.Country, candidateRunId);
                 if (picked == null) { Console.WriteLine("  Cancelled."); return 0; }
                 runId = picked;
             }
         }
 
         // Load unresolved discrepancies for this run
-        var pending = await db.Discrepancies.GetPendingAsync(runId, country);
+        var pending = await db.Discrepancies.GetPendingAsync(runId, opts.Country);
 
         // Filter out special-domain codes before enrichment.
         // Checks both code range AND name — catches rows inserted directly into
         // codes.discrepancies that bypassed the normal import classification.
-        var rules = CountryRulesFactory.For(country);
+        var rules = CountryRulesFactory.For(opts.Country);
         var specialCodeSet = pending
             .Where(d => rules.IsEnrichmentSkipped(d.ZpCode) || rules.IsKnownSpecialName(d.PlaceName))
             .Select(d => d.ZpCode)
@@ -122,9 +120,9 @@ public static class EnrichCandidatesCommand
             .ToList();
 
         EnrichCandidatesDisplay.PrintHeader(
-            country, runId,
+            opts.Country, runId,
             zips.Count + specialCodeSet.Count, specialCodeSet.Count,
-            zips.Count, limit, DelayMs / 1000, dryRun);
+            zips.Count, opts.Limit, DelayMs / 1000, opts.DryRun);
         Console.WriteLine();
 
         if (zips.Count == 0)
@@ -133,9 +131,9 @@ public static class EnrichCandidatesCommand
             return 0;
         }
 
-        var batch = zips.Take(limit).ToList();
+        var batch = zips.Take(opts.Limit).ToList();
 
-        if (dryRun)
+        if (opts.DryRun)
         {
             foreach (var z in batch)
                 AnsiConsole.MarkupLine($"  [grey][[dry-run]] Would enrich zip {Markup.Escape(z)}[/]");
@@ -172,7 +170,7 @@ public static class EnrichCandidatesCommand
 
         // Build the round-robin router once for the entire batch
         var apiKeys = ApiKeysConfig.TryLoad(db.RepoRoot);
-        var apis = EnrichmentApiFactory.GetApisForCountry(country, http, apiKeys);
+        var apis = EnrichmentApiFactory.GetApisForCountry(opts.Country, http, apiKeys);
         var router = new RoundRobinEnrichmentRouter(apis);
 
         // Seed router with current-period persisted counts so limits are enforced
@@ -190,7 +188,7 @@ public static class EnrichCandidatesCommand
         var userCancelled = await EnrichmentEngine.RunAsync(new EnrichmentRun
         {
             Conn          = conn,
-            Country       = country,
+            Country       = opts.Country,
             Rules         = rules,
             Batch         = batch,
             Counters      = counters,
@@ -198,20 +196,20 @@ public static class EnrichCandidatesCommand
             Apis          = apis,
             DelayMs       = DelayMs,
             IsDirectMode  = false,
-            GetStateAsync = async code => await GetCandidateStateAsync(conn, country, runId, code),
+            GetStateAsync = async code => await GetCandidateStateAsync(conn, opts.Country, runId, code),
             PersistAsync  = async (c, tx, items) =>
             {
                 foreach (var item in items)
                 {
                     if (item.Outcome == FetchOutcome.NotFound)
-                        await MarkUnfoundAsync(c, country, runId, item.Zip, tx);
+                        await MarkUnfoundAsync(c, opts.Country, runId, item.Zip, tx);
                     else
-                        await ResolveDiscrepanciesAsync(c, country, runId, item.Zip, item.Result!, item.ApiName!, tx);
+                        await ResolveDiscrepanciesAsync(c, opts.Country, runId, item.Zip, item.Result!, item.ApiName!, tx);
 
                     if (item.Outcome == FetchOutcome.Found)
                     {
                         var newName = await ReferenceEnrichmentHelper.UpdateReferenceAsync(
-                            c, country, item.Zip, item.Result!, tx, rules.ResolveAdmin1(item.Zip));
+                            c, opts.Country, item.Zip, item.Result!, tx, rules.ResolveAdmin1(item.Zip));
                         if (newName) counters.NewNamesInserted++;
                     }
                 }
@@ -219,7 +217,7 @@ public static class EnrichCandidatesCommand
             OnLongPlaceNameAsync = async (code, api, name) =>
             {
                 if (unfoundLogPath is null) return;
-                var line = $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}  {country.ToUpperInvariant()}  {code,-10}  unfound (name too long: {name.Length} chars)  via {api,-14}  {name}";
+                var line = $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}  {opts.Country.ToUpperInvariant()}  {code,-10}  unfound (name too long: {name.Length} chars)  via {api,-14}  {name}";
                 try
                 {
                     await File.AppendAllLinesAsync(unfoundLogPath, [line]);
@@ -239,7 +237,7 @@ public static class EnrichCandidatesCommand
             Console.WriteLine("Enrichment complete:");
         EnrichCandidatesDisplay.PrintSummary(counters);
 
-        var gold = await GoldCertifier.CertifyAsync(conn, country);
+        var gold = await GoldCertifier.CertifyAsync(conn, opts.Country);
         if (gold.Failed)
             AnsiConsole.MarkupLine($"  [grey](Gold certification skipped: {Markup.Escape(gold.Error!)})[/]");
         else if (gold.Certified > 0)
@@ -259,7 +257,7 @@ public static class EnrichCandidatesCommand
             var etaMinutes = remaining * (DelayMs / 1000.0) / 60;
             Console.WriteLine();
             Console.WriteLine($"  {remaining:N0} zips remaining — " +
-                              $"run again to continue (~{etaMinutes:F0} min at {limit}/run).");
+                              $"run again to continue (~{etaMinutes:F0} min at {opts.Limit}/run).");
         }
 
         return 0;
@@ -379,17 +377,16 @@ public static class EnrichCandidatesCommand
         return code ?? "";
     }
 
-    private static bool TryParseArgs(
-        string[] args, out string country, out string runId,
-        out int limit, out bool dryRun, out bool all)
+    private static bool TryParseArgs(string[] args, out Options opts)
     {
-        country = args.OptionValue("--country", rejectFlagValue: true) ?? "";
-        runId   = args.OptionValue("--run") ?? "";
-        limit   = args.IntOption("--limit", 100, min: 1);
-        dryRun  = args.HasFlag("--dry-run");
-        all     = args.HasFlag("--all");
-
-        return all || !string.IsNullOrWhiteSpace(country);
+        var country = args.OptionValue("--country", rejectFlagValue: true) ?? "";
+        opts = new Options(
+            Country: country,
+            RunId:   args.OptionValue("--run") ?? "",
+            Limit:   args.IntOption("--limit", 100, min: 1),
+            DryRun:  args.HasFlag("--dry-run"),
+            All:     args.HasFlag("--all"));
+        return opts.All || !string.IsNullOrWhiteSpace(country);
     }
 
     // -------------------------------------------------------------------------

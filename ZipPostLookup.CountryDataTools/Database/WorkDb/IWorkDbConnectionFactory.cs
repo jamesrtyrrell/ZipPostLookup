@@ -13,8 +13,14 @@ namespace ZipPostLookup.CountryDataTools.Database.WorkDb;
 /// Reserved for future use : PostgresConnectionFactory, SqliteConnectionFactory
 ///
 /// Usage:
-///   var factory = WorkDbConnectionFactory.Create(config);Z
+///   var factory = WorkDbConnectionFactory.Create(config);
 ///   using var conn = factory.CreateConnection();   // always open and ready
+///
+/// Connection usage rule: never run more than one active Dapper query on the same
+/// connection concurrently (e.g. via Task.WhenAll). SQL Server requires
+/// MultipleActiveResultSets=True for that — SqlServerConnectionFactory injects it
+/// automatically, but the CDT codebase follows the convention of opening a new
+/// short-lived connection per query to avoid the requirement entirely.
 /// </summary>
 public interface IWorkDbConnectionFactory
 {

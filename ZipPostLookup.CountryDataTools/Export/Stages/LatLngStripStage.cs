@@ -5,12 +5,11 @@ namespace ZipPostLookup.CountryDataTools.Export.Stages;
 ///
 /// Coordinates are stored in <c>data.reference</c> as enrichment metadata
 /// but are not used by the ZipPostLookup library at runtime — only timezones
-/// and admin1 divisions are consumed.  Including them in the embedded CSV
+/// and admin1 divisions are consumed. Including them in the embedded CSV
 /// would bloat the binary for no benefit.
 ///
-/// Sets <see cref="ExportMeta.IncludeCoords"/> to <c>false</c> — the CSV
-/// writer omits the columns entirely and <c>BuiltInDataSource</c> returns
-/// <c>null</c> for lat/lng on all entries.
+/// Sets <see cref="ExportMeta.IncludeCoords"/> to <c>false</c> so the CSV
+/// writer omits the lat/lng columns entirely.
 /// </summary>
 internal sealed class LatLngStripStage : IExportStage
 {

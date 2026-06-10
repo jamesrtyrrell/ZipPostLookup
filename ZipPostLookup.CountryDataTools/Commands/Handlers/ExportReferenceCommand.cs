@@ -5,9 +5,9 @@ using ZipPostLookup.CountryDataTools.Utilities;
 using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
 using ZipPostLookup.CountryDataTools.Validation.Export;
-using ZipPostLookup.CountryDataTools.DSV;
+using ZipPostLookup.CountryDataTools.Dsv;
 using ZipPostLookup.CountryDataTools.Export;
-using ZipPostLookup.CountryDataTools.Export.ZPimage;
+using ZipPostLookup.CountryDataTools.Export.ZpImage;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
 using ZipPostLookup.CountryDataTools.Models.Enums;
 using ZipPostLookup.CountryDataTools.Models.Json;
@@ -67,6 +67,15 @@ public static class ExportReferenceCommand
     // Entry point
     // =========================================================================
 
+    public sealed record Options(
+        string Country      = "",
+        ExportTarget Target = ExportTarget.Main,
+        string Output       = "",
+        bool CuratedOnly    = false,
+        bool Uncompressed   = false,
+        bool All            = false,
+        string? FromCsv     = null);
+
     public static async Task<int> RunAsync(string[] args)
     {
         if (args.Any(a => a is "-h" or "--help")) { PrintUsage(); return 0; }
@@ -91,20 +100,26 @@ public static class ExportReferenceCommand
             return 2;
         }
 
-        if (all)
+        return await RunAsync(new Options(country, target, output, curatedOnly, uncompressed, all, fromCsv));
+    }
+
+    public static async Task<int> RunAsync(Options opts)
+    {
+        if (opts.All)
         {
-            return await RunAllAsync(curatedOnly, target);
+            return await RunAllAsync(opts.CuratedOnly, opts.Target);
         }
 
+        var country  = opts.Country;
         var cc      = country.ToLowerInvariant();
         var ccUpper = country.ToUpperInvariant();
 
         // ── Offline zpi rebuild: source the optimised CSV directly, no working database. ──────
         // Use when the image format changes but the data has not. The CSV is the exact data the
         // runtime registry loads, so the rebuilt image is parity-guaranteed against it.
-        if (fromCsv != null)
+        if (opts.FromCsv != null)
         {
-            if (target != ExportTarget.Zpi)
+            if (opts.Target != ExportTarget.Zpi)
             {
                 await Console.Error.WriteLineAsync(
                     "  ✗ --from-csv only applies to --target zpi (it rebuilds the frozen image " +
@@ -112,7 +127,7 @@ public static class ExportReferenceCommand
                 return 2;
             }
 
-            return await RunZpiFromCsvAsync(cc, ccUpper, fromCsv, output, uncompressed);
+            return await RunZpiFromCsvAsync(cc, ccUpper, opts.FromCsv, opts.Output, opts.Uncompressed);
         }
 
         WorkDbContext db;
@@ -128,11 +143,11 @@ public static class ExportReferenceCommand
 
         var normalizer = GetNormalizer(ccUpper);
 
-        return target switch
+        return opts.Target switch
         {
-            ExportTarget.Ref => await RunRefExportAsync(db, cc, ccUpper, output, curatedOnly, normalizer),
-            ExportTarget.Zpi => await RunZpiExportAsync(db, cc, ccUpper, output, curatedOnly, uncompressed, normalizer),
-            _                => await RunMainExportAsync(db, cc, ccUpper, output, curatedOnly, normalizer),
+            ExportTarget.Ref => await RunRefExportAsync(db, cc, ccUpper, opts.Output, opts.CuratedOnly, normalizer),
+            ExportTarget.Zpi => await RunZpiExportAsync(db, cc, ccUpper, opts.Output, opts.CuratedOnly, opts.Uncompressed, normalizer),
+            _                => await RunMainExportAsync(db, cc, ccUpper, opts.Output, opts.CuratedOnly, normalizer),
         };
     }
 
@@ -286,7 +301,7 @@ public static class ExportReferenceCommand
         await RunPreChecksAsync(conn, ccUpper, db.RepoRoot);
 
         var sql = curatedOnly ? CommonQueries.ExportReferenceDataCuratedOnlyWithCuration : CommonQueries.ExportReferenceDataWithCuration;
-        var rows = (await conn.QueryAsync<ReferenceRowFull>(
+        var rows = (await conn.QueryAsync<DataReference>(
             sql, new { CountryId = ccUpper })).ToList();
 
         Console.WriteLine($"  Rows to export: {rows.Count:N0}");
@@ -512,7 +527,7 @@ public static class ExportReferenceCommand
             ? CommonQueries.ExportReferenceDataCuratedOnly
             : CommonQueries.ExportReferenceData;
 
-        var rows = (await conn.QueryAsync<ReferenceRowFull>(
+        var rows = (await conn.QueryAsync<DataReference>(
             sql, new { CountryId = ccUpper })).ToList();
 
         Console.WriteLine($"  Rows to export: {rows.Count:N0}");
@@ -628,7 +643,7 @@ public static class ExportReferenceCommand
             ? CommonQueries.ExportReferenceDataCuratedOnly
             : CommonQueries.ExportReferenceData;
 
-        var rows = (await conn.QueryAsync<ReferenceRowFull>(
+        var rows = (await conn.QueryAsync<DataReference>(
             sql, new { CountryId = ccUpper })).ToList();
 
         Console.WriteLine($"  Rows to export: {rows.Count:N0}");
@@ -758,7 +773,7 @@ public static class ExportReferenceCommand
             _    => null
         };
 
-    private static void NormalizeZips(IEnumerable<ReferenceRowFull> rows, ICountryCodeRules? normalizer)
+    private static void NormalizeZips(IEnumerable<DataReference> rows, ICountryCodeRules? normalizer)
     {
         if (normalizer is null) { return; }
         foreach (var row in rows)
@@ -767,9 +782,9 @@ public static class ExportReferenceCommand
         }
     }
 
-    private static int EnforceOneDefaultPerZip(IReadOnlyList<ReferenceRowFull> rows)
+    private static int EnforceOneDefaultPerZip(IReadOnlyList<DataReference> rows)
     {
-        var byCode = new Dictionary<string, List<ReferenceRowFull>>(StringComparer.OrdinalIgnoreCase);
+        var byCode = new Dictionary<string, List<DataReference>>(StringComparer.OrdinalIgnoreCase);
         foreach (var row in rows)
         {
             if (!byCode.ContainsKey(row.ZpCode)) { byCode[row.ZpCode] = []; }
@@ -865,5 +880,5 @@ public static class ExportReferenceCommand
     // Private row types
     // =========================================================================
 
-    private enum ExportTarget { Main, Ref, Zpi }
+    public enum ExportTarget { Main, Ref, Zpi }
 }

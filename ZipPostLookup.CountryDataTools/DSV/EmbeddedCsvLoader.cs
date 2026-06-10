@@ -4,7 +4,7 @@ using ZipPostLookup.Core;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
 using ZipPostLookup.CountryDataTools.Models.Json;
 
-namespace ZipPostLookup.CountryDataTools.DSV;
+namespace ZipPostLookup.CountryDataTools.Dsv;
 
 /// <summary>
 /// Loads <see cref="CodeEntry"/> records for a country's source-of-truth reference data.

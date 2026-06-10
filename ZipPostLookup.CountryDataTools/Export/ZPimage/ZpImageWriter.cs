@@ -1,6 +1,6 @@
 using System.IO.Compression;
 
-namespace ZipPostLookup.CountryDataTools.Export.ZPimage;
+namespace ZipPostLookup.CountryDataTools.Export.ZpImage;
 
 /// <summary>
 /// Writes a <see cref="ZpImageBuilder">ZP frozen image</see> to disk — the binary

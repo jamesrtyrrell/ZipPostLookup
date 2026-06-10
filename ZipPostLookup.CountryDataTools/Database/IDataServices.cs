@@ -30,11 +30,18 @@ public interface IDataServices
         int count = 0);
     
     /// <summary>
-    /// Merges/Upserts records into the data schema.
-    /// Associated CommonQueries: UpsertCountryInfo, UpdateCountryCuration, UpdateReferenceNameChecked, UpdateReferenceTimezoneBatch,
-    /// UpdateReferenceNameCheckedBatch, ResetCountryCodeCount, DeleteReferenceData, ResetCountryData
+    /// Retrieves DataReferenceAdmin records from the data schema.
+    /// Convenience typed accessor when the concrete return type is known.
+    /// Associated CommonQueries: GetReferenceAdmin.
+    /// </summary>
+    Task<List<DataReferenceAdmin>> RetrieveValidationCodesAsync(string commonQuery);
+
+    /// <summary>
+    /// Bulk-merges records into the data schema via Dapper Plus BulkMergeAsync.
+    /// List items must be concrete Dbo types (DataCountryInfo, DataReference, etc.).
+    /// Single-item saves: wrap in a list — MergeDataRecordsAsync([myRecord]).
+    /// Associated CommonQueries: UpsertCountryInfo, UpdateCountryCuration, UpdateReferenceNameChecked,
+    /// UpdateReferenceTimezoneBatch, UpdateReferenceNameCheckedBatch.
     /// </summary>
     Task<bool> MergeDataRecordsAsync(List<IDataSchema> dataRecords);
-   
-    
 }

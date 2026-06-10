@@ -4,7 +4,7 @@ using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
 using ZipPostLookup.CountryDataTools.Utilities;
-using ZipPostLookup.CountryDataTools.Validation;
+using ZipPostLookup.CountryDataTools.CountryRules;
 using ZipPostLookup.CountryDataTools.Validation.Export;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
@@ -37,6 +37,8 @@ namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 /// </summary>
 public static class WorkDbCommand
 {
+    public sealed record NormalizeOptions(string Country, bool All);
+
     public static async Task<int> RunAsync(string[] args)
     {
         if (args.Length == 0 || args.Any(a => a is "-h" or "--help"))
@@ -64,7 +66,7 @@ public static class WorkDbCommand
     // workdb init
     // -------------------------------------------------------------------------
 
-    private static async Task<int> RunInitAsync(string[] args)
+    internal static async Task<int> RunInitAsync(string[] args)
     {
         string country = "";
         string connection = "";
@@ -135,7 +137,7 @@ public static class WorkDbCommand
     // workdb status
     // -------------------------------------------------------------------------
 
-    private static async Task<int> RunStatusAsync(string[] _)
+    internal static async Task<int> RunStatusAsync(string[] _)
     {
         var configPath = WorkDbConfig.FindConfigFile(Directory.GetCurrentDirectory());
         if (configPath == null)
@@ -204,7 +206,7 @@ public static class WorkDbCommand
     // workdb newrun
     // -------------------------------------------------------------------------
 
-    private static async Task<int> RunNewRunAsync(string[] args)
+    internal static async Task<int> RunNewRunAsync(string[] args)
     {
         string source = "";
         for (int i = 0; i < args.Length - 1; i++)
@@ -245,7 +247,7 @@ public static class WorkDbCommand
     // workdb test
     // -------------------------------------------------------------------------
 
-    private static async Task<int> RunTestAsync(string[] _)
+    internal static async Task<int> RunTestAsync(string[] _)
     {
         var configPath = WorkDbConfig.FindConfigFile(Directory.GetCurrentDirectory());
         if (configPath == null)
@@ -273,7 +275,7 @@ public static class WorkDbCommand
     // db normalize-tz
     // -------------------------------------------------------------------------
 
-    private static async Task<int> RunNormalizeTzAsync()
+    internal static async Task<int> RunNormalizeTzAsync()
     {
         var db = await LoadDbAsync();
         if (db == null) return 1;
@@ -285,8 +287,8 @@ public static class WorkDbCommand
         {
             var oobBounds = new
             {
-                MinZip = Validation.Us.UsCountryRules.MinUsZip,
-                MaxZip = Validation.Us.UsCountryRules.MaxUsZip,
+                MinZip = CountryRules.Us.UsCountryRules.MinUsZip,
+                MaxZip = CountryRules.Us.UsCountryRules.MaxUsZip,
             };
             var oobCount = await Dapper.SqlMapper.ExecuteScalarAsync<int>(
                 conn, CommonQueries.CountOutOfRangeUs, oobBounds);
@@ -458,7 +460,7 @@ public static class WorkDbCommand
     // db normalize-names
     // -------------------------------------------------------------------------
 
-    private static async Task<int> RunNormalizeNamesAsync(string[] args)
+    internal static async Task<int> RunNormalizeNamesAsync(string[] args)
     {
         var all     = args.Any(a => a.Equals("--all", StringComparison.OrdinalIgnoreCase));
         var country = ParseCountry(args);
@@ -471,8 +473,16 @@ public static class WorkDbCommand
             return 2;
         }
 
+        return await RunNormalizeNamesAsync(new NormalizeOptions(country, all));
+    }
+
+    internal static async Task<int> RunNormalizeNamesAsync(NormalizeOptions opts)
+    {
         var db = await LoadDbAsync();
         if (db == null) return 1;
+
+        var all     = opts.All;
+        var country = opts.Country;
 
         var countries = all
             ? new[] { "US", "CA", "MX" }
@@ -556,7 +566,7 @@ public static class WorkDbCommand
     // workdb normalize-admins
     // -------------------------------------------------------------------------
 
-    private static async Task<int> RunNormalizeAdminsAsync(string[] args)
+    internal static async Task<int> RunNormalizeAdminsAsync(string[] args)
     {
         var all     = args.Any(a => a.Equals("--all", StringComparison.OrdinalIgnoreCase));
         var country = ParseCountry(args);
@@ -569,8 +579,16 @@ public static class WorkDbCommand
             return 2;
         }
 
+        return await RunNormalizeAdminsAsync(new NormalizeOptions(country, all));
+    }
+
+    internal static async Task<int> RunNormalizeAdminsAsync(NormalizeOptions opts)
+    {
         var db = await LoadDbAsync();
         if (db == null) return 1;
+
+        var all     = opts.All;
+        var country = opts.Country;
 
         var countries = all
             ? new[] { "US", "CA", "MX" }
@@ -738,10 +756,7 @@ public static class WorkDbCommand
                           MX two-digit range). Upserts into data.ReferenceAdmins
                           for every row whose admin1 is absent or '---'. Skips
                           codes where no rule match exists. Idempotent.
-                          Re-export affected countries after running. (e.g. "St. Martin"
-                          / "Saint Martin") for the same code and lat/lon, and set
-                          AltNameOf on the abbreviated row to link it to the canonical
-                          name. Safe to re-run; skips already-linked rows.
+                          Re-export affected countries after running.
                           --all runs US, CA, MX in sequence.
             """);
 
@@ -753,7 +768,7 @@ public static class WorkDbCommand
     // db clear
     // -------------------------------------------------------------------------
 
-    private static async Task<int> RunClearAsync(string[] args)
+    internal static async Task<int> RunClearAsync(string[] args)
     {
         var country = ParseCountry(args);
         if (string.IsNullOrWhiteSpace(country))
@@ -795,7 +810,7 @@ public static class WorkDbCommand
     // db reset
     // -------------------------------------------------------------------------
 
-    private static async Task<int> RunResetAsync(string[] args)
+    internal static async Task<int> RunResetAsync(string[] args)
     {
         var country = ParseCountry(args);
         if (string.IsNullOrWhiteSpace(country))

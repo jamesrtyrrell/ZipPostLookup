@@ -54,6 +54,10 @@ public class DataReference : IDataSchema
             AdminReferenceList.Add(new DataReferenceAdmin(adminLevelId, adminLevel));
             levelNumber++;
         }
+
+        var level1 = AdminReferenceList.OrderBy(a => a.AdminLevelId).FirstOrDefault();
+        Admin1     = level1?.Value ?? "---";
+        Admin1Code = level1?.Code  ?? "---";
     }
 
     [Key] public long ReferenceId { get; set; }
@@ -76,15 +80,20 @@ public class DataReference : IDataSchema
 
     [Write(false)] public List<DataReferenceAdmin> AdminReferenceList { get; set; } = new();
 
-    /// <summary>Value of the first admin level (e.g. province name).</summary>
-    [Write(false)]
-    public string Admin1 =>
-        AdminReferenceList.OrderBy(a => a.AdminLevelId).FirstOrDefault()?.Value ?? "";
+    /// <summary>Admin level 1 value (e.g. province name). Set by Dapper from JOIN results; populated from AdminReferenceList by the CodeEntry constructor.</summary>
+    [Write(false)] public string Admin1 { get; set; } = "---";
 
-    /// <summary>Code of the first admin level (e.g. "ON").</summary>
-    [Write(false)]
-    public string Admin1Code =>
-        AdminReferenceList.OrderBy(a => a.AdminLevelId).FirstOrDefault()?.Code ?? "";
+    /// <summary>Admin level 1 code (e.g. "ON"). Set by Dapper from JOIN results; populated from AdminReferenceList by the CodeEntry constructor.</summary>
+    [Write(false)] public string Admin1Code { get; set; } = "---";
+
+    /// <summary>Admin level 2 value — set by Dapper from extended JOIN queries (GetCodeDetailRows). Not populated by the CodeEntry constructor.</summary>
+    [Write(false)] public string Admin2 { get; set; } = "---";
+
+    /// <summary>Admin level 2 code — set by Dapper from extended JOIN queries (GetCodeDetailRows). Not populated by the CodeEntry constructor.</summary>
+    [Write(false)] public string Admin2Code { get; set; } = "---";
+
+    /// <summary>Gold certification flag — set by Dapper from EXISTS subquery (GetCodeDetailRows). Not written to DB.</summary>
+    [Write(false)] public bool IsGold { get; set; }
     
     public override string ToString()
     {

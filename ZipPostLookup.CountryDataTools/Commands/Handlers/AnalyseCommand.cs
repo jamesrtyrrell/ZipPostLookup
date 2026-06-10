@@ -1,11 +1,10 @@
 using Dapper;
-using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Commands.Handlers.Analyse;
 using ZipPostLookup.CountryDataTools.Commands.Handlers.Analyse.CountryAnalysis;
 using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
-using ZipPostLookup.CountryDataTools.Validation;
+using ZipPostLookup.CountryDataTools.CountryRules;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 
@@ -27,16 +26,17 @@ namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 /// </summary>
 public static class AnalyseCommand
 {
+    public sealed record Options(string Country = "", string Output = "", bool All = false);
+
     public static async Task<int> RunAsync(string[] args)
     {
         if (args.Any(a => a is "-h" or "--help")) { PrintUsage(); return 0; }
+        if (!TryParseArgs(args, out var opts)) { PrintUsage(); return 2; }
+        return await RunAsync(opts);
+    }
 
-        if (!TryParseArgs(args, out var country, out var output, out var all))
-        {
-            PrintUsage();
-            return 2;
-        }
-
+    public static async Task<int> RunAsync(Options opts)
+    {
         WorkDbContext db;
         try
         {
@@ -48,16 +48,16 @@ public static class AnalyseCommand
             return 1;
         }
 
-        if (all)
+        if (opts.All)
             return await CountryRunner.ForEachWithRuleAsync(cc =>
             {
-                var ccOutput = string.IsNullOrWhiteSpace(output)
+                var ccOutput = string.IsNullOrWhiteSpace(opts.Output)
                     ? ""
-                    : Path.Combine(output, $"{cc.ToLowerInvariant()}-analysis-{DateTime.UtcNow:yyyyMMdd}.md");
+                    : Path.Combine(opts.Output, $"{cc.ToLowerInvariant()}-analysis-{DateTime.UtcNow:yyyyMMdd}.md");
                 return RunForCountryAsync(db, cc, ccOutput);
             });
 
-        return await RunForCountryAsync(db, country.ToUpperInvariant(), output);
+        return await RunForCountryAsync(db, opts.Country.ToUpperInvariant(), opts.Output);
     }
 
     private static async Task<int> RunForCountryAsync(WorkDbContext db, string cc, string output)
@@ -165,13 +165,14 @@ public static class AnalyseCommand
 
     // ── Arg parsing ─────────────────────────────────────────────────────────────
 
-    private static bool TryParseArgs(string[] args, out string country, out string output, out bool all)
+    private static bool TryParseArgs(string[] args, out Options opts)
     {
-        country = args.OptionValue("--country", rejectFlagValue: true) ?? "";
-        output  = args.OptionValue("--output") ?? "";
-        all     = args.HasFlag("--all");
-
-        return all || !string.IsNullOrWhiteSpace(country);
+        var country = args.OptionValue("--country", rejectFlagValue: true) ?? "";
+        opts = new Options(
+            Country: country,
+            Output:  args.OptionValue("--output") ?? "",
+            All:     args.HasFlag("--all"));
+        return opts.All || !string.IsNullOrWhiteSpace(country);
     }
 
     private static void PrintUsage() =>

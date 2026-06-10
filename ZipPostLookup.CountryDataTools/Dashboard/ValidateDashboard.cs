@@ -1,5 +1,5 @@
 using Spectre.Console;
-using ZipPostLookup.CountryDataTools.Commands;
+using ZipPostLookup.CountryDataTools.Commands.Handlers;
 using ZipPostLookup.CountryDataTools.Dashboard.Layout;
 using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 
@@ -29,12 +29,14 @@ internal static class ValidateDashboard
 
             var noPrompts = AnsiConsole.Confirm("  --no-prompts (apply fix + extract automatically)?", false);
 
-            var args = new List<string> { file, "--country", country };
-            if (noPrompts) args.Add("--no-prompts");
-
             HeaderBar.Render("Validate");
 
-            var exitCode = await ValidateCommand.RunAsync([.. args]);
+            var exitCode = await ValidateCommand.RunAsync(
+                new ValidateCommand.Options(
+                    File:      file,
+                    Country:   country,
+                    Report:    null,
+                    NoPrompts: noPrompts));
 
             FooterBar.ShowResultAndPause(exitCode);
         }

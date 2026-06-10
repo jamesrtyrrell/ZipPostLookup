@@ -3,7 +3,7 @@ using Dapper;
 using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
-using ZipPostLookup.CountryDataTools.Validation;
+using ZipPostLookup.CountryDataTools.CountryRules;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 
@@ -26,6 +26,8 @@ namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 ///   9. Curated rows with blank PlaceName — would export an empty name.
 ///  10. TimezoneChecked=1 but Timezone blank — claims verified but exports empty string.
 ///  11. Gold code regressions — gold-certified codes that no longer meet all conditions.
+///  12. Open Gold Name Discrepancies — gold codes with unresolved Name discrepancies
+///      that may be real aliases needing promotion.
 ///
 /// Writes a Markdown report to DataAnalysis/{cc}-db-integrity-{date}.md.
 /// </summary>
@@ -49,6 +51,7 @@ public static class CdtDbIntegrityCommand
         List<InvalidCodeRow> BlankPlaceNames,
         List<InvalidCodeRow> BlankTimezones,
         List<string>         GoldRegressions,
+        List<string>         GoldNameDiscrepancies,
         bool              AdminCheckSupported);
 
     // ── Entry point ────────────────────────────────────────────────────────────
@@ -91,8 +94,7 @@ public static class CdtDbIntegrityCommand
         AnsiConsole.MarkupLine($"  [grey]Running CDT DB integrity checks for {cc}…[/]");
 
         var rules           = CountryRulesFactory.For(cc);
-        var adminSupported  = rules.GetType().GetMethod(nameof(ICountryRules.ResolveAdmin1))
-                              ?.DeclaringType != typeof(ICountryRules);
+        var adminSupported  = rules.SupportsAdmin1Derivation;
 
         // ── Check 1: Admin code correctness ──────────────────────────────────
         var adminMismatches = new List<(string ZpCode, string Stored, string Expected)>();
@@ -192,12 +194,27 @@ public static class CdtDbIntegrityCommand
         }
         Console.WriteLine($" — {goldRegressions.Count:N0} code(s)");
 
+        // ── Check 12: Gold codes with open Name discrepancies ─────────────────
+        Console.Write("  ▸ Open Gold Name discrepancies");
+        var goldNameDiscrepancies = new List<string>();
+        try
+        {
+            goldNameDiscrepancies = (await conn.QueryAsync<string>(
+                CommonQueries.GetGoldNameDiscrepancies,
+                new { CountryId = cc })).ToList();
+        }
+        catch
+        {
+            // data.GoldCode or codes.Discrepancies.Notes may not exist yet — run migrations first
+        }
+        Console.WriteLine($" — {goldNameDiscrepancies.Count:N0} code(s)");
+
         Console.WriteLine();
 
         var results = new DbCheckResults(
             adminMismatches, missingAdmin1Count, orphans, dupes, invalidCodes,
             noDefaultCodes, altDefaultRows, blankPlaceNames, blankTimezones,
-            goldRegressions, adminSupported);
+            goldRegressions, goldNameDiscrepancies, adminSupported);
 
         // ── Print summary table ────────────────────────────────────────────────
         PrintSummaryTable(cc, results);
@@ -225,7 +242,8 @@ public static class CdtDbIntegrityCommand
             || altDefaultRows.Count > 0
             || blankPlaceNames.Count > 0
             || blankTimezones.Count > 0
-            || goldRegressions.Count > 0;
+            || goldRegressions.Count > 0
+            || goldNameDiscrepancies.Count > 0;
 
         return (hasIssues ? 1 : 0, results, output);
     }
@@ -281,6 +299,10 @@ public static class CdtDbIntegrityCommand
             $"{r.GoldRegressions.Count:N0}",
             StatusIcon(r.GoldRegressions.Count));
 
+        table.AddRow("Open Gold Name discrepancies",
+            $"{r.GoldNameDiscrepancies.Count:N0}",
+            StatusIcon(r.GoldNameDiscrepancies.Count));
+
         AnsiConsole.Write(table);
         AnsiConsole.WriteLine();
     }
@@ -311,6 +333,7 @@ public static class CdtDbIntegrityCommand
         sb.AppendLine($"| Curated blank place names | {r.BlankPlaceNames.Count:N0} | {(r.BlankPlaceNames.Count == 0 ? "✓" : "⚠")} |");
         sb.AppendLine($"| Checked but blank timezones | {r.BlankTimezones.Count:N0} | {(r.BlankTimezones.Count == 0 ? "✓" : "⚠")} |");
         sb.AppendLine($"| Gold code regressions | {r.GoldRegressions.Count:N0} | {(r.GoldRegressions.Count == 0 ? "✓" : "⚠")} |");
+        sb.AppendLine($"| Open Gold Name discrepancies | {r.GoldNameDiscrepancies.Count:N0} | {(r.GoldNameDiscrepancies.Count == 0 ? "✓" : "⚠")} |");
 
         sb.AppendLine();
 
@@ -505,6 +528,26 @@ public static class CdtDbIntegrityCommand
         }
         sb.AppendLine();
 
+        // ── Open Gold Name discrepancies ──────────────────────────────────────
+        sb.AppendLine("## Open Gold Name Discrepancies");
+        sb.AppendLine();
+        if (r.GoldNameDiscrepancies.Count == 0)
+        {
+            sb.AppendLine("_None — no gold codes have unresolved Name discrepancies._");
+        }
+        else
+        {
+            sb.AppendLine($"_{r.GoldNameDiscrepancies.Count:N0} gold-certified code(s) have unresolved Name discrepancies. The incoming name may be a real alias worth promoting. Review in `codes.Discrepancies` (FieldName='Name', ResolvedAt IS NULL) and add as AltNameOf if confirmed._");
+            sb.AppendLine();
+            sb.AppendLine("| ZpCode |");
+            sb.AppendLine("|---|");
+            foreach (var z in r.GoldNameDiscrepancies.Take(200))
+                sb.AppendLine($"| {z} |");
+            if (r.GoldNameDiscrepancies.Count > 200)
+                sb.AppendLine("| … |");
+        }
+        sb.AppendLine();
+
         return sb.ToString();
     }
 
@@ -537,6 +580,7 @@ public static class CdtDbIntegrityCommand
                 · Curated blank place names    (NULL/empty PlaceName on curated rows)
                 · Checked but blank timezones  (TimezoneChecked=1 but Timezone is blank)
                 · Gold code regressions        (gold-certified codes that lost qualifying conditions)
+                · Open Gold Name discrepancies (gold codes with unresolved Name discrepancies — may be aliases)
 
               --country XX   Country code (US, CA, MX).  Default: US
               --all          Run for all three countries in sequence.

@@ -1,6 +1,6 @@
 using ZipPostLookup.CountryDataTools.Commands;
 using ZipPostLookup.CountryDataTools.Commands.Display;
-using ZipPostLookup.CountryDataTools.Configuration;
+using ZipPostLookup.CountryDataTools.Database.Configuration;
 using ZipPostLookup.CountryDataTools.Dashboard;
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -4,10 +4,10 @@ using Spectre.Console;
 using ZipPostLookup.Core;
 using ZipPostLookup.CountryDataTools.Commands.Display;
 using ZipPostLookup.CountryDataTools.Database.Sql;
-using ZipPostLookup.CountryDataTools.Models.Commands;
+using ZipPostLookup.CountryDataTools.Models.Counters;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
-using ZipPostLookup.CountryDataTools.Validation;
+using ZipPostLookup.CountryDataTools.CountryRules;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 
@@ -234,12 +234,12 @@ public static class IntegrityCheckCommand
     /// Uses a two-step query: first draw a random set of distinct zips via NEWID(),
     /// then join back to pick the correct representative row per zip.
     /// </summary>
-    private static async Task<List<ReferenceRowFull>> SampleDefaultRowsAsync(
+    private static async Task<List<DataReference>> SampleDefaultRowsAsync(
         System.Data.IDbConnection conn,
         string cc,
         int count)
     {
-        var rows = await conn.QueryAsync<ReferenceRowFull>(
+        var rows = await conn.QueryAsync<DataReference>(
             CommonQueries.GetTestDataSet,
             new { CountryId = cc, Count = count });
 
@@ -251,12 +251,12 @@ public static class IntegrityCheckCommand
     /// Used only for the GetAllByCode name-presence check.
     /// Returns an empty list if no non-default rows exist.
     /// </summary>
-    private static async Task<List<ReferenceRowFull>> SampleNonDefaultRowsAsync(
+    private static async Task<List<DataReference>> SampleNonDefaultRowsAsync(
         System.Data.IDbConnection conn,
         string cc,
         int count)
     {
-        var rows = await conn.QueryAsync<ReferenceRowFull>(
+        var rows = await conn.QueryAsync<DataReference>(
             CommonQueries.GetNonDefaultTestDataSet,
             new { CountryId = cc, Count = count });
 
@@ -269,8 +269,8 @@ public static class IntegrityCheckCommand
 
     private static CheckResults RunChecks(
         ZipPostRegistry registry,
-        List<ReferenceRowFull> defaultRows,
-        List<ReferenceRowFull> nonDefaultRows)
+        List<DataReference> defaultRows,
+        List<DataReference> nonDefaultRows)
     {
         var results = new CheckResults();
         var dot = 0;
@@ -299,7 +299,7 @@ public static class IntegrityCheckCommand
     }
 
     private static void CheckGetByCode(
-        ZipPostRegistry registry, ReferenceRowFull row, CheckResults results)
+        ZipPostRegistry registry, DataReference row, CheckResults results)
     {
         results.GetByCodeAttempts++;
         var entry = registry.GetByCode(row.ZpCode);
@@ -314,7 +314,7 @@ public static class IntegrityCheckCommand
     }
 
     private static void CheckGetByZip(
-        ZipPostRegistry registry, ReferenceRowFull row, CheckResults results)
+        ZipPostRegistry registry, DataReference row, CheckResults results)
     {
         results.GetByZipAttempts++;
         var entry = registry.GetByZip(row.ZpCode);
@@ -333,7 +333,7 @@ public static class IntegrityCheckCommand
     /// and that entry's fields must match the DB row.
     /// </summary>
     private static void CheckGetAllByCodeDefault(
-        ZipPostRegistry registry, ReferenceRowFull row, CheckResults results)
+        ZipPostRegistry registry, DataReference row, CheckResults results)
     {
         results.GetAllByCodeAttempts++;
         var entries = registry.GetAllByCode(row.ZpCode);
@@ -360,7 +360,7 @@ public static class IntegrityCheckCommand
     /// in the result list (any entry, not just the default).
     /// </summary>
     private static void CheckGetAllByCodeNonDefault(
-        ZipPostRegistry registry, ReferenceRowFull row, CheckResults results)
+        ZipPostRegistry registry, DataReference row, CheckResults results)
     {
         results.GetAllByCodeNonDefaultAttempts++;
         var entries = registry.GetAllByCode(row.ZpCode);
@@ -383,7 +383,7 @@ public static class IntegrityCheckCommand
     }
 
     private static void CheckEntry(
-        CheckKind kind, ReferenceRowFull row, CodeEntry entry, CheckResults results)
+        CheckKind kind, DataReference row, CodeEntry entry, CheckResults results)
     {
         // PlaceName
         if (!string.Equals(entry.PlaceName, row.PlaceName, StringComparison.OrdinalIgnoreCase))

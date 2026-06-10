@@ -1,6 +1,7 @@
 ﻿using Microsoft.Data.SqlClient;
 using Dapper;
 using Z.Dapper.Plus;
+using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
 
@@ -92,15 +93,33 @@ public class DataServices : IDataServices
         await using var conn = (SqlConnection)_factory.CreateConnection();
         try
         {
-            var result = (await conn.QueryAsync<IDataSchema>(commonQuery, parameters)).ToList();
-            return result;
+            if (commonQuery == CommonQueries.GetCountryInfoById)
+                return (await conn.QueryAsync<DataCountryInfo>(commonQuery, parameters))
+                       .Cast<IDataSchema>().ToList();
+
+            if (commonQuery == CommonQueries.GetAdminLevels)
+                return (await conn.QueryAsync<DataAdminLevel>(commonQuery, parameters))
+                       .Cast<IDataSchema>().ToList();
+
+            if (commonQuery == CommonQueries.GetReferenceByCode
+             || commonQuery == CommonQueries.GetReferenceByCodeAndName)
+                return (await conn.QueryAsync<DataReference>(commonQuery, parameters))
+                       .Cast<IDataSchema>().ToList();
+
+            if (commonQuery == CommonQueries.GetReferenceAdmin)
+                return (await conn.QueryAsync<DataReferenceAdmin>(commonQuery, parameters))
+                       .Cast<IDataSchema>().ToList();
+
+            throw new NotSupportedException(
+                $"Query not mapped in RetrieveDataRecordsAsync. " +
+                $"Use inline Dapper for projection/scalar queries.");
         }
+        catch (NotSupportedException) { throw; }
         catch (Exception ex)
         {
             Console.WriteLine($"Error retrieving Data records: {ex.Message}");
+            return [];
         }
-
-        return new List<IDataSchema>();
     }
 
     /// <summary>

@@ -1,5 +1,4 @@
-using Spectre.Console;
-using ZipPostLookup.CountryDataTools.Commands;
+using ZipPostLookup.CountryDataTools.Commands.Handlers;
 using ZipPostLookup.CountryDataTools.Dashboard.Layout;
 using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 
@@ -40,9 +39,9 @@ internal static class NormalizeDashboard
 
             _ = selected.Key switch
             {
-                "normalize-tz"     => await RunNormalizeAsync("normalize-tz",    ["US", "CA", "MX"], "All (US + CA + MX)", "US + CA + MX in sequence"),
-                "normalize-names"  => await RunNormalizeAsync("normalize-names", ["US", "CA", "MX"], "All (US + CA + MX)", "US + CA + MX in sequence"),
-                "normalize-admins" => await RunNormalizeAsync("normalize-admins", ["US", "MX"],       "All (US + MX)",      "US + MX in sequence"),
+                "normalize-tz"     => await RunNormalizeTzAsync(),
+                "normalize-names"  => await RunNormalizeWithPickerAsync("normalize-names",  ["US", "CA", "MX"], "All (US + CA + MX)", "US + CA + MX in sequence"),
+                "normalize-admins" => await RunNormalizeWithPickerAsync("normalize-admins", ["US", "MX"],       "All (US + MX)",      "US + MX in sequence"),
                 _                  => 0,
             };
         }
@@ -50,9 +49,19 @@ internal static class NormalizeDashboard
         return 0;
     }
 
-    // ── shared: country picker → db <sub> ───────────────────────────────────────
+    // ── normalize-tz: no country picker — always runs for all pipeline countries ─
 
-    private static async Task<int> RunNormalizeAsync(
+    private static async Task<int> RunNormalizeTzAsync()
+    {
+        HeaderBar.Render("Normalize › normalize-tz");
+        var exitCode = await WorkDbCommand.RunNormalizeTzAsync();
+        FooterBar.ShowResultAndPause(exitCode);
+        return exitCode;
+    }
+
+    // ── normalize-names / normalize-admins: country picker ───────────────────────
+
+    private static async Task<int> RunNormalizeWithPickerAsync(
         string sub, IReadOnlyList<string> countries, string allLabel, string allDescription)
     {
         HeaderBar.Render($"Normalize › {sub}");
@@ -66,20 +75,15 @@ internal static class NormalizeDashboard
 
         if (choice == "← Cancel") return 0;
 
-        string[] extra = choice.StartsWith("All")
-            ? ["--all"]
-            : ["--country", choice];
+        var isAll   = choice.StartsWith("All");
+        var country = isAll ? "" : choice;
+        var opts    = new WorkDbCommand.NormalizeOptions(country, isAll);
 
-        return await RunAndPauseAsync(sub, extra);
-    }
-
-    // ── shared run + pause ────────────────────────────────────────────────────
-
-    private static async Task<int> RunAndPauseAsync(string sub, string[] extra)
-    {
         HeaderBar.Render($"Normalize › {sub}");
 
-        var exitCode = await DbCommand.RunAsync([sub, .. extra]);
+        var exitCode = sub == "normalize-names"
+            ? await WorkDbCommand.RunNormalizeNamesAsync(opts)
+            : await WorkDbCommand.RunNormalizeAdminsAsync(opts);
 
         FooterBar.ShowResultAndPause(exitCode);
         return exitCode;

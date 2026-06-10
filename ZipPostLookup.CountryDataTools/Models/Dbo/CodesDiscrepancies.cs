@@ -20,6 +20,7 @@ public class CodesDiscrepancies : ICodesSchema
     public string FieldName { get; set; } = string.Empty;
     public string? RefValue { get; set; }
     public string? InValue { get; set; }
+    public string? Notes { get; set; }
     public string? OverrideValue { get; set; }
     public bool? AcceptIncoming { get; set; }
     public bool Process { get; set; }

@@ -1,6 +1,6 @@
-using static ZipPostLookup.CountryDataTools.Export.ZPimage.ZpImageFormat;
+using static ZipPostLookup.CountryDataTools.Export.ZpImage.ZpImageFormat;
 
-namespace ZipPostLookup.CountryDataTools.Export.ZPimage;
+namespace ZipPostLookup.CountryDataTools.Export.ZpImage;
 
 /// <summary>
 /// Result of building a ZP frozen image: the raw (uncompressed) image bytes plus the

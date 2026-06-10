@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 
-namespace ZipPostLookup.CountryDataTools.Export.ZPimage;
+namespace ZipPostLookup.CountryDataTools.Export.ZpImage;
 
 /// <summary>
 /// Minimal append-only writer of little-endian primitives into a growable byte buffer.

@@ -1,11 +1,9 @@
-using Dapper;
 using Spectre.Console;
 using Z.Dapper.Plus;
 using ZipPostLookup.Core;
 using ZipPostLookup.CountryDataTools.Database;
-using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
-using ZipPostLookup.CountryDataTools.DSV;
+using ZipPostLookup.CountryDataTools.Dsv;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
 using CurationStatus = ZipPostLookup.CountryDataTools.Models.Enums.CurationStatus;
 
@@ -33,11 +31,13 @@ namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 /// </summary>
 public static class ImportReferenceDataCommand
 {
+    public sealed record Options(string Country = "", bool Force = false, bool InfoOnly = false, bool All = false);
+
     public static async Task<int> RunAsync(string[] args)
     {
         if (args.Any(a => a is "-h" or "--help")) { PrintUsage(); return 0; }
 
-        var country  = args.OptionValue("--country", rejectFlagValue: true);
+        var country  = args.OptionValue("--country", rejectFlagValue: true) ?? "";
         var all      = args.HasFlag("--all");
         var force    = args.HasFlag("--force");
         var infoOnly = args.HasFlag("--info-only");
@@ -49,6 +49,11 @@ public static class ImportReferenceDataCommand
             return 2;
         }
 
+        return await RunAsync(new Options(country, force, infoOnly, all));
+    }
+
+    public static async Task<int> RunAsync(Options opts)
+    {
         // --- Load workdb context ---
         WorkDbContext db;
         try
@@ -66,9 +71,9 @@ public static class ImportReferenceDataCommand
         // CountryInfoSource is internal to ZipPostLookup — access via the public
         // CountryInfoRegistry facade instead, which exposes the same data.
         var allKnown = CountryInfoRegistry.All;
-        var targets = all
+        var targets = opts.All
             ? allKnown.Keys.ToList()
-            : [country!.ToUpperInvariant()];
+            : [opts.Country.ToUpperInvariant()];
 
         int exitCode = 0;
 
@@ -76,7 +81,7 @@ public static class ImportReferenceDataCommand
         {
             Console.WriteLine();
             AnsiConsole.Write(new Rule($"[bold]{Markup.Escape(cc)}[/]").LeftJustified());
-            var result = await ImportCountryAsync(db, cc, force, infoOnly);
+            var result = await ImportCountryAsync(db, cc, opts.Force, opts.InfoOnly);
             if (result != 0) exitCode = result;
         }
 

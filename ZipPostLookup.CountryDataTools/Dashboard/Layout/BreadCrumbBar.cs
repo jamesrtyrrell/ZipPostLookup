@@ -1,5 +1,3 @@
-using Spectre.Console;
-
 namespace ZipPostLookup.CountryDataTools.Dashboard.Layout;
 
 internal static class BreadCrumbBar

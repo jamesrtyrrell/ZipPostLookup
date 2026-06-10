@@ -8,9 +8,8 @@ using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
 using ZipPostLookup.CountryDataTools.Enrichment;
 using ZipPostLookup.CountryDataTools.Enrichment.Api;
-using ZipPostLookup.CountryDataTools.Models.Commands;
-using ZipPostLookup.CountryDataTools.Utilities;
-using ZipPostLookup.CountryDataTools.Validation;
+using ZipPostLookup.CountryDataTools.Models.Counters;
+using ZipPostLookup.CountryDataTools.CountryRules;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 
@@ -34,20 +33,19 @@ public static class EnrichDirectCommand
 {
     private const int DelayMs = 0_800;
 
+    public sealed record Options(string Country = "", int Limit = 100, bool DryRun = false, bool All = false);
+
     public static async Task<int> RunAsync(string[] args)
     {
         if (args.Any(a => a is "-h" or "--help")) { PrintUsage(); return 0; }
+        if (!TryParseArgs(args, out var opts)) { PrintUsage(); return 2; }
+        return await RunAsync(opts);
+    }
 
-        if (!TryParseArgs(args, out var country, out var limit, out var dryRun, out var all))
-        {
-            PrintUsage();
-            return 2;
-        }
-
-        if (all)
-            return await CountryRunner.ForEachWithRuleAsync(cc => RunAsync(["--country", cc,
-                "--limit", limit.ToString(),
-                .. (dryRun ? new[] { "--dry-run" } : Array.Empty<string>())]));
+    public static async Task<int> RunAsync(Options opts)
+    {
+        if (opts.All)
+            return await CountryRunner.ForEachWithRuleAsync(cc => RunAsync(opts with { Country = cc, All = false }));
 
         WorkDbContext db;
         try
@@ -65,10 +63,10 @@ public static class EnrichDirectCommand
         // Load all uncurated codes with their level-1 admin code for territory routing.
         var uncurated = (await conn.QueryAsync<(string ZpCode, string Admin1Code)>(
             CommonQueries.GetUncuratedReferenceCodes,
-            new { CountryId = country.ToUpperInvariant() })).ToList();
+            new { CountryId = opts.Country.ToUpperInvariant() })).ToList();
 
         // Filter special-domain codes (APO/FPO/DPO/territory) — same logic as enrichcandidates.
-        var rules = CountryRulesFactory.For(country);
+        var rules = CountryRulesFactory.For(opts.Country);
         var specialCodeSet = uncurated
             .Where(r => rules.IsEnrichmentSkipped(r.ZpCode))
             .Select(r => r.ZpCode)
@@ -79,9 +77,9 @@ public static class EnrichDirectCommand
             .ToList();
 
         EnrichCandidatesDisplay.PrintDirectHeader(
-            country,
+            opts.Country,
             uncurated.Count, specialCodeSet.Count, enrichable.Count,
-            limit, DelayMs / 1000, dryRun);
+            opts.Limit, DelayMs / 1000, opts.DryRun);
         Console.WriteLine();
 
         if (enrichable.Count == 0)
@@ -90,9 +88,9 @@ public static class EnrichDirectCommand
             return 0;
         }
 
-        var batch = enrichable.Take(limit).ToList();
+        var batch = enrichable.Take(opts.Limit).ToList();
 
-        if (dryRun)
+        if (opts.DryRun)
         {
             foreach (var (code, admin) in batch)
                 AnsiConsole.MarkupLine($"  [grey][[dry-run]] Would enrich {Markup.Escape(code),-12}  admin: {Markup.Escape(admin)}[/]");
@@ -110,7 +108,7 @@ public static class EnrichDirectCommand
         };
 
         var apiKeys = ApiKeysConfig.TryLoad(db.RepoRoot);
-        var apis    = EnrichmentApiFactory.GetApisForCountry(country, http, apiKeys);
+        var apis    = EnrichmentApiFactory.GetApisForCountry(opts.Country, http, apiKeys);
         var router  = new RoundRobinEnrichmentRouter(apis);
 
         // Seed router with persisted period counts so limits are enforced across sessions.
@@ -136,7 +134,7 @@ public static class EnrichDirectCommand
         {
             var logDir = Path.Combine(db.RepoRoot, "Logs");
             Directory.CreateDirectory(logDir);
-            unfoundLogPath = Path.Combine(logDir, $"enrich-direct-unfound_{country.ToUpperInvariant()}_{DateTime.UtcNow:yyyyMMdd}.log");
+            unfoundLogPath = Path.Combine(logDir, $"enrich-direct-unfound_{opts.Country.ToUpperInvariant()}_{DateTime.UtcNow:yyyyMMdd}.log");
         }
         catch (Exception ex)
         {
@@ -147,7 +145,7 @@ public static class EnrichDirectCommand
         var userCancelled = await EnrichmentEngine.RunAsync(new EnrichmentRun
         {
             Conn          = conn,
-            Country       = country,
+            Country       = opts.Country,
             Rules         = rules,
             Batch         = batch.Select(b => b.ZpCode).ToList(),
             Counters      = counters,
@@ -163,14 +161,14 @@ public static class EnrichDirectCommand
                     // NotFound: no DB action — row stays Curated=0, retried next run.
                     if (item.Outcome != FetchOutcome.Found) continue;
                     var newName = await ReferenceEnrichmentHelper.UpdateReferenceAsync(
-                        c, country, item.Zip, item.Result!, tx, rules.ResolveAdmin1(item.Zip));
+                        c, opts.Country, item.Zip, item.Result!, tx, rules.ResolveAdmin1(item.Zip));
                     if (newName) counters.NewNamesInserted++;
                 }
             },
             OnLongPlaceNameAsync = async (code, api, name) =>
             {
                 if (unfoundLogPath is null) return;
-                var line = $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}  {country.ToUpperInvariant()}  {code,-10}  unfound (name too long: {name.Length} chars)  via {api,-14}  {name}";
+                var line = $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}  {opts.Country.ToUpperInvariant()}  {code,-10}  unfound (name too long: {name.Length} chars)  via {api,-14}  {name}";
                 try
                 {
                     await File.AppendAllLinesAsync(unfoundLogPath, [line]);
@@ -190,7 +188,7 @@ public static class EnrichDirectCommand
             Console.WriteLine("Enrichment complete:");
         EnrichCandidatesDisplay.PrintSummary(counters, isDirectMode: true);
 
-        var gold = await GoldCertifier.CertifyAsync(conn, country);
+        var gold = await GoldCertifier.CertifyAsync(conn, opts.Country);
         if (gold.Failed)
             AnsiConsole.MarkupLine($"  [grey](Gold certification skipped: {Markup.Escape(gold.Error!)})[/]");
         else if (gold.Certified > 0)
@@ -210,21 +208,21 @@ public static class EnrichDirectCommand
             var etaMinutes = remaining * (DelayMs / 1000.0) / 60;
             Console.WriteLine();
             Console.WriteLine($"  {remaining:N0} uncurated codes remaining — " +
-                              $"run again to continue (~{etaMinutes:F0} min at {limit}/run).");
+                              $"run again to continue (~{etaMinutes:F0} min at {opts.Limit}/run).");
         }
 
         return 0;
     }
 
-    private static bool TryParseArgs(
-        string[] args, out string country, out int limit, out bool dryRun, out bool all)
+    private static bool TryParseArgs(string[] args, out Options opts)
     {
-        country = args.OptionValue("--country", rejectFlagValue: true) ?? "";
-        limit   = args.IntOption("--limit", 100, min: 1);
-        dryRun  = args.HasFlag("--dry-run");
-        all     = args.HasFlag("--all");
-
-        return all || !string.IsNullOrWhiteSpace(country);
+        var country = args.OptionValue("--country", rejectFlagValue: true) ?? "";
+        opts = new Options(
+            Country: country,
+            Limit:   args.IntOption("--limit", 100, min: 1),
+            DryRun:  args.HasFlag("--dry-run"),
+            All:     args.HasFlag("--all"));
+        return opts.All || !string.IsNullOrWhiteSpace(country);
     }
 
     private static void PrintUsage() =>

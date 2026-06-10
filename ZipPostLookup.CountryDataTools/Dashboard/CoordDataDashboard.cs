@@ -1,5 +1,5 @@
 using Spectre.Console;
-using ZipPostLookup.CountryDataTools.Commands;
+using ZipPostLookup.CountryDataTools.Commands.Handlers;
 using ZipPostLookup.CountryDataTools.Dashboard.Layout;
 using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 
@@ -33,13 +33,16 @@ internal static class CoordDataDashboard
 
         var dryRun = AnsiConsole.Confirm("  Dry run?", false);
 
-        var args = new List<string> { "coords", "--source", source };
-        if (countryChoice != "Any (no filter)") args.AddRange(["--country", countryChoice]);
-        args.AddRange(["--batch", batch.ToString()]);
-        if (dryRun) args.Add("--dry-run");
+        var country = countryChoice == "Any (no filter)" ? "US" : countryChoice;
 
         HeaderBar.Render("Coord Data › coords");
-        var exitCode = await IngestCommand.RunAsync([.. args]);
+
+        var exitCode = await EnrichReferenceFromCoordinatesCommand.RunAsync(
+            new EnrichReferenceFromCoordinatesCommand.Options(
+                Source:    source,
+                Country:   country,
+                BatchSize: batch,
+                DryRun:    dryRun));
 
         FooterBar.ShowResultAndPause(exitCode);
         return exitCode;

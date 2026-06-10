@@ -1,8 +1,8 @@
-using ZipPostLookup.CountryDataTools.Pipeline;
+using ZipPostLookup.CountryDataTools.Validation.Csv;
 using ZipPostLookup.CountryDataTools.Utilities;
 using ZipPostLookup.Normalizers;
 
-namespace ZipPostLookup.CountryDataTools.DSV;
+namespace ZipPostLookup.CountryDataTools.Dsv;
 
 /// <summary>
 /// Applies all auto-fixable transforms to a list of <see cref="CsvRow"/> instances.

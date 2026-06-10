@@ -3,7 +3,7 @@ using GeoTimeZone;
 using Microsoft.Data.SqlClient;
 using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
-using ZipPostLookup.CountryDataTools.Models.Commands;
+using ZipPostLookup.CountryDataTools.Models.Counters;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
 using ZipPostLookup.CountryDataTools.Models.Dsv;
 
@@ -28,6 +28,8 @@ namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 /// </summary>
 public static class EnrichReferenceFromCoordinatesCommand
 {
+    public sealed record Options(string Source, string Country = "US", int BatchSize = 1000, bool DryRun = false);
+
     public static async Task<int> RunAsync(string[] args)
     {
         if (args.Any(a => a is "-h" or "--help")) { PrintUsage(); return 0; }
@@ -45,6 +47,17 @@ public static class EnrichReferenceFromCoordinatesCommand
             return 2;
         }
 
+        return await RunAsync(new Options(source, country, batchSize, dryRun));
+    }
+
+    public static async Task<int> RunAsync(Options opts)
+    {
+        if (!File.Exists(opts.Source))
+        {
+            await Console.Error.WriteLineAsync($"  ✗ File not found: {opts.Source}");
+            return 2;
+        }
+
         WorkDbContext db;
         try
         {
@@ -57,13 +70,13 @@ public static class EnrichReferenceFromCoordinatesCommand
         }
 
         Console.WriteLine($"Enriching data.reference from coordinates CSV");
-        Console.WriteLine($"  Source  : {source}");
-        Console.WriteLine($"  Country : {country.ToUpperInvariant()}");
-        Console.WriteLine($"  Dry run : {dryRun}");
+        Console.WriteLine($"  Source  : {opts.Source}");
+        Console.WriteLine($"  Country : {opts.Country.ToUpperInvariant()}");
+        Console.WriteLine($"  Dry run : {opts.DryRun}");
         Console.WriteLine();
 
         // --- Read CSV (auto-detect format) ---
-        var rows = ReadCsv(source, out var hasCity);
+        var rows = ReadCsv(opts.Source, out var hasCity);
         Console.WriteLine($"  Rows in CSV        : {rows.Count:N0}");
         Console.WriteLine($"  Format detected    : {(hasCity ? "ZIP,CITY,STATE,LAT,LNG" : "ZIP,LAT,LNG")}");
 
@@ -95,7 +108,7 @@ public static class EnrichReferenceFromCoordinatesCommand
         Console.WriteLine($"  Resolved           : {resolved.Count:N0}");
         Console.WriteLine($"  Failed (bad coords): {failed:N0}");
 
-        if (dryRun)
+        if (opts.DryRun)
         {
             Console.WriteLine();
             Console.WriteLine("  --dry-run: no database updates will be made.");
@@ -110,7 +123,7 @@ public static class EnrichReferenceFromCoordinatesCommand
 
         // --- Update [data].[reference] in batches ---
         Console.WriteLine();
-        Console.WriteLine($"  Updating data.reference in batches of {batchSize:N0}...");
+        Console.WriteLine($"  Updating data.reference in batches of {opts.BatchSize:N0}...");
         Console.WriteLine();
 
         await using var conn = (SqlConnection)db.GetFactory().CreateConnection();
@@ -129,20 +142,20 @@ public static class EnrichReferenceFromCoordinatesCommand
 
         var zipList = byZip.Keys.ToList();
 
-        for (int i = 0; i < zipList.Count; i += batchSize)
+        for (int i = 0; i < zipList.Count; i += opts.BatchSize)
         {
-            var batchZips = zipList.Skip(i).Take(batchSize).ToList();
+            var batchZips = zipList.Skip(i).Take(opts.BatchSize).ToList();
             var batchRows = batchZips.SelectMany(z => byZip[z]).ToList();
 
-            await UpdateBatchAsync(conn, country, batchZips, batchRows, hasCity, counters);
+            await UpdateBatchAsync(conn, opts.Country, batchZips, batchRows, hasCity, counters);
 
-            var pct = Math.Min((i + batchSize) * 100 / zipList.Count, 100);
+            var pct = Math.Min((i + opts.BatchSize) * 100 / zipList.Count, 100);
             var elapsed = stopwatch.Elapsed;
-            var rate = (i + batchSize) / Math.Max(elapsed.TotalSeconds, 1);
+            var rate = (i + opts.BatchSize) / Math.Max(elapsed.TotalSeconds, 1);
             var eta = TimeSpan.FromSeconds(
-                Math.Max(zipList.Count - i - batchSize, 0) / Math.Max(rate, 1));
+                Math.Max(zipList.Count - i - opts.BatchSize, 0) / Math.Max(rate, 1));
 
-            Console.Write($"\r  [{pct,3}%] {Math.Min(i + batchSize, zipList.Count):N0}/{zipList.Count:N0}  " +
+            Console.Write($"\r  [{pct,3}%] {Math.Min(i + opts.BatchSize, zipList.Count):N0}/{zipList.Count:N0}  " +
                           $"tz_updated:{counters.TzUpdated:N0}  tz_skipped:{counters.TzSkipped:N0}  " +
                           $"NameChecked:{counters.CityChecked:N0}  ETA:{eta:mm\\:ss}  ");
         }
@@ -174,7 +187,7 @@ public static class EnrichReferenceFromCoordinatesCommand
         var cc = country.ToUpperInvariant();
 
         // Get current state of these zips in data.reference
-        var refRows = (await conn.QueryAsync<ReferenceStateRow>(
+        var refRows = (await conn.QueryAsync<DataReference>(
             CommonQueries.GetReferenceStateByCodes,
             new { CountryId = cc, Codes = batchZips }))
             .ToList();

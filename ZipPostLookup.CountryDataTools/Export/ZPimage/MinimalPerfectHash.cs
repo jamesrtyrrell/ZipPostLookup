@@ -1,4 +1,4 @@
-namespace ZipPostLookup.CountryDataTools.Export.ZPimage;
+namespace ZipPostLookup.CountryDataTools.Export.ZpImage;
 
 /// <summary>
 /// A minimal perfect hash (MPHF) over a set of <see cref="ulong"/> keys: it maps the

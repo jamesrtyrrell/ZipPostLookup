@@ -4,9 +4,9 @@ using ZipPostLookup.CountryDataTools.Commands.Display;
 using ZipPostLookup.CountryDataTools.Database.Repositories;
 using ZipPostLookup.CountryDataTools.Enrichment;
 using ZipPostLookup.CountryDataTools.Enrichment.Api;
-using ZipPostLookup.CountryDataTools.Models.Commands;
+using ZipPostLookup.CountryDataTools.Models.Counters;
 using ZipPostLookup.CountryDataTools.Utilities;
-using ZipPostLookup.CountryDataTools.Validation;
+using ZipPostLookup.CountryDataTools.CountryRules;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 

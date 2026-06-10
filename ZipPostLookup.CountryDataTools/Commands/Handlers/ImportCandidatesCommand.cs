@@ -5,14 +5,13 @@ using Z.Dapper.Plus;
 using ZipPostLookup.CountryDataTools.Database.Repositories;
 using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
-using ZipPostLookup.CountryDataTools.DSV;
-using ZipPostLookup.CountryDataTools.Extensions;
+using ZipPostLookup.CountryDataTools.Dsv;
+using ZipPostLookup.CountryDataTools.Utilities;
 using Spectre.Console;
-using ZipPostLookup.CountryDataTools.Models.Commands;
+using ZipPostLookup.CountryDataTools.Models.Counters;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
 using ZipPostLookup.CountryDataTools.Models.Enums;
-using ZipPostLookup.CountryDataTools.Utilities;
-using ZipPostLookup.CountryDataTools.Validation;
+using ZipPostLookup.CountryDataTools.CountryRules;
 using ZipPostLookup.CountryDataTools.Commands.Display;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
@@ -48,6 +47,8 @@ public static class ImportCandidatesCommand
 {
     private const int ChunkSize = 5_000;
 
+    public sealed record Options(string File, string Country);
+
     public static async Task<int> RunAsync(string[] args)
     {
         if (args.Any(a => a is "-h" or "--help")) { PrintUsage(); return 0; }
@@ -65,17 +66,22 @@ public static class ImportCandidatesCommand
 
         if (!CommandArgs.ResolveCountry(file, country, out country)) { return 2; }
 
-        Console.WriteLine($"Importing candidates: {file} [{country}]");
+        return await RunAsync(new Options(file, country));
+    }
+
+    public static async Task<int> RunAsync(Options opts)
+    {
+        Console.WriteLine($"Importing candidates: {opts.File} [{opts.Country}]");
 
         // --- 1. Read and fix candidate rows ---
-        var (rows, headerOk, _) = CsvReader.Read(file);
+        var (rows, headerOk, _) = CsvReader.Read(opts.File);
         if (!headerOk)
         {
             await Console.Error.WriteLineAsync("  ✗ Header errors — run 'validate' first.");
             return 1;
         }
 
-        var (fixedRows, _) = Fixer.Fix(rows, country);
+        var (fixedRows, _) = Fixer.Fix(rows, opts.Country);
         Console.WriteLine($"  Rows read: {fixedRows.Count:N0}");
 
         // --- 2. Connect to working DB ---
@@ -93,7 +99,7 @@ public static class ImportCandidatesCommand
         }
 
         // --- 3. Create a run ---
-        var runId = await db.Runs.CreateRunAsync(country, Path.GetFileName(file));
+        var runId = await db.Runs.CreateRunAsync(opts.Country, Path.GetFileName(opts.File));
         Console.WriteLine($"  Run ID: {runId}");
 
         await using var conn = (SqlConnection)db.GetFactory().CreateConnection();
@@ -102,7 +108,7 @@ public static class ImportCandidatesCommand
         // CodesCandidate stores level numbers (1, 2, ...) not the identity PK.
         var adminLevelMap = (await conn.QueryAsync<DataAdminLevel>(
                 CommonQueries.GetCandidateAdminLevels,
-                new { CountryId = country.ToUpperInvariant() }))
+                new { CountryId = opts.Country.ToUpperInvariant() }))
             .ToDictionary(r => r.LevelNumber, r => r.AdminLevelId);
 
         // Build CodesCandidate objects — title-casing and normalisation applied by
@@ -111,7 +117,7 @@ public static class ImportCandidatesCommand
         var codesCandidateList = new List<CodesCandidate>();
         foreach (var fixedRow in fixedRows)
         {
-            var codesCandidate = new CodesCandidate(country, fixedRow) { RunId = runId };
+            var codesCandidate = new CodesCandidate(opts.Country, fixedRow) { RunId = runId };
             if (codesCandidate.RemapCandidatesList(adminLevelMap))
             {
                 codesCandidateList.Add(codesCandidate);
@@ -146,7 +152,7 @@ public static class ImportCandidatesCommand
         var pendingCoordUpdates = new List<DataReference>();
         var total               = codesCandidateList.Count;
         var stopwatch           = Stopwatch.StartNew();
-        var countryRules        = CountryRulesFactory.For(country);
+        var countryRules        = CountryRulesFactory.For(opts.Country);
 
         await AnsiConsole.Progress()
             .AutoClear(false)
@@ -165,16 +171,16 @@ public static class ImportCandidatesCommand
 
                     var parameters = new DynamicParameters();
                     parameters.Add("Codes",     DataTools.ConvertArrayToCodeTableParameter(chunkCodes));
-                    parameters.Add("CountryId", country.ToUpperInvariant());
+                    parameters.Add("CountryId", opts.Country.ToUpperInvariant());
 
-                    var refLookup = (await conn.QueryAsync<ReferenceReadRow>(CommonQueries.GetReferenceForImportBatch, parameters))
+                    var refLookup = (await conn.QueryAsync<DataReference>(CommonQueries.GetReferenceForImportBatch, parameters))
                         .GroupBy(r => r.ZpCode, StringComparer.OrdinalIgnoreCase)
                         .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
                     ProcessChunkCandidates(chunkCandidates, refLookup,
                         acc, pendingCoordUpdates, counters, countryRules);
 
-                    await FlushChunkAsync(conn, db, country, runId, acc);
+                    await FlushChunkAsync(conn, db, opts.Country, runId, acc);
 
                     processTask.Increment(chunkCandidates.Count);
                 }
@@ -199,7 +205,7 @@ public static class ImportCandidatesCommand
         {
             Console.WriteLine("  Review discrepancies in SSMS:");
             Console.WriteLine("    SELECT * FROM pipeline.PendingDiscrepancies");
-            Console.WriteLine($"    WHERE CountryId = '{country.ToUpperInvariant()}';");
+            Console.WriteLine($"    WHERE CountryId = '{opts.Country.ToUpperInvariant()}';");
         }
 
         return 0;
@@ -291,7 +297,7 @@ public static class ImportCandidatesCommand
     /// </summary>
     private static void ProcessChunkCandidates(
         IReadOnlyList<CodesCandidate>             chunkCandidates,
-        IReadOnlyDictionary<string, List<ReferenceReadRow>> refLookup,
+        IReadOnlyDictionary<string, List<DataReference>> refLookup,
         ChunkAccumulators                         acc,
         List<DataReference>                       pendingCoordUpdates,
         ImportCounters                            counters,
@@ -452,7 +458,7 @@ public static class ImportCandidatesCommand
         CodesCandidate      candidate,
         string              code,
         string              name,
-        List<ReferenceReadRow>        refRows,
+        List<DataReference>        refRows,
         ChunkAccumulators   acc,
         List<DataReference> pendingCoordUpdates,
         ImportCounters      counters)
@@ -461,13 +467,18 @@ public static class ImportCandidatesCommand
         TryEnrichCoordsForNameMismatch(candidate, refRows, pendingCoordUpdates, counters);
 
         var defaultRef = refRows.FirstOrDefault(r => r.IsDefault) ?? refRows[0];
+        var goldNote   = refRows.Any(r => r.IsGold)
+            ? "Gold-certified code — incoming name may be an alias"
+            : null;
+
         acc.Discrepancies.Add(new DiscrepancyInput(
             Code:         code,
             Name:         name,
             AdminLevelId: null,
             FieldName:    "Name",
             RefValue:     defaultRef.PlaceName,
-            InValue:      name));
+            InValue:      name,
+            Notes:        goldNote));
 
         counters.NameDiscrepancies++;
     }
@@ -481,7 +492,7 @@ public static class ImportCandidatesCommand
         string            code,
         string            name,
         string            tz,
-        ReferenceReadRow            nameMatch,
+        DataReference            nameMatch,
         ChunkAccumulators acc,
         ImportCounters    counters)
     {
@@ -507,7 +518,7 @@ public static class ImportCandidatesCommand
     /// </summary>
     private static void TryEnrichCoordsForCleanMatch(
         CodesCandidate      candidate,
-        ReferenceReadRow              nameMatch,
+        DataReference              nameMatch,
         List<DataReference> pendingCoordUpdates,
         ImportCounters      counters)
     {
@@ -541,7 +552,7 @@ public static class ImportCandidatesCommand
     /// </summary>
     private static void TryEnrichCoordsForNameMismatch(
         CodesCandidate      candidate,
-        List<ReferenceReadRow>        refRows,
+        List<DataReference>        refRows,
         List<DataReference> pendingCoordUpdates,
         ImportCounters      counters)
     {

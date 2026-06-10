@@ -24,7 +24,14 @@ public sealed class SqlServerConnectionFactory : IWorkDbConnectionFactory
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new ArgumentException("Connection string must not be empty.", nameof(connectionString));
 
-        _connectionString = connectionString;
+        // Ensure MARS is enabled so concurrent Dapper queries on the same connection
+        // don't throw. The codebase avoids concurrent queries by convention, but this
+        // makes the factory safe regardless.
+        var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(connectionString)
+        {
+            MultipleActiveResultSets = true
+        };
+        _connectionString = builder.ConnectionString;
     }
 
     /// <summary>

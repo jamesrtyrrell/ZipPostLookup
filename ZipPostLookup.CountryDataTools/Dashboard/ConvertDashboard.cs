@@ -1,5 +1,5 @@
 using Spectre.Console;
-using ZipPostLookup.CountryDataTools.Commands;
+using ZipPostLookup.CountryDataTools.Commands.Handlers;
 using ZipPostLookup.CountryDataTools.Dashboard.Layout;
 
 namespace ZipPostLookup.CountryDataTools.Dashboard;
@@ -32,14 +32,14 @@ internal static class ConvertDashboard
 
             var noPrompts = AnsiConsole.Confirm("  --no-prompts (skip format confirmation)?", false);
 
-            var args = new List<string> { file };
-            if (!string.IsNullOrWhiteSpace(countryOverride)) args.AddRange(["--country", countryOverride]);
-            if (!string.IsNullOrWhiteSpace(outputOverride))  args.AddRange(["--output",  outputOverride]);
-            if (noPrompts) args.Add("--no-prompts");
-
             HeaderBar.Render("Convert");
 
-            var exitCode = await ConvertKnownFormatsCommand.RunAsync([.. args]);
+            var exitCode = await ConvertKnownFormatsCommand.RunAsync(
+                new ConvertKnownFormatsCommand.Options(
+                    File:      file,
+                    Country:   string.IsNullOrWhiteSpace(countryOverride) ? null : countryOverride,
+                    Output:    string.IsNullOrWhiteSpace(outputOverride)  ? null : outputOverride,
+                    NoPrompts: noPrompts));
 
             FooterBar.ShowResultAndPause(exitCode, "Conversion complete");
         }

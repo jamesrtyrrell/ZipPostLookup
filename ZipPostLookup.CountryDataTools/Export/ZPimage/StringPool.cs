@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace ZipPostLookup.CountryDataTools.Export.ZPimage;
+namespace ZipPostLookup.CountryDataTools.Export.ZpImage;
 
 /// <summary>
 /// Deduplicating pool of UTF-8 strings. Each distinct string is interned once and

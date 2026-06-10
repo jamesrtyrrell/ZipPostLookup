@@ -1,6 +1,6 @@
 ﻿using System.Text;
 using Dapper.Contrib.Extensions;
-using ZipPostLookup.CountryDataTools.DSV;
+using ZipPostLookup.CountryDataTools.Dsv;
 using ZipPostLookup.CountryDataTools.Models.Enums;
 
 namespace ZipPostLookup.CountryDataTools.Models.Dbo;
@@ -31,10 +31,11 @@ public class CodesCandidate : ICodesSchema
         AdminCandidateList = new List<CodesCandidateAdmin>();
         if (!string.IsNullOrWhiteSpace(entry.Admin1) && !string.IsNullOrWhiteSpace(entry.Admin1Code))
         {
-            var codeCandidateAdmin = new CodesCandidateAdmin(1, entry.Admin1  ,entry.Admin1Code);
+            var codeCandidateAdmin = new CodesCandidateAdmin(1, entry.Admin1, entry.Admin1Code);
             AdminCandidateList.Add(codeCandidateAdmin);
-        } 
-
+            Admin1     = entry.Admin1;
+            Admin1Code = entry.Admin1Code;
+        }
     }
 
     [Key] public long CandidateId { get; set; }
@@ -51,15 +52,11 @@ public class CodesCandidate : ICodesSchema
     public DateTimeOffset CreatedAt { get; set; }
     [Write(false)] public List<CodesCandidateAdmin> AdminCandidateList { get; set; } = new();
 
-    /// <summary>Value of the first admin level (e.g. province name).</summary>
-    [Write(false)]
-    public string Admin1 =>
-        AdminCandidateList.OrderBy(a => a.AdminLevelId).FirstOrDefault()?.Value ?? "";
+    /// <summary>Admin level 1 value. Set by Dapper from JOIN results; populated from AdminCandidateList by the CsvRow constructor.</summary>
+    [Write(false)] public string Admin1 { get; set; } = "";
 
-    /// <summary>Code of the first admin level (e.g. "ON").</summary>
-    [Write(false)]
-    public string Admin1Code =>
-        AdminCandidateList.OrderBy(a => a.AdminLevelId).FirstOrDefault()?.Code ?? "";
+    /// <summary>Admin level 1 code. Set by Dapper from JOIN results; populated from AdminCandidateList by the CsvRow constructor.</summary>
+    [Write(false)] public string Admin1Code { get; set; } = "";
 
     
     

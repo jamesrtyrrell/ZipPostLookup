@@ -1,5 +1,5 @@
 using Spectre.Console;
-using ZipPostLookup.CountryDataTools.Commands;
+using ZipPostLookup.CountryDataTools.Commands.Handlers;
 using ZipPostLookup.CountryDataTools.Dashboard.Layout;
 using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 
@@ -58,13 +58,20 @@ internal static class IngestDashboard
         var force    = AnsiConsole.Confirm("  --force (re-import even if rows already exist)?", false);
         var infoOnly = AnsiConsole.Confirm("  --info-only (seed country_info only, skip reference rows)?", false);
 
-        var args = new List<string> { "ref" };
-        if (choice.StartsWith("All")) args.Add("--all");
-        else args.AddRange(["--country", choice]);
-        if (force)    args.Add("--force");
-        if (infoOnly) args.Add("--info-only");
+        var isAll   = choice.StartsWith("All");
+        var country = isAll ? "" : choice;
 
-        return await RunAndPause("ingest ref", args);
+        HeaderBar.Render("Ingest › ref");
+
+        var exitCode = await ImportReferenceDataCommand.RunAsync(
+            new ImportReferenceDataCommand.Options(
+                Country:  country,
+                Force:    force,
+                InfoOnly: infoOnly,
+                All:      isAll));
+
+        FooterBar.ShowResultAndPause(exitCode);
+        return exitCode;
     }
 
     // ── candidate ─────────────────────────────────────────────────────────────
@@ -85,16 +92,10 @@ internal static class IngestDashboard
 
         if (country == "← Cancel") return 0;
 
-        return await RunAndPause("ingest candidate", ["candidate", file, "--country", country]);
-    }
+        HeaderBar.Render("Ingest › candidate");
 
-    // ── shared run + pause ────────────────────────────────────────────────────
-
-    private static async Task<int> RunAndPause(string label, List<string> args)
-    {
-        HeaderBar.Render(label);
-
-        var exitCode = await IngestCommand.RunAsync([.. args]);
+        var exitCode = await ImportCandidatesCommand.RunAsync(
+            new ImportCandidatesCommand.Options(File: file, Country: country));
 
         FooterBar.ShowResultAndPause(exitCode);
         return exitCode;

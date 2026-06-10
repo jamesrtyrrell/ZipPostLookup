@@ -1,5 +1,5 @@
 using Spectre.Console;
-using ZipPostLookup.CountryDataTools.Commands;
+using ZipPostLookup.CountryDataTools.Commands.Handlers;
 using ZipPostLookup.CountryDataTools.Dashboard.Layout;
 using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 
@@ -29,14 +29,16 @@ internal static class AnalyseDashboard
                 new TextPrompt<string>("  Output path [grey](blank = default DataAnalysis/ dir)[/]:")
                     .AllowEmpty());
 
-            var args = new List<string>();
-            if (choice.StartsWith("All")) args.Add("--all");
-            else args.AddRange(["--country", choice]);
-            if (!string.IsNullOrWhiteSpace(output)) args.AddRange(["--output", output]);
+            var isAll   = choice.StartsWith("All");
+            var country = isAll ? "" : choice;
 
             HeaderBar.Render("Analyse");
 
-            var exitCode = await AnalyseCommand.RunAsync([.. args]);
+            var exitCode = await AnalyseCommand.RunAsync(
+                new AnalyseCommand.Options(
+                    Country: country,
+                    Output:  output,
+                    All:     isAll));
 
             FooterBar.ShowResultAndPause(exitCode, "Report written");
         }

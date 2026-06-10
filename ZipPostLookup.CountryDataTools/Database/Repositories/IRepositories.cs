@@ -109,7 +109,8 @@ public sealed record DiscrepancyInput(
     int? AdminLevelId,
     string FieldName,   // "Name" | "state" | "state_name" | "timezone" | "IsDefault"
     string? RefValue,   // value from data.reference
-    string? InValue     // value from the candidate
+    string? InValue,    // value from the candidate
+    string? Notes = null
 );
 
 

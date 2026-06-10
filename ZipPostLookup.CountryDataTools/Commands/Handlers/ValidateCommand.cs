@@ -1,11 +1,10 @@
 using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
-using ZipPostLookup.CountryDataTools.DSV;
+using ZipPostLookup.CountryDataTools.Dsv;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
 using ZipPostLookup.CountryDataTools.Models.Enums;
-using ZipPostLookup.CountryDataTools.Pipeline;
-using ZipPostLookup.CountryDataTools.Reporting;
+using ZipPostLookup.CountryDataTools.Validation.Csv;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 
@@ -27,6 +26,8 @@ namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 /// </summary>
 public static class ValidateCommand
 {
+    public sealed record Options(string File, string Country, string? Report = null, bool NoPrompts = false);
+
     public static async Task<int> RunAsync(string[] args)
     {
         if (args.Any(a => a is "-h" or "--help")) { PrintUsage(); return 0; }
@@ -46,24 +47,29 @@ public static class ValidateCommand
 
         if (!CommandArgs.ResolveCountry(file, country, out country)) return 2;
 
+        return await RunAsync(new Options(file, country, report, noPrompts));
+    }
+
+    public static async Task<int> RunAsync(Options opts)
+    {
         // =====================================================================
         // Step 1 — Validate
         // =====================================================================
 
-        Console.WriteLine($"Validating {file} [{country.ToUpperInvariant()}]…");
+        Console.WriteLine($"Validating {opts.File} [{opts.Country.ToUpperInvariant()}]…");
         Console.WriteLine();
 
-        var (rows, headerOk, missingCols) = CsvReader.Read(file);
+        var (rows, headerOk, missingCols) = CsvReader.Read(opts.File);
         Console.WriteLine($"  Rows read : {rows.Count:N0}");
 
-        var errors = ValidationRules.Validate(rows, headerOk, missingCols, country);
+        var errors = ValidationRules.Validate(rows, headerOk, missingCols, opts.Country);
 
         int errorCount = errors.Count(e => e.Severity == Severity.Error);
         int fixableCount = errors.Count(e => e.Severity == Severity.Fixable);
         int warningCount = errors.Count(e => e.Severity == Severity.Warning);
 
         // Write report file
-        var reportPath = report ?? Path.ChangeExtension(file, ".validation.txt");
+        var reportPath = opts.Report ?? Path.ChangeExtension(opts.File, ".validation.txt");
         ReportWriter.Write(errors, reportPath);
 
         // Display summary
@@ -116,7 +122,7 @@ public static class ValidateCommand
         else
         {
             AnsiConsole.Write(new Rule());
-            bool runFix = noPrompts || Prompt(
+            bool runFix = opts.NoPrompts || Prompt(
                 $"Fix {fixableCount} fixable issue(s)?",
                 fixInfo: """
                   Fix will automatically resolve:
@@ -133,18 +139,18 @@ public static class ValidateCommand
             if (runFix)
             {
                 Console.WriteLine();
-                Console.WriteLine($"  Fixing {file}…");
+                Console.WriteLine($"  Fixing {opts.File}…");
 
-                var (fixedRows, fixLog) = Fixer.Fix(rows, country);
+                var (fixedRows, fixLog) = Fixer.Fix(rows, opts.Country);
 
-                var outPath = file;
+                var outPath = opts.File;
                 CsvWriter.Write(fixedRows, outPath);
 
                 int fixedCount = fixLog.Count;
                 AnsiConsole.MarkupLine($"  [green]✓ Fix complete — {fixedCount} row(s) updated.[/]");
 
                 // Re-validate after fix so extract sees fresh counts
-                var postFix = ValidationRules.Validate(fixedRows, true, Array.Empty<string>(), country);
+                var postFix = ValidationRules.Validate(fixedRows, true, Array.Empty<string>(), opts.Country);
                 errorCount = postFix.Count(e => e.Severity == Severity.Error);
                 rows = fixedRows;
                 Console.WriteLine();
@@ -170,13 +176,13 @@ public static class ValidateCommand
             AnsiConsole.Write(new Rule());
 
             var extractedPath = Path.Combine(
-                Path.GetDirectoryName(Path.GetFullPath(file)) ?? ".",
-                Path.GetFileNameWithoutExtension(file) + "-extracted-records.csv");
+                Path.GetDirectoryName(Path.GetFullPath(opts.File)) ?? ".",
+                Path.GetFileNameWithoutExtension(opts.File) + "-extracted-records.csv");
 
-            bool runExtract = noPrompts || Prompt(
+            bool runExtract = opts.NoPrompts || Prompt(
                 $"Extract {errorCount} structural error row(s)?",
                 fixInfo: $"""
-                  Extract will remove {errorCount} row(s) with structural errors from {Path.GetFileName(file)}.
+                  Extract will remove {errorCount} row(s) with structural errors from {Path.GetFileName(opts.File)}.
                   You will be asked where to write them:
                     (1) DB only   — insert into codes.candidate with status='error' (requires workdb.json)
                     (2) File only — write to {Path.GetFileName(extractedPath)} for manual review
@@ -189,9 +195,9 @@ public static class ValidateCommand
                 Console.WriteLine();
 
                 // Ask where to write extracted rows
-                var destination = noPrompts ? "2" : PromptDestination(errorCount, extractedPath);
+                var destination = opts.NoPrompts ? "2" : PromptDestination(errorCount, extractedPath);
 
-                var postErrors = ValidationRules.Validate(rows, true, Array.Empty<string>(), country);
+                var postErrors = ValidationRules.Validate(rows, true, Array.Empty<string>(), opts.Country);
                 var errorRecords = postErrors
                     .Where(e => e.Severity == Severity.Error)
                     .Select(e => e.RecordNumber)
@@ -201,7 +207,7 @@ public static class ValidateCommand
                 var extractedRows = rows.Where(r => errorRecords.Contains(r.RecordNumber)).ToList();
 
                 // Always write the clean rows back to the source file
-                CsvWriter.Write(cleanRows, file);
+                CsvWriter.Write(cleanRows, opts.File);
 
                 // Write to DB
                 if (destination is "1" or "3")
@@ -209,10 +215,10 @@ public static class ValidateCommand
                     try
                     {
                         var db = await WorkDbContext.LoadAsync(Directory.GetCurrentDirectory());
-                        var runId = await db.Runs.CreateRunAsync(country, Path.GetFileName(file));
+                        var runId = await db.Runs.CreateRunAsync(opts.Country, Path.GetFileName(opts.File));
 
                         var extractedCandidates = extractedRows
-                            .Select(r => new CodesCandidate(country, r))
+                            .Select(r => new CodesCandidate(opts.Country, r))
                             .ToList();
                         await db.Candidates.InsertBatchAsync(extractedCandidates);
 
@@ -220,7 +226,7 @@ public static class ValidateCommand
                         using var conn = db.GetFactory().CreateConnection();
                         await Dapper.SqlMapper.ExecuteAsync(conn,
                             CommonQueries.MarkCandidatesAsError,
-                            new { CountryId = country.ToUpperInvariant(), RunId = runId });
+                            new { CountryId = opts.Country.ToUpperInvariant(), RunId = runId });
 
                         AnsiConsole.MarkupLine($"  [green]✓ {extractedRows.Count} row(s) inserted into codes.candidate (status=error)  run:{Markup.Escape(runId)}[/]");
                     }
@@ -258,7 +264,7 @@ public static class ValidateCommand
 
         if (errorCount == 0 && fixableCount == 0)
         {
-            Console.WriteLine($"  {file} is ready for ingest.");
+            Console.WriteLine($"  {opts.File} is ready for ingest.");
         }
         else if (errorCount > 0)
         {

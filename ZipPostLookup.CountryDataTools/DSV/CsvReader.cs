@@ -1,7 +1,7 @@
 using System.Globalization;
 using CsvHelper.Configuration;
 
-namespace ZipPostLookup.CountryDataTools.DSV;
+namespace ZipPostLookup.CountryDataTools.Dsv;
 
 /// <summary>
 /// A raw row parsed from the input CSV, before any validation or fixing.

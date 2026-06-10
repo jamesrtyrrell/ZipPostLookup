@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using GeoTimeZone;
-using ZipPostLookup.CountryDataTools.Validation;
+using ZipPostLookup.CountryDataTools.CountryRules;
 
 namespace ZipPostLookup.CountryDataTools.Enrichment.Api;
 

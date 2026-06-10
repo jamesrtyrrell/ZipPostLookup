@@ -1,9 +1,9 @@
 using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
-using ZipPostLookup.CountryDataTools.Reporting;
+using ZipPostLookup.CountryDataTools.Validation.Csv;
 
-namespace ZipPostLookup.CountryDataTools.DSV;
+namespace ZipPostLookup.CountryDataTools.Dsv;
 
 /// <summary>
 /// Writes a list of <see cref="CsvRow"/> instances back to a CSV file using CsvHelper.

@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 using Spectre.Console;
-using ZipPostLookup.CountryDataTools.DSV;
+using ZipPostLookup.CountryDataTools.Dsv;
 using ZipPostLookup.CountryDataTools.Models.Dsv;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
@@ -54,6 +54,8 @@ public static class ConvertKnownFormatsCommand
     // Entry point
     // =========================================================================
 
+    public sealed record Options(string File, string? Country = null, string? Output = null, bool NoPrompts = false);
+
     public static async Task<int> RunAsync(string[] args)
     {
         if (args.Length == 0 || args[0] is "-h" or "--help")
@@ -75,9 +77,14 @@ public static class ConvertKnownFormatsCommand
             return 2;
         }
 
+        return await RunAsync(new Options(inputFile, countryOverride, outputOverride, noPrompts));
+    }
+
+    public static async Task<int> RunAsync(Options opts)
+    {
         // ── Detect format ─────────────────────────────────────────────────────
         string firstLine;
-        using (var sr = new StreamReader(inputFile, detectEncodingFromByteOrderMarks: true))
+        using (var sr = new StreamReader(opts.File, detectEncodingFromByteOrderMarks: true))
             firstLine = sr.ReadLine() ?? "";
 
         var format = FindFormat(firstLine);
@@ -93,7 +100,7 @@ public static class ConvertKnownFormatsCommand
         Console.WriteLine($"  Detected format : {format.Value.Name}");
 
         // ── Confirm with user unless --no-prompts ─────────────────────────────
-        if (!noPrompts)
+        if (!opts.NoPrompts)
         {
             if (!AnsiConsole.Confirm($"Can you confirm this is a {Markup.Escape(format.Value.Name)} file?"))
             {
@@ -103,7 +110,7 @@ public static class ConvertKnownFormatsCommand
         }
 
         // ── Resolve country code ──────────────────────────────────────────────
-        var country = ResolveCountry(inputFile, countryOverride, format.Value.Name);
+        var country = ResolveCountry(opts.File, opts.Country, format.Value.Name);
         if (string.IsNullOrWhiteSpace(country))
         {
             await Console.Error.WriteLineAsync(
@@ -115,7 +122,7 @@ public static class ConvertKnownFormatsCommand
         Console.WriteLine($"  Country code    : {country}");
 
         // ── Resolve output path ───────────────────────────────────────────────
-        var outputPath = ResolveOutputPath(inputFile, outputOverride, country);
+        var outputPath = ResolveOutputPath(opts.File, opts.Output, country);
         Console.WriteLine($"  Output          : {outputPath}");
         Console.WriteLine();
 
@@ -123,7 +130,7 @@ public static class ConvertKnownFormatsCommand
         int written;
         try
         {
-            written = await format.Value.Convert(inputFile, outputPath, country);
+            written = await format.Value.Convert(opts.File, outputPath, country);
         }
         catch (Exception ex)
         {

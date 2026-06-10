@@ -1,4 +1,4 @@
-namespace ZipPostLookup.CountryDataTools.Export.ZPimage;
+namespace ZipPostLookup.CountryDataTools.Export.ZpImage;
 
 /// <summary>
 /// On-disk layout constants and section identifiers for the <b>ZP frozen image</b>

@@ -40,7 +40,19 @@ public sealed class WorkDbContext
 
     /// <summary>Manages [data].[reference] and data.country_info CodeCount.</summary>
     public IReferenceRepository Reference { get; }
-    
+
+    /// <summary>Reads and merges data.* schema records.</summary>
+    public IDataServices Data { get; }
+
+    /// <summary>Reads and merges codes.* schema records.</summary>
+    public ICodeServices Codes { get; }
+
+    /// <summary>Reads and merges pipeline.* schema records.</summary>
+    public IPipelineServices Pipeline { get; }
+
+    /// <summary>Executes DELETE statements with transactional safety.</summary>
+    public IDeleteServices Delete { get; }
+
     // -------------------------------------------------------------------------
 
     private WorkDbContext(
@@ -57,6 +69,10 @@ public sealed class WorkDbContext
         Candidates    = new SqlCandidateRepository(factory);
         Discrepancies = new SqlDiscrepancyRepository(factory);
         Reference     = new SqlReferenceRepository(factory);
+        Data          = new DataServices(factory);
+        Codes         = new CodeServices(factory);
+        Pipeline      = new PipelineServices(factory);
+        Delete        = new DeleteServices(factory);
     }
 
     /// <summary>

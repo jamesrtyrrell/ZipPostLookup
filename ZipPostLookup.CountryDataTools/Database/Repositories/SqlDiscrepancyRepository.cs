@@ -40,6 +40,7 @@ public sealed class SqlDiscrepancyRepository : IDiscrepancyRepository
             FieldName    = input.FieldName,
             RefValue     = input.RefValue,
             InValue      = input.InValue,
+            Notes        = input.Notes,
             Process      = false,
         }).ToList();
 

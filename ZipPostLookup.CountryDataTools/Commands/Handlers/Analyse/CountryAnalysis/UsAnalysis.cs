@@ -1,4 +1,4 @@
-using ZipPostLookup.CountryDataTools.Validation.Us;
+using ZipPostLookup.CountryDataTools.CountryRules.Us;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers.Analyse.CountryAnalysis;
 

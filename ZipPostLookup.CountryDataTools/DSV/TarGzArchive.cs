@@ -1,7 +1,7 @@
 using System.Formats.Tar;
 using System.IO.Compression;
 
-namespace ZipPostLookup.CountryDataTools.DSV;
+namespace ZipPostLookup.CountryDataTools.Dsv;
 
 /// <summary>
 /// Minimal gzip-compressed tar (<c>.tar.gz</c>) helper for the single-CSV reference archives.

@@ -1,5 +1,5 @@
 using ZipPostLookup.CountryDataTools.Models.Dbo;
-using ZipPostLookup.CountryDataTools.Validation;
+using ZipPostLookup.CountryDataTools.CountryRules;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers.Analyse;
 
@@ -43,9 +43,7 @@ public sealed class AnalysisContext
         Rows        = rows;
         Rules       = rules;
 
-        RulesDeriveAdmin1 =
-            rules.GetType().GetMethod(nameof(ICountryRules.ResolveAdmin1))?.DeclaringType
-            != typeof(ICountryRules);
+        RulesDeriveAdmin1 = rules.SupportsAdmin1Derivation;
 
         TotalRows       = rows.Count;
         UniqueCodes     = rows.Select(r => r.ZpCode).Distinct(StringComparer.OrdinalIgnoreCase).Count();

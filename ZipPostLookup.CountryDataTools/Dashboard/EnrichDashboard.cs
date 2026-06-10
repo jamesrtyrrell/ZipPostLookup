@@ -1,5 +1,5 @@
 using Spectre.Console;
-using ZipPostLookup.CountryDataTools.Commands;
+using ZipPostLookup.CountryDataTools.Commands.Handlers;
 using ZipPostLookup.CountryDataTools.Dashboard.Layout;
 using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
 
@@ -31,14 +31,9 @@ internal static class EnrichDashboard
             if (selected == Back)
                 break;
 
-            // enrich ref has too many option shapes (file path vs provider) — show help for now.
             if (selected == Ref)
             {
-                HeaderBar.Render("Enrich › ref");
-                await EnrichCommand.RunAsync(["-h"]);
-                AnsiConsole.WriteLine();
-                FooterBar.PressAnyKey();
-                Console.ReadKey(intercept: true);
+                await RunRefAsync();
                 continue;
             }
 
@@ -61,17 +56,29 @@ internal static class EnrichDashboard
 
             var dryRun = AnsiConsole.Confirm("  Dry run?", false);
 
-            string[] countryArgs = countryChoice.StartsWith("All")
-                ? ["--all"]
-                : ["--country", countryChoice];
+            var isAll = countryChoice.StartsWith("All");
+            var country = isAll ? "" : countryChoice;
 
-            string[] dryRunArgs = dryRun ? ["--dry-run"] : [];
-
-            string[] runArgs = [selected.Key, ..countryArgs, "--limit", limit.ToString(), ..dryRunArgs];
-
-            HeaderBar.Render($"Enrich › {selected.Name}");
-
-            var exitCode = await EnrichCommand.RunAsync(runArgs);
+            int exitCode;
+            if (selected == Candidates)
+            {
+                exitCode = await EnrichCandidatesCommand.RunAsync(
+                    new EnrichCandidatesCommand.Options(
+                        Country: country,
+                        RunId:   "",
+                        Limit:   limit,
+                        DryRun:  dryRun,
+                        All:     isAll));
+            }
+            else
+            {
+                exitCode = await EnrichDirectCommand.RunAsync(
+                    new EnrichDirectCommand.Options(
+                        Country: country,
+                        Limit:   limit,
+                        DryRun:  dryRun,
+                        All:     isAll));
+            }
 
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine(exitCode == 0
@@ -83,5 +90,45 @@ internal static class EnrichDashboard
         }
 
         return 0;
+    }
+
+    private static async Task RunRefAsync()
+    {
+        HeaderBar.Render("Enrich › ref");
+
+        var source = AnsiConsole.Prompt(
+            new TextPrompt<string>("  Source CSV path:")
+                .Validate(s => !string.IsNullOrWhiteSpace(s)
+                    ? ValidationResult.Success()
+                    : ValidationResult.Error("[red]Path is required[/]")));
+
+        var countryChoice = CountryPicker.Show(
+            title: "Country (optional):",
+            cancelLabel: "← Cancel",
+            anyLabel: "Any (no filter)");
+
+        if (countryChoice == "← Cancel") return;
+
+        var batch = AnsiConsole.Prompt(
+            new TextPrompt<int>("  Batch size [grey](default 1000)[/]:")
+                .DefaultValue(1000)
+                .Validate(n => n > 0
+                    ? ValidationResult.Success()
+                    : ValidationResult.Error("[red]Must be positive[/]")));
+
+        var dryRun = AnsiConsole.Confirm("  Dry run?", false);
+
+        var country = countryChoice == "Any (no filter)" ? "US" : countryChoice;
+
+        HeaderBar.Render("Enrich › ref › coords");
+
+        var exitCode = await EnrichReferenceFromCoordinatesCommand.RunAsync(
+            new EnrichReferenceFromCoordinatesCommand.Options(
+                Source:    source,
+                Country:   country,
+                BatchSize: batch,
+                DryRun:    dryRun));
+
+        FooterBar.ShowResultAndPause(exitCode);
     }
 }

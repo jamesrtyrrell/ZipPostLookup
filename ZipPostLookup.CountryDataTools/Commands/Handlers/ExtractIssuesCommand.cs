@@ -1,7 +1,6 @@
-using ZipPostLookup.CountryDataTools.DSV;
+using ZipPostLookup.CountryDataTools.Dsv;
 using ZipPostLookup.CountryDataTools.Models.Enums;
-using ZipPostLookup.CountryDataTools.Pipeline;
-using ZipPostLookup.CountryDataTools.Reporting;
+using ZipPostLookup.CountryDataTools.Validation.Csv;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 
@@ -109,8 +108,8 @@ public static class ExtractIssuesCommand
         Console.WriteLine("Next steps:");
         Console.WriteLine($"  1. Review {extractedFile} and correct the records manually.");
         Console.WriteLine($"  2. Run: fix {file} --country {country.ToUpperInvariant()}");
-        Console.WriteLine($"  3. Once clean, merge the extracted file back:");
-        Console.WriteLine($"     merge {extractedFile} --country {country.ToUpperInvariant()} --out {file}");
+        Console.WriteLine($"  3. Once clean, manually merge the corrected records back into:");
+        Console.WriteLine($"     {file}");
 
         return 0;
     }

@@ -1,4 +1,4 @@
-namespace ZipPostLookup.CountryDataTools.Export.ZPimage;
+namespace ZipPostLookup.CountryDataTools.Export.ZpImage;
 
 /// <summary>
 /// Packs a postal code string into a single <see cref="ulong"/> key and back.

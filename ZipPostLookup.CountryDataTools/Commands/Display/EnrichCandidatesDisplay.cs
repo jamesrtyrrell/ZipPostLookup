@@ -1,6 +1,6 @@
 using Spectre.Console;
 using Spectre.Console.Rendering;
-using ZipPostLookup.CountryDataTools.Models.Commands;
+using ZipPostLookup.CountryDataTools.Models.Counters;
 
 namespace ZipPostLookup.CountryDataTools.Commands.Display;
 
