@@ -24,12 +24,4 @@ public static class StopwatchExtensions
 
         return $"{ts.Milliseconds}ms";
     }
-
-    public static string ControllerResponseMessage(this Stopwatch stopwatch, string controllerMessage, bool isTest)
-    {
-        var utcNow = DateTime.UtcNow;
-        var elapsedTime = stopwatch.ZipPostLookupTaskElapsedTime();
-        var test = (isTest) ? "Test - " : string.Empty;
-        return $"{test}{controllerMessage} - Elapsed time: {elapsedTime} - Finished at UTC: {utcNow}";
-    }
 }

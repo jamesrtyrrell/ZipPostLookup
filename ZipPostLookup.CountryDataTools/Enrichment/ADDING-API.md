@@ -235,7 +235,7 @@ Build ZipPostLookup.CountryDataTools and fix any compile errors introduced by th
 
 ---
 
-## 6. Update `PROJECTS-ONGOING.md`
+## 6. Update `.claude/PROJECTS-ONGOING.md`
 
 Move the API from **APIs confirmed, pending research** (or Rejected) into the **Completed APIs** table.
 Add the new row: `| {Name} | {Countries} | {key/no key} — {what it provides} |`
@@ -273,4 +273,4 @@ its call counter increments.
 - [ ] Registered in `EnrichmentApiFactory.GetApisForCountry`
 - [ ] Key added to `apikeys.json` (if applicable)
 - [ ] Build passes with 0 warnings
-- [ ] `PROJECTS-ONGOING.md` Completed APIs table updated
+- [ ] `.claude/PROJECTS-ONGOING.md` Completed APIs table updated

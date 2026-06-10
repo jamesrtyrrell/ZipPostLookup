@@ -273,7 +273,7 @@ Runs the full export pipeline for US, CA, and MX in sequence with a Y/N confirma
 
 Stops immediately on the first failure and prints targeted recovery commands. On success, prints the recommended next steps: integrity checks, `dotnet build`, `dotnet test`, and git commit.
 
-Use `snapshot` as the standard end-of-session command after curating data, instead of running the export steps manually. See `PROJECTS.md` for the planned full scope (integrity, build, test, and git commit will be added in a future iteration).
+Use `snapshot` as the standard end-of-session command after curating data, instead of running the export steps manually. See `.claude/PROJECTS.md` for the planned full scope (integrity, build, test, and git commit will be added in a future iteration).
 
 ### `analyse` — Analyse curated reference data
 

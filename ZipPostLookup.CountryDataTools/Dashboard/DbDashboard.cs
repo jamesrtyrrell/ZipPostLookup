@@ -11,15 +11,12 @@ internal static class DbDashboard
 
     private static readonly Sub[] Subs =
     [
-        new("status",          "status",          "Show config, connection status, and recent runs"),
-        new("test",            "test",             "Verify the connection and schema only"),
-        new("init",            "init",             "Create or replace workdb.json"),
-        new("newrun",          "newrun",           "Create a new pipeline run and set activeRunId"),
-        new("normalize-tz",    "normalize-tz",     "Normalise timezone aliases and resolve from coordinates"),
-        new("normalize-names",   "normalize-names",   "Detect and link place-name abbreviation alternates"),
-        new("normalize-admins",  "normalize-admins",  "Backfill missing admin1 from ZIP prefix rules"),
-        new("clear",           "clear",            "Clear pipeline working data for a country", Destructive: true),
-        new("reset",           "reset",            "Full wipe — removes reference data too",   Destructive: true),
+        new("status",  "status",  "Show config, connection status, and recent runs"),
+        new("test",    "test",    "Verify the connection and schema only"),
+        new("init",    "init",    "Create or replace workdb.json"),
+        new("newrun",  "newrun",  "Create a new pipeline run and set activeRunId"),
+        new("clear",   "clear",   "Clear pipeline working data for a country", Destructive: true),
+        new("reset",   "reset",   "Full wipe — removes reference data too",   Destructive: true),
     ];
 
     public static async Task<int> RunAsync()
@@ -45,16 +42,13 @@ internal static class DbDashboard
 
             var exitCode = selected.Key switch
             {
-                "status"          => await RunSimpleAsync("status",         []),
-                "test"            => await RunSimpleAsync("test",           []),
-                "normalize-tz"    => await RunSimpleAsync("normalize-tz",   []),
-                "init"            => await RunInitAsync(),
-                "newrun"          => await RunNewRunAsync(),
-                "normalize-names"   => await RunNormalizeNamesAsync(),
-                "normalize-admins"  => await RunNormalizeAdminsAsync(),
-                "clear"           => await RunWithCountryAsync("clear",     needsConfirm: false),
-                "reset"           => await RunWithCountryAsync("reset",     needsConfirm: false),
-                _                 => 0,
+                "status"  => await RunSimpleAsync("status", []),
+                "test"    => await RunSimpleAsync("test",   []),
+                "init"    => await RunInitAsync(),
+                "newrun"  => await RunNewRunAsync(),
+                "clear"   => await RunWithCountryAsync("clear", needsConfirm: false),
+                "reset"   => await RunWithCountryAsync("reset", needsConfirm: false),
+                _         => 0,
             };
 
             _ = exitCode; // caller already shows ✓/✗ in each branch above
@@ -62,6 +56,13 @@ internal static class DbDashboard
 
         return 0;
     }
+
+    // ── Individual entry points (used by CdtNestedMenu DB Maintenance group) ─
+
+    internal static Task<int> RunStatusAsync() => RunSimpleAsync("status", []);
+    internal static Task<int> RunTestAsync()   => RunSimpleAsync("test",   []);
+    internal static Task<int> RunClearAsync()  => RunWithCountryAsync("clear", needsConfirm: false);
+    internal static Task<int> RunResetAsync()  => RunWithCountryAsync("reset", needsConfirm: false);
 
     // ── Simple: no args needed ────────────────────────────────────────────────
 
@@ -83,7 +84,7 @@ internal static class DbDashboard
 
     // ── init: country + connection string ─────────────────────────────────────
 
-    private static async Task<int> RunInitAsync()
+    internal static async Task<int> RunInitAsync()
     {
         HeaderBar.Render("DB › init");
         AnsiConsole.MarkupLine("  Creates [grey]workdb.json[/] in the current directory.");
@@ -129,7 +130,7 @@ internal static class DbDashboard
 
     // ── newrun: source file path ───────────────────────────────────────────────
 
-    private static async Task<int> RunNewRunAsync()
+    internal static async Task<int> RunNewRunAsync()
     {
         HeaderBar.Render("DB › newrun");
 
@@ -151,58 +152,6 @@ internal static class DbDashboard
         FooterBar.PressAnyKey();
         Console.ReadKey(intercept: true);
         return exitCode;
-    }
-
-    // ── normalize-names: country or all ───────────────────────────────────────
-
-    private static async Task<int> RunNormalizeNamesAsync()
-    {
-        HeaderBar.Render("DB › normalize-names");
-
-        var choice = CdtSelectMenu.Show(
-            ["US", "CA", "MX", "All (US + CA + MX)", "← Cancel"],
-            s => s switch
-            {
-                "← Cancel"           => "[grey]← Cancel[/]",
-                "All (US + CA + MX)" => $"[bold cyan]{"All",-10}[/]  [grey]US + CA + MX in sequence[/]",
-                _                    => $"[bold cyan]{s}[/]",
-            },
-            escapeReturns: "← Cancel",
-            title: "Country:");
-
-        if (choice == "← Cancel") return 0;
-
-        string[] extra = choice.StartsWith("All")
-            ? ["--all"]
-            : ["--country", choice];
-
-        return await RunSimpleAsync("normalize-names", extra);
-    }
-
-    // ── normalize-admins: country or all ─────────────────────────────────────
-
-    private static async Task<int> RunNormalizeAdminsAsync()
-    {
-        HeaderBar.Render("DB › normalize-admins");
-
-        var choice = CdtSelectMenu.Show(
-            ["US", "MX", "All (US + MX)", "← Cancel"],
-            s => s switch
-            {
-                "← Cancel"      => "[grey]← Cancel[/]",
-                "All (US + MX)" => $"[bold cyan]{"All",-10}[/]  [grey]US + MX in sequence[/]",
-                _               => $"[bold cyan]{s}[/]",
-            },
-            escapeReturns: "← Cancel",
-            title: "Country:");
-
-        if (choice == "← Cancel") return 0;
-
-        string[] extra = choice.StartsWith("All")
-            ? ["--all"]
-            : ["--country", choice];
-
-        return await RunSimpleAsync("normalize-admins", extra);
     }
 
     // ── clear / reset: country picker, then let handler do the confirmation ───

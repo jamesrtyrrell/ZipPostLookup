@@ -152,6 +152,32 @@ ZipPostRegistry na2 = ZipPostLookup.CreateRegistry("us", "ca");
 
 ---
 
+## Why No Async Methods?
+
+All lookup methods (`GetByCode`, `GetByName`, `GetByState`, etc.) are synchronous by design. Every registry is fully in-memory — `GetByCode` does a `FrozenDictionary` lookup that completes in ~6 ns. There is no I/O, no network, no disk access at query time.
+
+Async is the right tool for I/O-bound work. Wrapping an in-memory lookup in `Task` or `ValueTask` would:
+
+- Allocate a `Task<T>` object on every call, adding GC pressure on the hot path
+- Signal to callers that the operation might be slow or involve I/O — which is false
+- Add async state-machine overhead with zero benefit
+
+The standard .NET libraries take the same position: `FrozenDictionary`, `Dictionary`, `IMemoryCache.TryGetValue`, and `MemoryStream.Read` are all synchronous and are called from async code constantly without issue.
+
+**If you need to run a lookup off the calling thread**, use `Task.Run` — but given the nanosecond completion time this is rarely warranted:
+
+```csharp
+// Synchronous — fine in async methods, completes in nanoseconds
+var entry = registry.GetByCode("M5V3L9");
+
+// Thread-pool dispatch if you genuinely need it
+var entry = await Task.Run(() => registry.GetByCode("M5V3L9"));
+```
+
+**The one async story on the roadmap** is `ICodeDataSource` — if a future implementation fetches data from a remote source at construction time, a `CreateRegistryAsync` factory would be the appropriate addition. Lookup will remain synchronous regardless, since once loaded the data is entirely in memory.
+
+---
+
 ## Binary Image Lookup (net8.0+)
 
 On .NET 8 and later, `ZpImageLookup` loads a pre-built Brotli-compressed binary image instead of parsing CSV rows. It implements `IZipPostLookup` and is a drop-in replacement with 19–432× faster startup and 7–10× less memory at startup.

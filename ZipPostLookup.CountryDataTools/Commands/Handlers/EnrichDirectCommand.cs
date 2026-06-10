@@ -31,7 +31,7 @@ namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 /// </summary>
 public static class EnrichDirectCommand
 {
-    private const int DelayMs = 1_500;
+    private const int DelayMs = 0_800;
 
     public static async Task<int> RunAsync(string[] args)
     {
@@ -186,11 +186,14 @@ public static class EnrichDirectCommand
                             counters.IncrementTransient(calledName);
                     }
 
+                    var displayName = apiResult?.PlaceName is { Length: > 40 } n
+                        ? n[..37] + "..."
+                        : apiResult?.PlaceName ?? "";
                     statusMarkup = fetchOutcome switch
                     {
                         FetchOutcome.NotFound       => $"ZIP {Markup.Escape(code),-10}  [yellow]→ not found[/]",
                         FetchOutcome.TransientError => $"ZIP {Markup.Escape(code),-10}  [red]→ transient error (all APIs)[/]",
-                        FetchOutcome.Found          => $"ZIP {Markup.Escape(code),-10}  [green]→ {Markup.Escape(apiResult!.PlaceName)}, {apiResult.Admin1Code}[/]  [grey]{apiResult.Timezone ?? "no tz"}[/]  [grey]via {Markup.Escape(apiName!)}[/]",
+                        FetchOutcome.Found          => $"ZIP {Markup.Escape(code),-10}  [green]→ {Markup.Escape(displayName)}, {Markup.Escape(apiResult!.Admin1Code)}[/]  [grey]{apiResult.Timezone ?? "no tz"}[/]  [grey]via {Markup.Escape(apiName!)}[/]",
                         _                           => $"ZIP {Markup.Escape(code),-10}",
                     };
 

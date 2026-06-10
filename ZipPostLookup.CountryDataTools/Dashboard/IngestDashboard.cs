@@ -11,7 +11,6 @@ internal static class IngestDashboard
 
     private static readonly Sub SubRef       = new("ref",       "ref",       "Seed data.reference from the embedded reference CSV");
     private static readonly Sub SubCandidate = new("candidate", "candidate", "Import a candidate CSV against reference data");
-    private static readonly Sub SubCoords    = new("coords",    "coords",    "Bulk-resolve timezones from a coordinates CSV");
     private static readonly Sub SubBack      = new("back",      "← Back",   "");
 
     public static async Task<int> RunAsync()
@@ -21,7 +20,7 @@ internal static class IngestDashboard
             HeaderBar.Render("Ingest");
 
             var selected = CdtSelectMenu.Show(
-                [SubRef, SubCandidate, SubCoords, SubBack],
+                [SubRef, SubCandidate, SubBack],
                 s => s == SubBack
                     ? "[grey]← Back[/]"
                     : $"[bold cyan]{s.Label,-14}[/]  [grey]{s.Desc}[/]",
@@ -34,7 +33,6 @@ internal static class IngestDashboard
             {
                 "ref"       => await RunRefAsync(),
                 "candidate" => await RunCandidateAsync(),
-                "coords"    => await RunCoordsAsync(),
                 _           => 0,
             };
 
@@ -95,48 +93,6 @@ internal static class IngestDashboard
         if (country == "← Cancel") return 0;
 
         return await RunAndPause("ingest candidate", ["candidate", file, "--country", country]);
-    }
-
-    // ── coords ────────────────────────────────────────────────────────────────
-
-    private static async Task<int> RunCoordsAsync()
-    {
-        HeaderBar.Render("Ingest › coords");
-
-        var source = AnsiConsole.Prompt(
-            new TextPrompt<string>("  Source CSV path:")
-                .Validate(s => !string.IsNullOrWhiteSpace(s)
-                    ? ValidationResult.Success()
-                    : ValidationResult.Error("[red]Path is required[/]")));
-
-        var countryChoice = CdtSelectMenu.Show(
-            ["US", "CA", "MX", "Any (no filter)", "← Cancel"],
-            s => s switch
-            {
-                "← Cancel"        => "[grey]← Cancel[/]",
-                "Any (no filter)" => "[grey]Any (no filter)[/]",
-                _                 => $"[bold cyan]{s}[/]",
-            },
-            escapeReturns: "← Cancel",
-            title: "Country (optional):");
-
-        if (countryChoice == "← Cancel") return 0;
-
-        var batch = AnsiConsole.Prompt(
-            new TextPrompt<int>("  Batch size [grey](default 1000)[/]:")
-                .DefaultValue(1000)
-                .Validate(n => n > 0
-                    ? ValidationResult.Success()
-                    : ValidationResult.Error("[red]Must be positive[/]")));
-
-        var dryRun = AnsiConsole.Confirm("  Dry run?", false);
-
-        var args = new List<string> { "coords", "--source", source };
-        if (countryChoice != "Any (no filter)") args.AddRange(["--country", countryChoice]);
-        args.AddRange(["--batch", batch.ToString()]);
-        if (dryRun) args.Add("--dry-run");
-
-        return await RunAndPause("ingest coords", args);
     }
 
     // ── shared run + pause ────────────────────────────────────────────────────

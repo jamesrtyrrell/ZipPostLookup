@@ -61,6 +61,23 @@ internal static class ZpCodeEditorDashboard
         public int     GoldCount            { get; set; }
     }
 
+    private sealed class CandidateBrowseRow
+    {
+        public string ZpCode     { get; set; } = "";
+        public string PlaceName  { get; set; } = "";
+        public string Timezone   { get; set; } = "";
+        public bool   IsDefault  { get; set; }
+        public string Status     { get; set; } = "";
+        public string Admin1     { get; set; } = "---";
+        public string Admin1Code { get; set; } = "---";
+    }
+
+    private sealed class CandidateStatusCount
+    {
+        public string Status { get; set; } = "";
+        public int    Count  { get; set; }
+    }
+
     // ── Entry point ────────────────────────────────────────────────────────────
 
     public static async Task<int> RunAsync()
@@ -96,11 +113,12 @@ internal static class ZpCodeEditorDashboard
             HeaderBar.Render("ZpCode Editor");
 
             var mode = CdtSelectMenu.Show(
-                ["Edit Uncurated", "Edit Flagged", "← Back"],
+                ["Edit Uncurated", "Edit Flagged", "Candidate", "← Back"],
                 s => s switch
                 {
                     "← Back"       => "[grey]← Back[/]",
                     "Edit Flagged" => $"[bold red]{"Edit Flagged",-18}[/]  [grey]Browse and manage flagged (bad-actor) codes[/]",
+                    "Candidate"    => $"[bold yellow]{"Candidate",-18}[/]  [grey]Browse pipeline candidate codes by status[/]",
                     _              => $"[bold cyan]{"Edit Uncurated",-18}[/]  [grey]Browse and curate uncurated reference codes[/]",
                 },
                 escapeReturns: "← Back",
@@ -108,7 +126,10 @@ internal static class ZpCodeEditorDashboard
 
             if (mode == "← Back") continue;
 
-            await BrowseCodesAsync(country, flaggedMode: mode == "Edit Flagged");
+            if (mode == "Candidate")
+                await BrowseCandidatesAsync(country);
+            else
+                await BrowseCodesAsync(country, flaggedMode: mode == "Edit Flagged");
         }
 
         return 0;
@@ -902,9 +923,17 @@ internal static class ZpCodeEditorDashboard
                 CommonQueries.GetOrphanAltNameCount,
                 new { CountryId = country });
 
-            var goldCount = await conn.ExecuteScalarAsync<int>(
-                CommonQueries.GetGoldCodeCount,
-                new { CountryId = country });
+            var goldCount = 0;
+            try
+            {
+                goldCount = await conn.ExecuteScalarAsync<int>(
+                    CommonQueries.GetGoldCodeCount,
+                    new { CountryId = country });
+            }
+            catch
+            {
+                // data.GoldCode not yet migrated — run MigrateAddGoldCodeTable first
+            }
 
             var page = (await conn.QueryAsync<BrowseRow>(
                 flaggedMode ? CommonQueries.GetFlaggedBrowseRowsPage : CommonQueries.GetBrowseRowsPage,
@@ -924,4 +953,380 @@ internal static class ZpCodeEditorDashboard
             return ([], 0, null);
         }
     }
+
+    // ── Candidate mode ────────────────────────────────────────────────────────
+
+    private static async Task BrowseCandidatesAsync(string country)
+    {
+        WorkDbContext db;
+        try { db = await WorkDbContext.LoadAsync(Directory.GetCurrentDirectory()); }
+        catch (Exception ex)
+        {
+            HeaderBar.Render($"ZpCode Editor › {country} › Candidate");
+            AnsiConsole.MarkupLine($"[red]  ✗ {Markup.Escape(ex.Message)}[/]");
+            AnsiConsole.WriteLine();
+            FooterBar.PressAnyKey();
+            Console.ReadKey(intercept: true);
+            return;
+        }
+
+        var factory = db.GetFactory();
+
+        while (true)
+        {
+            List<CandidateStatusCount> counts;
+            try
+            {
+                using var conn = factory.CreateConnection();
+                counts = (await conn.QueryAsync<CandidateStatusCount>(
+                    CommonQueries.GetCandidateStatusSummary,
+                    new { CountryId = country })).ToList();
+            }
+            catch (Exception ex)
+            {
+                HeaderBar.Render($"ZpCode Editor › {country} › Candidate");
+                AnsiConsole.MarkupLine($"[red]  ✗ Load failed: {Markup.Escape(ex.Message)}[/]");
+                AnsiConsole.WriteLine();
+                FooterBar.PressAnyKey();
+                Console.ReadKey(intercept: true);
+                return;
+            }
+
+            HeaderBar.Render($"ZpCode Editor › {country} › Candidate");
+            AnsiConsole.WriteLine();
+
+            if (counts.Count == 0)
+            {
+                AnsiConsole.MarkupLine("[grey]  No candidates for this country.[/]");
+                AnsiConsole.WriteLine();
+                FooterBar.PressAnyKey();
+                Console.ReadKey(intercept: true);
+                return;
+            }
+
+            var statusChoices = counts.Select(c => c.Status).Append("← Back").ToList();
+            var selected = CdtSelectMenu.Show(
+                statusChoices,
+                s =>
+                {
+                    if (s == "← Back") return "[grey]← Back[/]";
+                    var c = counts.First(x => x.Status == s);
+                    return $"{CandidateStatusMarkup(s),-35}  [grey]{c.Count:N0}[/]";
+                },
+                escapeReturns: "← Back",
+                title: "Browse by status:");
+
+            if (selected == "← Back") return;
+
+            await BrowseCandidateStatusAsync(factory, country, selected);
+        }
+    }
+
+    private static async Task BrowseCandidateStatusAsync(
+        IWorkDbConnectionFactory factory, string country, string status)
+    {
+        var header        = $"ZpCode Editor › {country} › Candidate › {status}";
+        var offset        = 0;
+        var selectedIndex = 0;
+
+        var (page, totalCount) = await LoadCandidatePageAsync(factory, country, status, offset);
+
+        while (true)
+        {
+            HeaderBar.Render(header);
+
+            if (totalCount == 0)
+            {
+                AnsiConsole.MarkupLine("[green]  ✓ No codes with this status.[/]");
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[grey]  Press any key to return...[/]");
+                Console.ReadKey(intercept: true);
+                return;
+            }
+
+            AnsiConsole.Write(BuildCandidateBrowseTable(page, selectedIndex, offset, totalCount, status));
+            CdtCommandMenu.Render("  [grey]↑↓ move   PgUp/PgDn page   Enter view   Esc back[/]");
+
+            var key = Console.ReadKey(intercept: true).Key;
+
+            switch (key)
+            {
+                case ConsoleKey.UpArrow:
+                    if (selectedIndex > 0)
+                        selectedIndex--;
+                    else if (offset > 0)
+                    {
+                        offset -= PageSize;
+                        (page, totalCount) = await LoadCandidatePageAsync(factory, country, status, offset);
+                        selectedIndex = page.Count - 1;
+                    }
+                    break;
+
+                case ConsoleKey.DownArrow:
+                    if (selectedIndex < page.Count - 1)
+                        selectedIndex++;
+                    else if (offset + PageSize < totalCount)
+                    {
+                        offset += PageSize;
+                        (page, totalCount) = await LoadCandidatePageAsync(factory, country, status, offset);
+                        selectedIndex = 0;
+                    }
+                    break;
+
+                case ConsoleKey.PageUp:
+                    if (offset > 0)
+                    {
+                        offset = Math.Max(0, offset - PageSize);
+                        (page, totalCount) = await LoadCandidatePageAsync(factory, country, status, offset);
+                        selectedIndex = 0;
+                    }
+                    break;
+
+                case ConsoleKey.PageDown:
+                    if (offset + PageSize < totalCount)
+                    {
+                        offset += PageSize;
+                        (page, totalCount) = await LoadCandidatePageAsync(factory, country, status, offset);
+                        selectedIndex = 0;
+                    }
+                    break;
+
+                case ConsoleKey.Enter when page.Count > 0:
+                    await ViewCandidateCodeAsync(factory, country, page[selectedIndex].ZpCode);
+                    (page, totalCount) = await LoadCandidatePageAsync(factory, country, status, offset);
+                    var maxOff = totalCount == 0 ? 0 : ((totalCount - 1) / PageSize) * PageSize;
+                    if (offset > maxOff)
+                    {
+                        offset = maxOff;
+                        (page, totalCount) = await LoadCandidatePageAsync(factory, country, status, offset);
+                    }
+                    selectedIndex = Math.Min(selectedIndex, Math.Max(0, page.Count - 1));
+                    break;
+
+                case ConsoleKey.Escape:
+                    return;
+            }
+        }
+    }
+
+    private static async Task ViewCandidateCodeAsync(
+        IWorkDbConnectionFactory factory, string country, string zpCode)
+    {
+        var header = $"ZpCode Editor › {country} › Candidate › {zpCode}";
+
+        while (true)
+        {
+            List<CandidateBrowseRow> candidateRows;
+            List<BrowseRow>          refRows;
+
+            try
+            {
+                using var conn = factory.CreateConnection();
+
+                candidateRows = (await conn.QueryAsync<CandidateBrowseRow>(
+                    @"SELECT c.ZpCode, c.PlaceName, c.Timezone,
+                             CAST(c.IsDefault AS BIT)    AS IsDefault,
+                             c.Status,
+                             ISNULL(ca.Value, '---')     AS Admin1,
+                             ISNULL(ca.Code,  '---')     AS Admin1Code
+                      FROM   codes.Candidate c
+                      LEFT   JOIN codes.CandidateAdmins ca
+                             ON  ca.CandidateId  = c.CandidateId
+                             AND ca.AdminLevelId = (SELECT MIN(AdminLevelId)
+                                                    FROM   codes.AdminLevels
+                                                    WHERE  CountryId = c.CountryId AND LevelNumber = 1)
+                      WHERE  c.CountryId = @CountryId AND c.ZpCode = @ZpCode
+                      ORDER  BY c.PlaceName",
+                    new { CountryId = country, ZpCode = zpCode })).ToList();
+
+                refRows = (await conn.QueryAsync<BrowseRow>(
+                    @"SELECT r.ZpCode, r.PlaceName, r.Timezone,
+                             CAST(r.IsDefault       AS BIT) AS IsDefault,
+                             ISNULL(r.Lat,  '---')          AS Lat,
+                             ISNULL(r.Lng,  '---')          AS Lng,
+                             r.AltNameOf,
+                             ISNULL(ra.Value, '---')        AS Admin1,
+                             ISNULL(ra.Code,  '---')        AS Admin1Code,
+                             CAST(r.TimezoneChecked AS BIT) AS TimezoneChecked,
+                             CAST(r.NameChecked     AS BIT) AS NameChecked,
+                             CAST(r.Flagged         AS BIT) AS Flagged
+                      FROM   data.Reference r
+                      LEFT   JOIN data.ReferenceAdmins ra
+                             ON  ra.ReferenceId  = r.ReferenceId
+                             AND ra.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
+                                                    WHERE CountryId = r.CountryId AND LevelNumber = 1)
+                      WHERE  r.CountryId = @CountryId AND r.ZpCode = @ZpCode AND r.Flagged = 0
+                      ORDER  BY r.IsDefault DESC, r.PlaceName",
+                    new { CountryId = country, ZpCode = zpCode })).ToList();
+            }
+            catch (Exception ex)
+            {
+                HeaderBar.Render(header);
+                AnsiConsole.MarkupLine($"[red]  ✗ {Markup.Escape(ex.Message)}[/]");
+                AnsiConsole.WriteLine();
+                FooterBar.PressAnyKey();
+                Console.ReadKey(intercept: true);
+                return;
+            }
+
+            HeaderBar.Render(header);
+
+            var candidateTable = new Table()
+                .Border(TableBorder.Square)
+                .Caption("[grey]Candidate rows[/]")
+                .AddColumn(new TableColumn("[grey]Status[/]"))
+                .AddColumn(new TableColumn("[grey]Place Name[/]"))
+                .AddColumn(new TableColumn("[grey]Admin[/]"))
+                .AddColumn(new TableColumn("[grey]Timezone[/]"));
+
+            foreach (var r in candidateRows)
+            {
+                candidateTable.AddRow(
+                    CandidateStatusMarkup(r.Status),
+                    Markup.Escape(r.PlaceName),
+                    Markup.Escape(r.Admin1Code),
+                    Markup.Escape(r.Timezone));
+            }
+
+            AnsiConsole.Write(candidateTable);
+            AnsiConsole.WriteLine();
+
+            if (refRows.Count > 0)
+            {
+                var refTable = new Table()
+                    .Border(TableBorder.Square)
+                    .Caption("[grey]Reference rows[/]")
+                    .AddColumn(new TableColumn("[grey]D[/]").Centered())
+                    .AddColumn(new TableColumn("[grey]Place Name[/]"))
+                    .AddColumn(new TableColumn("[grey]Admin[/]"))
+                    .AddColumn(new TableColumn("[grey]Timezone[/]"));
+
+                foreach (var r in refRows)
+                {
+                    refTable.AddRow(
+                        r.IsDefault ? "[cyan]✓[/]" : "[grey]–[/]",
+                        Markup.Escape(r.PlaceName),
+                        Markup.Escape(r.Admin1Code),
+                        Markup.Escape(r.Timezone));
+                }
+
+                AnsiConsole.Write(refTable);
+                AnsiConsole.WriteLine();
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("  [grey](No reference rows for this code)[/]");
+                AnsiConsole.WriteLine();
+            }
+
+            var isRejected = candidateRows.Count > 0 && candidateRows.All(r => r.Status == "Rejected");
+            var hint = isRejected
+                ? "  [bold]U[/][grey] un-reject   Esc back[/]"
+                : "  [bold]R[/][grey] reject all   Esc back[/]";
+            CdtCommandMenu.Render(hint);
+
+            var key = Console.ReadKey(intercept: true).Key;
+
+            switch (key)
+            {
+                case ConsoleKey.R when !isRejected:
+                    try
+                    {
+                        using var conn = factory.CreateConnection();
+                        await conn.ExecuteAsync(CommonQueries.RejectCandidateZpCode,
+                            new { CountryId = country, ZpCode = zpCode });
+                    }
+                    catch (Exception ex)
+                    {
+                        AnsiConsole.MarkupLine($"[red]  ✗ {Markup.Escape(ex.Message)}[/]");
+                        AnsiConsole.MarkupLine("[grey]  Press any key...[/]");
+                        Console.ReadKey(intercept: true);
+                    }
+                    return;
+
+                case ConsoleKey.U when isRejected:
+                    try
+                    {
+                        using var conn = factory.CreateConnection();
+                        await conn.ExecuteAsync(
+                            @"UPDATE codes.Candidate SET Status = 'Pending'
+                              WHERE CountryId = @CountryId AND ZpCode = @ZpCode",
+                            new { CountryId = country, ZpCode = zpCode });
+                    }
+                    catch (Exception ex)
+                    {
+                        AnsiConsole.MarkupLine($"[red]  ✗ {Markup.Escape(ex.Message)}[/]");
+                        AnsiConsole.MarkupLine("[grey]  Press any key...[/]");
+                        Console.ReadKey(intercept: true);
+                    }
+                    return;
+
+                case ConsoleKey.Escape:
+                    return;
+            }
+        }
+    }
+
+    // ── Candidate helpers ─────────────────────────────────────────────────────
+
+    private static async Task<(List<CandidateBrowseRow> page, int totalCount)> LoadCandidatePageAsync(
+        IWorkDbConnectionFactory factory, string country, string status, int offset)
+    {
+        try
+        {
+            using var conn = factory.CreateConnection();
+            var total = await conn.ExecuteScalarAsync<int>(
+                CommonQueries.GetCandidatesBrowseCount,
+                new { CountryId = country, Status = status });
+            var page = (await conn.QueryAsync<CandidateBrowseRow>(
+                CommonQueries.GetCandidatesBrowsePage,
+                new { CountryId = country, Status = status, Offset = offset, PageSize })).ToList();
+            return (page, total);
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]  ✗ Load failed: {Markup.Escape(ex.Message)}[/]");
+            return ([], 0);
+        }
+    }
+
+    private static Table BuildCandidateBrowseTable(
+        List<CandidateBrowseRow> page, int selectedIndex, int offset, int totalCount, string status)
+    {
+        var totalPages  = (int)Math.Ceiling(totalCount / (double)PageSize);
+        var currentPage = offset / PageSize + 1;
+
+        var table = new Table()
+            .Border(TableBorder.Square)
+            .Caption($"[grey]{totalCount:N0} {status} — page {currentPage}/{totalPages}[/]")
+            .AddColumn(new TableColumn("").Padding(0, 0, 0, 0))
+            .AddColumn(new TableColumn("[grey]Code[/]"))
+            .AddColumn(new TableColumn("[grey]Place Name[/]"))
+            .AddColumn(new TableColumn("[grey]Admin[/]"))
+            .AddColumn(new TableColumn("[grey]Timezone[/]"));
+
+        for (var i = 0; i < page.Count; i++)
+        {
+            var r   = page[i];
+            var sel = i == selectedIndex;
+            var ind  = sel ? "[bold green]❯[/]" : " ";
+            var code = sel ? $"[bold]{Markup.Escape(r.ZpCode)}[/]" : Markup.Escape(r.ZpCode);
+            var name = r.PlaceName.Length > 40 ? r.PlaceName[..37] + "..." : r.PlaceName;
+
+            table.AddRow(ind, code, Markup.Escape(name), Markup.Escape(r.Admin1Code), Markup.Escape(r.Timezone));
+        }
+
+        return table;
+    }
+
+    private static string CandidateStatusMarkup(string status) => status switch
+    {
+        "Discrepancy" => "[bold yellow]Discrepancy[/]",
+        "Unfound"     => "[bold red]Unfound[/]",
+        "Pending"     => "[grey]Pending[/]",
+        "Error"       => "[bold red]Error[/]",
+        "Rejected"    => "[grey]Rejected[/]",
+        "Clean"       => "[green]Clean[/]",
+        _             => Markup.Escape(status),
+    };
 }

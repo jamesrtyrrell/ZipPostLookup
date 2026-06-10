@@ -40,7 +40,7 @@ namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 /// </summary>
 public static class EnrichCandidatesCommand
 {
-    private const int DelayMs = 1_500;
+    private const int DelayMs = 0_800;
 
     public static async Task<int> RunAsync(string[] args)
     {
@@ -235,7 +235,8 @@ public static class EnrichCandidatesCommand
                 {
                     var (apiResult, apiName, fetchOutcome) = await router.LookupAsync(
                         country, rules.GetApiLookupCode(code), candidateState);
-
+                    
+                    
                     // Record every API called for this code (router may have tried several
                     // on TransientError before finding a result or exhausting all options).
                     foreach (var (calledName, calledOutcome, calledDetail) in router.LastCallLog)
@@ -246,14 +247,13 @@ public static class EnrichCandidatesCommand
                         if (calledOutcome == FetchOutcome.TransientError)
                         {
                             counters.IncrementTransient(calledName);
-
+                            var logOn = false;
                             // Log every per-API transient as it occurs — even when another API
                             // later recovers the code (so 'Skipped' stays 0 but the failure is real).
-                            if (transientLogPath != null)
+                            if (transientLogPath != null && logOn)
                             {
                                 var reason = string.IsNullOrWhiteSpace(calledDetail) ? "no detail" : calledDetail;
-                                var logLine =
-                                    $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}  {country.ToUpperInvariant()}  {code,-10}  transient via {calledName,-14}  {reason}";
+                                var logLine = $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}  {country.ToUpperInvariant()}  {code,-10}  transient via {calledName,-14}  {reason}";
                                 try
                                 {
                                     await File.AppendAllLinesAsync(transientLogPath, [logLine]);
@@ -268,11 +268,14 @@ public static class EnrichCandidatesCommand
                         }
                     }
 
+                    var displayName = apiResult?.PlaceName is { Length: > 40 } n
+                        ? n[..37] + "..."
+                        : apiResult?.PlaceName ?? "";
                     statusMarkup = fetchOutcome switch
                     {
                         FetchOutcome.NotFound       => $"ZIP {Markup.Escape(code),-10}  [yellow]→ 404 not found[/]",
                         FetchOutcome.TransientError => $"ZIP {Markup.Escape(code),-10}  [red]→ transient error (all APIs)[/]",
-                        FetchOutcome.Found          => $"ZIP {Markup.Escape(code),-10}  [green]→ {Markup.Escape(apiResult!.PlaceName)}, {apiResult.Admin1Code}[/]  [grey]{apiResult.Timezone ?? "no tz"}[/]  [grey]via {Markup.Escape(apiName!)}[/]",
+                        FetchOutcome.Found          => $"ZIP {Markup.Escape(code),-10}  [green]→ {Markup.Escape(displayName)}, {Markup.Escape(apiResult!.Admin1Code)}[/]  [grey]{apiResult.Timezone ?? "no tz"}[/]  [grey]via {Markup.Escape(apiName!)}[/]",
                         _                           => $"ZIP {Markup.Escape(code),-10}",
                     };
 
