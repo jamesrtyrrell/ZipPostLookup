@@ -15,8 +15,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
-		<PackageReference Include="Dapper" Version="2.1.79" />
-		<PackageReference Include="Zip2City" Version="*" />
+		<PackageReference Include="Zip2City" Version="3.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>

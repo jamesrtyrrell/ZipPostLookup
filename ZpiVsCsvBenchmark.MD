@@ -5,7 +5,7 @@ Head-to-head comparison of the two lookup backends across all three built-in cou
 - **CSV** — `ZipPostRegistry`, built by parsing the embedded `{cc}.csv` into `FrozenDictionary` indexes.
 - **ZPI** — `ZpImageLookup`, loaded from the embedded `{cc}.zpi.br` binary frozen image (minimal perfect hash + lazy `CodeEntry` materialisation).
 
-> **Status:** ✅ **measured (2026-06-06).** Results below are from the post-v3-format run (format version 3: fastrange MPHF + single-pass FNV). CA data includes fully-populated admin data (412k entries, 21 timezones). Numbers are from an i7-13700K (see §2).
+> **Status:** ✅ **measured (2026-06-12).** Results below use the v4 ZPI format (fused directory + lazy NamePool, atop the fastrange MPHF + single-pass FNV reader). CA data includes fully-populated admin data (603k FSA-compressed entries, 25 timezones). This run also reflects the **2026-06-12 fix to a quadratic insert in CSV registry construction** (`AddToIndex`), which cut the CA build from ~33 s to ~1.4 s and reshaped the cold-start comparison in §3.3. Numbers are from an i7-13700K (see §2).
 
 ---
 
@@ -36,9 +36,10 @@ ZipPostLookup.Benchmarks/BenchmarkDotNet.Artifacts/results/
   ZipPostLookup.Benchmarks.ConstructionBenchmarks-report-github.md
 ```
 
-> **Note on the run cost:** `ConstructionBenchmarks` builds the CA CSV registry (~1.5 s / ~768 MB per
-> build) many times — that class is slow by nature. The lookup matrix itself is fast. Run the matrix
-> alone while iterating, and the full set when you want final cold-start numbers.
+> **Note on the run cost:** `ConstructionBenchmarks` builds the CA CSV registry (~1.4 s / ~817 MB per
+> build) many times. Since the 2026-06-12 construction fix this is far cheaper than it used to be
+> (~33 s/build before), but it is still the slowest class. The lookup matrix itself is fast. Run the
+> matrix alone while iterating, and the full set when you want final cold-start numbers.
 
 ### Reading the output
 
@@ -54,22 +55,27 @@ to CSV for this operation in this country"* — `Ratio < 1.00` means ZPI is fast
 ```
 BenchmarkDotNet v0.15.8, Windows 11 (10.0.22631.6199/23H2)
 13th Gen Intel Core i7-13700K 3.40GHz, 1 CPU, 24 logical and 16 physical cores
-.NET SDK 10.0.300
-  [Host]   : .NET 8.0.27 (8.0.27, 8.0.2726.22922), X64 RyuJIT x86-64-v3
-  .NET 8.0 : .NET 8.0.27 (8.0.27, 8.0.2726.22922), X64 RyuJIT x86-64-v3
+.NET SDK 10.0.301
+  [Host]   : .NET 8.0.28 (8.0.28, 8.0.2826.26413), X64 RyuJIT x86-64-v3
+  .NET 8.0 : .NET 8.0.28 (8.0.28, 8.0.2826.26413), X64 RyuJIT x86-64-v3
 ```
 
-Embedded resource sizes (the on-disk cost of each backend's data):
+Embedded resource sizes (the on-disk cost of each backend's data). The library now embeds the
+**Brotli-compressed `{cc}.csv.br`** for the CSV backend (not the plain `.csv`), plus the
+`{cc}.zpi.br` image — so the honest disk comparison is `.csv.br` vs `.zpi.br`:
 
-| Country | `{cc}.csv` | `{cc}.zpi.br` | Image vs CSV |
-|---------|-----------:|--------------:|-------------:|
-| US      |    1.9 MB  |   **656 KB**  | 34% (0.34×)  |
-| MX      |    5.5 MB  |    **1.3 MB** | 24% (0.24×)  |
-| CA      |   14.0 MB  |    **3.8 MB** | 27% (0.27×)  |
+| Country | `{cc}.csv` (decompressed) | `{cc}.csv.br` (embedded) | `{cc}.zpi.br` (embedded) | Image vs csv.br |
+|---------|--------------------------:|-------------------------:|-------------------------:|----------------:|
+| US      |                  2,020 KB |               **282 KB** |                 **727 KB** |          2.58×  |
+| MX      |                  5,837 KB |               **852 KB** |               **1,292 KB** |          1.52×  |
+| CA      |                 20,878 KB |               **784 KB** |               **5,882 KB** |          7.51×  |
 
-The Brotli-compressed image is **3–4× smaller on disk** than the embedded CSV for every country.
+> **Disk-size note (changed).** Because the CSV is now shipped Brotli-compressed, the `.zpi.br`
+> image is no longer the smallest artifact on disk — plain CSV text compresses extremely well
+> (CA: 20.9 MB → 784 KB). The image's advantage is **load time and startup memory** (§3.3), not
+> disk footprint. The package ships both backends, so on-disk cost is `.csv.br` + `.zpi.br`.
 
-Datasets under test: **US** 42,931 distinct codes (57k rows) · **CA** ~900,688 distinct codes (412,403 FSA-compressed entries from 908,745 rows) · **MX** 32,247 distinct codes (145k rows).
+Datasets under test: **US** 43,498 distinct codes (59,719 rows) · **CA** ~900,686 distinct codes (603,272 FSA-compressed entries) · **MX** 32,893 distinct codes (146,183 rows).
 
 ---
 
@@ -79,72 +85,84 @@ Datasets under test: **US** 42,931 distinct codes (57k rows) · **CA** ~900,688 
 
 ### 3.1 Lookup matrix — `ZpImageBenchmarks` (CSV baseline vs ZPI, per country)
 
-Results from ZPI format v3 (fastrange MPHF + single-pass FNV; regenerated 2026-06-06).
+Results from the v4 ZPI format (fused directory + lazy NamePool; run 2026-06-12).
 
 | Operation | Country | CSV Mean | ZPI Mean | Ratio | CSV alloc | ZPI alloc |
 |---|---|--:|--:|--:|--:|--:|
-| **GetByCode** hit | US | 7.06 ns | 9.45 ns | 1.34× | 0 B | 0 B |
-| | MX | 6.74 ns | 8.96 ns | 1.33× | 0 B | 0 B |
-| | CA | 8.67 ns | 10.16 ns | 1.17× | 0 B | 0 B |
-| **GetByCode** alt ¹ | US | 7.79 ns | 9.69 ns | 1.24× | 0 B | 0 B |
-| | MX | 7.27 ns | 9.20 ns | 1.27× | 0 B | 0 B |
-| | CA | 8.34 ns | 10.99 ns | 1.32× | 0 B | 0 B |
-| **GetByCode** miss | US | 43.72 ns | 30.88 ns | **0.71×** | 104 B | **64 B** |
-| | MX | 43.12 ns | 31.02 ns | **0.72×** | 104 B | **64 B** |
-| | CA | 43.89 ns | 40.41 ns | **0.92×** | 104 B | **64 B** |
-| **GetAllByCode** | US | 7.39 ns | 15.56 ns | 2.11× | 24 B | 40 B |
-| | MX | 7.66 ns | 14.58 ns | 1.90× | 24 B | 40 B |
-| | CA | 8.93 ns | 17.12 ns | 1.92× | 24 B | 40 B |
-| **GetByName** | US | 9.03 ns | 18.31 ns | 2.03× | 24 B | **0 B** |
-| | MX | 17.27 ns | 21.57 ns | 1.25× | 24 B | **0 B** |
-| | CA | 13.21 ns | 20.57 ns | 1.56× | 24 B | **0 B** |
-| **GetByState** | US | 7.99 ns | 10.50 ns | 1.32× | 24 B | **0 B** |
-| | MX | 8.21 ns | 9.37 ns | 1.14× | 24 B | **0 B** |
-| | CA | 8.00 ns | 10.57 ns | 1.32× | 24 B | **0 B** |
-| **GetByStateName** | US | 10.64 ns | 11.78 ns | 1.11× | 24 B | **0 B** |
-| | MX | 12.66 ns | 11.74 ns | **0.93×** | 24 B | **0 B** |
-| | CA | 7.26 ns | 13.21 ns | 1.82× | 24 B | **0 B** |
-| **GetByAdmin** | US | 21.78 ns | 18.44 ns | **0.85×** | 80 B | **0 B** |
-| | MX | 19.34 ns | 17.96 ns | **0.93×** | 80 B | **0 B** |
-| | CA | 14.54 ns | 22.03 ns | 1.52× | 80 B | **0 B** |
-| **GetByTimeZone** | US | 9.40 ns | 11.52 ns | 1.23× | 24 B | **0 B** |
-| | MX | 8.76 ns | 14.09 ns | 1.61× | 24 B | **0 B** |
-| | CA | 11.92 ns | 14.95 ns | 1.26× | 24 B | **0 B** |
-| **GetBatch** | US | 393 ns | 529 ns | 1.35× | 480 B | 480 B |
-| | MX | 424 ns | 513 ns | 1.21× | 480 B | 480 B |
-| | CA | 716 ns | 736 ns | 1.03× | 856 B | **672 B** |
-| **Spread (hit)** 10× | US | 72.9 ns | 102.6 ns | 1.41× | 0 B | 0 B |
-| | MX | 72.1 ns | 101.7 ns | 1.41× | 0 B | 0 B |
-| | CA | 218.1 ns | 229.7 ns | 1.05× | 376 B | **192 B** |
-| **Spread (miss)** 5× | US | 196.0 ns | 160.3 ns | **0.82×** | 520 B | **320 B** |
-| | MX | 212.9 ns | 223.1 ns | 1.05× | 520 B | **320 B** |
-| | CA | 229.0 ns | 221.5 ns | **0.97×** | 520 B | **320 B** |
+| **GetByCode** hit | US | 6.16 ns | 8.13 ns | 1.32× | 0 B | 0 B |
+| | MX | 5.78 ns | 7.95 ns | 1.38× | 0 B | 0 B |
+| | CA | 6.99 ns | 9.00 ns | 1.29× | 0 B | 0 B |
+| **GetByCode** alt ¹ | US | 6.98 ns | 8.25 ns | 1.18× | 0 B | 0 B |
+| | MX | 5.79 ns | 8.62 ns | 1.49× | 0 B | 0 B |
+| | CA | 6.83 ns | 9.63 ns | 1.41× | 0 B | 0 B |
+| **GetByCode** miss | US | 30.46 ns | 24.20 ns | **0.79×** | 104 B | **64 B** |
+| | MX | 33.46 ns | 24.81 ns | **0.74×** | 104 B | **64 B** |
+| | CA | 37.80 ns | 32.20 ns | **0.85×** | 104 B | **64 B** |
+| **GetAllByCode** | US | 8.96 ns | 14.12 ns | 1.58× | 24 B | 40 B |
+| | MX | 8.74 ns | 12.87 ns | 1.47× | 24 B | 40 B |
+| | CA | 8.87 ns | 15.05 ns | 1.70× | 24 B | 40 B |
+| **GetByName** | US | 11.29 ns | 15.52 ns | 1.38× | 24 B | **0 B** |
+| | MX | 14.37 ns | 17.92 ns | 1.25× | 24 B | **0 B** |
+| | CA | 11.19 ns | 15.14 ns | 1.35× | 24 B | **0 B** |
+| **GetByState** | US | 6.05 ns | 7.93 ns | 1.31× | 24 B | **0 B** |
+| | MX | 6.91 ns | 9.01 ns | 1.31× | 24 B | **0 B** |
+| | CA | 6.99 ns | 9.08 ns | 1.30× | 24 B | **0 B** |
+| **GetByStateName** | US | 9.55 ns | 11.23 ns | 1.18× | 24 B | **0 B** |
+| | MX | 9.96 ns | 10.38 ns | **1.04×** | 24 B | **0 B** |
+| | CA | 6.23 ns | 9.54 ns | 1.53× | 24 B | **0 B** |
+| **GetByAdmin** | US | 17.73 ns | 16.93 ns | **0.95×** | 80 B | **0 B** |
+| | MX | 16.46 ns | 17.42 ns | 1.06× | 80 B | **0 B** |
+| | CA | 14.01 ns | 17.97 ns | 1.28× | 80 B | **0 B** |
+| **GetByTimeZone** | US | 8.41 ns | 10.59 ns | 1.26× | 24 B | **0 B** |
+| | MX | 7.63 ns | 11.71 ns | 1.54× | 24 B | **0 B** |
+| | CA | 7.73 ns | 11.68 ns | 1.51× | 24 B | **0 B** |
+| **GetBatch** | US | 168.4 ns | 212.9 ns | 1.26× | 480 B | 480 B |
+| | MX | 173.4 ns | 212.1 ns | 1.22× | 480 B | 480 B |
+| | CA | 295.9 ns | 313.4 ns | 1.06× | 856 B | **672 B** |
+| **Spread (hit)** 10× | US | 66.1 ns | 92.0 ns | 1.39× | 0 B | 0 B |
+| | MX | 64.2 ns | 91.5 ns | 1.43× | 0 B | 0 B |
+| | CA | 199.1 ns | 207.5 ns | 1.04× | 376 B | **192 B** |
+| **Spread (miss)** 5× | US | 168.6 ns | 138.4 ns | **0.82×** | 520 B | **320 B** |
+| | MX | 149.5 ns | 133.6 ns | **0.89×** | 416 B | **256 B** |
+| | CA | 172.7 ns | 195.4 ns | 1.13× | 520 B | **320 B** |
 
 ¹ CA's `GetByCode alt` probe is `T0A0A0` — an exact LDU in a mixed FSA (no range involved).
   CA's range-resolved hit (primary probe `M5V3L9`) is the `GetByCode hit` row and costs the same
-  ~8.67 ns as an exact hit, confirming range resolution adds no observable overhead on the hot path.
+  ~6.99 ns as an exact hit, confirming range resolution adds no observable overhead on the hot path.
 
-**Reading it (v3 format):** ZPI exact hits are now **1.17–1.34× CSV** (single-digit-to-low-double-digit ns, zero-alloc) — a large improvement over v2's 2.5–2.8×, driven by the fastrange MPHF + single-pass FNV redesign. ZPI **beats CSV on the miss path** (0.71–0.92×) and allocates 38% less (64 B vs 104 B). Several reverse lookups are **at or below CSV cost** (GetByAdmin US/MX 0.85/0.93×, GetByStateName MX 0.93×, Spread miss US 0.82×) and all are allocation-free (0 B). CA Spread(hit) reached **1.05×** (near-parity). See §3.4 for the before/after reverse-lookup caching story.
+**Reading it (v4 format):** ZPI exact hits are **1.18–1.49× CSV** (single-digit ns, zero-alloc).
+ZPI **beats CSV on the miss path** (0.74–0.85×) and allocates 38% less (64 B vs 104 B). Several
+reverse lookups are **at or below CSV cost** (GetByAdmin US 0.95×, GetByStateName MX 1.04×, Spread
+miss US/MX 0.82/0.89×) and **every reverse lookup is allocation-free on ZPI** (0 B vs CSV's 24–80 B).
+The widest gap is `GetAllByCode` (1.47–1.70×, the only reverse op where ZPI allocates) and the hit
+`Spread` (10× hits compound the per-probe constant). See §3.4 for the reverse-lookup caching story.
 
 ### 3.2 GetClosest — `ClosestImageBenchmarks` (US, MX)
 
 | Country | CSV Mean | ZPI Mean | Ratio | Allocated |
 |---|--:|--:|--:|--:|
-| US | 35.76 ns | 59.09 ns | 1.65 | 32 B (both) |
-| MX | 42.04 ns | **36.99 ns** | **0.88** | 32 B (both) |
+| US | 44.16 ns | 44.10 ns | **1.00** | 32 B (both) |
+| MX | 34.39 ns | 41.10 ns | 1.19 | 32 B (both) |
 
 ### 3.3 Construction / cold load — `ConstructionBenchmarks`
 
-The image's headline win: CSV parse-and-index vs Brotli-decompress-and-map (no per-row construction).
+The image's headline win: Brotli-decompress-and-map (no per-row construction) vs CSV parse-and-index.
 
 | Country | CSV build | ZPI load | Speedup | CSV alloc | ZPI alloc |
 |---|--:|--:|--:|--:|--:|
-| US (57k rows)   |    184 ms  |  **9 ms** | **20×**  |  82.2 MB | 11.0 MB |
-| MX (145k rows)  |    608 ms  | **18 ms** | **34×**  | 188.9 MB | 22.5 MB |
-| CA (412k rows)  | 14,727 ms  | **43 ms** | **342×** | 559.8 MB | 53.2 MB |
-| US+CA+MX        | 15,801 ms  | **~70 ms**| **~226×**| 806.9 MB | ~87 MB  |
+| US (60k rows)   |    136 ms  | **7.8 ms** | **17×**  |   81.1 MB |  2.8 MB |
+| MX (146k rows)  |    375 ms  |**14.3 ms** | **26×**  |  189.3 MB |  6.3 MB |
+| CA (603k rows)  |  1,373 ms  |**55.2 ms** | **25×**  |  816.6 MB | 26.3 MB |
+| US+CA+MX        |  2,186 ms  | **~77 ms** | **~28×** | 1,073  MB | ~35 MB  |
 
-(Zip2City baseline — compile-time-baked data — initialises in ~0.033 ms / 160 B.)
+(Zip2City baseline — compile-time-baked data — initialises in ~0.03 ms / 160 B.)
+
+> **Big change since prior runs.** Before the 2026-06-12 `AddToIndex` fix, the CA CSV build was
+> ~33 s and the image loaded it ~340–430× faster. That quadratic insert is gone — CA now builds in
+> ~1.4 s — so the image's **time** advantage has collapsed from hundreds of× to ~17–28×. Its
+> **memory** advantage actually grew: ZPI load now allocates **~29–31× less** than the CSV build
+> (lazy NamePool keeps untouched names off the heap at load). The image remains the right choice
+> for cold-start-sensitive and memory-constrained deployments; the CSV path is no longer painful.
 
 ### 3.4 Reverse-lookup result caching — before vs after (CA, the worst case)
 
@@ -152,13 +170,13 @@ The reverse lookups originally re-materialised the entire result set into a fres
 (landing CA's large sets on the large-object heap, triggering Gen2 GC). Per-bucket result caching now
 returns the built list reference on repeat calls, exactly like the CSV registry:
 
-| Operation (CA) | Before (no cache) | After (cached) | Speedup | Alloc before → after |
+| Operation (CA) | Before (no cache) | After (cached, 2026-06-12) | Speedup | Alloc before → after |
 |---|--:|--:|--:|--:|
-| GetByState     | 1,135,415 ns | **15.4 ns** | ~73,000× | 687 KB → **0 B** |
-| GetByStateName |   895,587 ns | **11.8 ns** | ~76,000× | 687 KB → **0 B** |
-| GetByTimeZone  |   976,154 ns | **21.0 ns** | ~46,000× | 1.38 MB → **0 B** |
-| GetByAdmin     |   509,872 ns | **22.6 ns** | ~22,000× | 687 KB → **0 B** |
-| GetByName      |     7,670 ns | **17.9 ns** | ~430×    | 51 KB → **0 B** |
+| GetByState     | 1,135,415 ns |  **9.08 ns** | ~125,000× | 687 KB → **0 B** |
+| GetByStateName |   895,587 ns |  **9.54 ns** |  ~94,000× | 687 KB → **0 B** |
+| GetByTimeZone  |   976,154 ns | **11.68 ns** |  ~84,000× | 1.38 MB → **0 B** |
+| GetByAdmin     |   509,872 ns | **17.97 ns** |  ~28,000× | 687 KB → **0 B** |
+| GetByName      |     7,670 ns | **15.14 ns** |    ~510×  | 51 KB → **0 B** |
 
 Two reader-side fixes delivered this (no on-disk format change): a lazy `record→directory-slot` map
 (`CodeForExactRecord` O(1) instead of O(n) per record) and the per-bucket / per-name result caches
@@ -167,135 +185,37 @@ Two reader-side fixes delivered this (no on-disk format change): a lazy `record�
 
 ### 3.5 Verdict
 
-ZPI now wins on **both** axes it was meant to: it loads **20–342× faster** than building the CSV
-registry, uses **~7–10× less startup memory**, and ships **3–4× smaller on disk** — and (with the v3
-format) matches or beats CSV on every query category (exact hits **1.17–1.34× CSV** at 9–11 ns, zero-alloc;
-miss path **ZPI faster: 0.71–0.92×** with 38% less allocation; reverse lookups **0.85–2.0×** and all allocation-free).
-The remaining per-lookup overhead is a small constant (MPHF probe + bucket resolution) that doesn't scale with dataset size.
+ZPI's two real wins are now **startup memory** and **load time**: it loads **17–28× faster** than
+building the CSV registry and allocates **~29–31× less** at load — and (with the v4 format) it matches
+or beats CSV on most query categories (exact hits **1.18–1.49× CSV** at 8–10 ns, zero-alloc; miss path
+**ZPI faster: 0.74–0.85×** with 38% less allocation; reverse lookups **0.95–1.70×** and **all
+allocation-free**). The remaining per-lookup overhead is a small constant (MPHF probe + bucket
+resolution) that doesn't scale with dataset size.
 
-**Recommendation:** the frozen image is a strong default for cold-start-sensitive or memory-constrained
-deployments (Lambda, CLIs, large CA datasets), where its load win dwarfs the ~9–11 ns exact-hit overhead.
-For an always-warm service where `GetAllByCode` volume dominates and that 1.9–2.1× gap matters more than
-zero-alloc reverse lookups, the CSV registry's `FrozenDictionary` hot path may still edge it. Both remain
-interchangeable behind `IZipPostLookup`.
+Two things changed the calculus versus earlier runs. First, the **2026-06-12 construction fix** cut the
+CA CSV build from ~33 s to ~1.4 s, so the image's *time* lead shrank from hundreds-of-× to ~17–28× (the
+memory lead grew). Second, the library now embeds the **Brotli-compressed `.csv.br`**, which compresses
+far better than the binary image — so ZPI is **no longer the smallest artifact on disk** (§2). Its
+value is load/runtime, not footprint.
 
----
-
-## 4. Analysis — AI prompts
-
-Each prompt is self-contained — paste it into Claude (or another assistant) **along with the
-relevant result table from §3** to get a focused read. Fill the `{…}` placeholders with your numbers.
-
-### P01 — Hot-path lookup: is ZPI competitive on `GetByCode` hits?
-
-```
-Here is a BenchmarkDotNet comparison of two postal-code lookup backends for the same data — a
-CSV-built registry backed by FrozenDictionary (baseline) vs a binary "ZP frozen image" backed by a
-minimal perfect hash with lazy CodeEntry materialisation. Table grouped by {country × operation},
-CSV = baseline, Ratio = ZPI relative to CSV:
-
-{paste the "GetByCode hit", "GetByCode alt", and "Spread (hit)" rows for US/CA/MX}
-
-The ZPI hit path is expected to match the registry's zero-allocation reference return once its
-per-record cache is warm (the benchmark warms it in GlobalSetup). For each country, tell me:
-(1) whether ZPI hits are within noise of CSV or meaningfully slower/faster and by how much,
-(2) whether either backend allocates on the hit path and why that would happen,
-(3) whether CA's range-resolved hit (M5V3L9) behaves differently from CA's exact-LDU hit (T0A0A0),
-and (4) any result that looks anomalous enough to be a benchmark artifact rather than a real cost.
-```
-
-### P02 — Miss path
-
-```
-These rows compare the GetByCode MISS path for CSV vs ZP-image backends across US/CA/MX:
-
-{paste the "GetByCode miss" and "Spread (miss)" rows}
-
-The CSV registry is known to allocate on misses (it constructs an object on the return path) and to
-run a normalisation loop plus range fallback before giving up. For each country: does the ZP image
-avoid that miss-path allocation, and is its miss latency lower than CSV's? Explain the likely cause
-of any difference given that a miss must exhaust the MPHF probe, every normalisation rule, and the
-range table before returning null. Flag whether the miss cost scales with dataset size.
-```
-
-### P03 — Reverse lookups and enumeration
-
-```
-Compare CSV vs ZP-image for the reverse-lookup and enumeration operations below (US/CA/MX):
-
-{paste the "GetByName", "GetByState", "GetByStateName", "GetByAdmin", "GetByTimeZone",
-"GetAllByCode", "GetAll", "GetBatch" rows}
-
-The ZP image stores postings lists for these reverse indexes and materialises CodeEntry objects
-lazily on first touch. The registry returns references into already-built Lists. For each operation:
-(1) is ZPI's reverse lookup competitive, (2) where does lazy materialisation show up as extra
-allocation or latency, (3) is GetAll (full enumeration of every entry) reasonable on the image given
-it must materialise all rows — especially for CA at 311k entries — and (4) does GetBatch show any
-backend-specific overhead beyond the per-code lookup cost.
-```
-
-### P04 — Cold start: CSV build vs ZPI load
-
-```
-Here are construction/cold-start numbers for the same data via two paths — building the CSV registry
-(parse + index into FrozenDictionary) vs loading the ZP frozen image (Brotli-decompress + map):
-
-{paste the ZipPostLookup_Build* and ZpImage_Load* rows for US/CA/MX, plus Allocated}
-
-For each country, quantify the ZPI load speedup and allocation reduction vs CSV build. CA CSV
-construction is ~1.5 s / ~768 MB; state how much of that the image removes. Then advise: for which
-deployment profiles (AWS Lambda cold start, short-lived CLI, long-running service, unit-test fixture)
-does the ZP image's faster load justify shipping it, and where does the CSV path remain fine because
-construction is amortised? Note any case where decompression cost offsets the construction saving.
-```
-
-### P05 — Per-country verdict
-
-```
-Using all the tables in sections 3.1–3.3, produce a per-country (US, CA, MX) verdict on whether the
-ZP frozen image should become the default backend, stay an opt-in alternative, or be dropped. Weigh:
-hot-path parity, miss-path behaviour, reverse-lookup cost, full-enumeration cost, cold-start saving,
-and on-disk size (.zpi.br vs the embedded .csv — include the embedded resource byte sizes). Call out
-any country where the answer differs from the others and why (e.g. CA's range compression interacts
-differently with the MPHF). End with the single most important follow-up benchmark or measurement
-still missing from this comparison.
-```
-
-### P06 — Combined optimisation prompt
-
-```
-I maintain ZipPostLookup (.NET 8 postal-code library) with two interchangeable lookup backends
-implementing the same IZipPostLookup interface:
-  • ZipPostRegistry — parses an embedded CSV into FrozenDictionary indexes at construction
-  • ZpImageLookup   — loads a Brotli-compressed binary "frozen image" (minimal perfect hash +
-                      lazy CodeEntry materialisation), reader is net8.0+ only
-
-Both are benchmarked across US (42,931 distinct codes / 57k rows), CA (~900,688 distinct codes / 412k FSA-compressed entries), and MX (32,247 distinct codes / 145k rows), for: GetByCode hit/miss, GetAllByCode, GetByName/State/StateName/Admin/TimeZone, GetBatch, GetClosest (US/MX), hit/miss spread, and cold-start construction vs load.
-
-Results:
-{paste all three tables from section 3}
-
-Embedded resource sizes:
-{paste byte sizes of Data/{cc}/{cc}.csv vs Data/{cc}/{cc}.zpi.br for each country}
-
-Give me a prioritised plan that answers: (1) should ZPI become the default for the static US
-ZipPostLookup facade, (2) what — if anything — to optimise in the ZPI reader hot/miss/enumeration
-paths before that, (3) the size-vs-speed tradeoff of shipping both the .csv and .zpi.br vs only one,
-and (4) any correctness risk introduced by defaulting to the image (recall the writer/reader format
-must stay byte-identical and is guarded by ZpImageParityTests). The public API must not change.
-```
+**Recommendation:** the frozen image remains a strong choice for cold-start-sensitive or
+memory-constrained deployments (Lambda, CLIs, large CA datasets), where ~30× less startup allocation
+and a one-decompress load beat the CSV build. For an always-warm service where `GetAllByCode` volume
+dominates and that ~1.5–1.7× gap matters more than zero-alloc reverse lookups, the CSV registry's
+`FrozenDictionary` hot path may still edge it. Both remain interchangeable behind `IZipPostLookup`.
 
 ---
 
-## 5. Benchmark source
+## 4. Benchmark source
 
 | File | Class | What it measures |
 |------|-------|------------------|
 | `ZpImageBenchmarks.cs` | `ZpImageBenchmarks` | CSV vs ZPI lookup matrix, `[Params]` over US/CA/MX |
 | `ClosestImageBenchmarks.cs` | `ClosestImageBenchmarks` | CSV vs ZPI `GetClosest`, US/MX (CA excluded — alphanumeric codes) |
 | `ConstructionBenchmarks.cs` | `ConstructionBenchmarks` | CSV build vs ZPI load (+ Zip2City baseline), all countries |
-| `InternationalLookupBenchmarks.cs` | `InternationalLookupBenchmarks` | CSV hot-path: US/CA/MX individually + combined multi-country registry |
-| `CaRangeBenchmarks.cs` | `CaRangeBenchmarks` | CA range index: exact LDU vs compressed FSA hits, misses, normalisation |
+| `MultiCountryBenchmarks.cs` | `MultiCountryBenchmarks` | Combined US+CA+MX registry: per-country lookup + CA range resolve + cross-country timezone |
+| `LegacyVsModernBenchmarks.cs` | `LegacyVsModernBenchmarks` | `Dictionary` (netstandard2.0) vs `FrozenDictionary` (net8.0) hot path |
+| `CsvCompressionBenchmarks.cs` | `CsvCompressionBenchmarks` | Brotli vs plain CSV stream read (the I/O share of construction) |
 | `BatchLookupBenchmarks.cs` | `BatchLookupBenchmarks` | `GetBatch` vs sequential loop at 10/100/1000 codes; dedup benefit |
 | `LookupBenchmarks.cs` | `LookupBenchmarks` | US hot-path vs Zip2City; `GetClosest`; reverse lookups |
 

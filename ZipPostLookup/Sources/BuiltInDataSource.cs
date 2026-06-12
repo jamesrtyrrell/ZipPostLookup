@@ -5,7 +5,10 @@ using ZipPostLookup.Core;
 namespace ZipPostLookup.Sources;
 
 /// <summary>
-/// Loads postal entry data from an embedded <c>Data/{cc}/{cc}.csv</c> resource.
+/// Loads postal entry data from an embedded <c>Data/{cc}/{cc}.csv.br</c> resource (net8+)
+/// or <c>Data/{cc}/{cc}.csv</c> (netstandard2.0 / Legacy package).
+/// The net8+ build embeds Brotli-compressed CSVs to reduce package size; the stream is
+/// decompressed transparently before parsing.
 ///
 /// Supported CSV formats:
 ///
@@ -37,7 +40,8 @@ namespace ZipPostLookup.Sources;
 ///   · CA uses range notation in the code column: "B2G0**:B2G9**"
 ///     Range entries are yielded with the range code intact — ZipRegistry handles expansion.
 ///
-/// Adding a new country requires only embedding a CSV at Data/{cc}/{cc}.csv.
+/// Adding a new country: embed <c>Data/{cc}/{cc}.csv.br</c> (net8+ package) and
+/// <c>Data/{cc}/{cc}.csv</c> (Legacy package), both marked as <c>EmbeddedResource</c>.
 /// </summary>
 internal sealed class BuiltInDataSource : ICodeDataSource
 {
@@ -54,19 +58,29 @@ internal sealed class BuiltInDataSource : ICodeDataSource
     {
         var assembly = Assembly.GetExecutingAssembly();
         var cc       = ((string)_country).ToLowerInvariant();
+#if NET8_0_OR_GREATER
+        var fileName = $"{cc}.csv.br";
+#else
         var fileName = $"{cc}.csv";
+#endif
 
         var resourceName = assembly
             .GetManifestResourceNames()
             .FirstOrDefault(n => n.EndsWith(fileName, StringComparison.OrdinalIgnoreCase))
             ?? throw new NotSupportedException(
                 $"No built-in data exists for country '{_country}'. " +
-                $"To add support, embed a CSV file at Data/{cc}/{fileName} " +
+                $"To add support, embed a CSV file at Data/{cc}/{cc}.csv " +
                 $"and mark it as EmbeddedResource in the .csproj, " +
                 $"or implement ICodeDataSource to supply your own data.");
 
-        using var stream = assembly.GetManifestResourceStream(resourceName)!;
-        using var reader = new StreamReader(stream);
+        using var rawStream = assembly.GetManifestResourceStream(resourceName)!;
+#if NET8_0_OR_GREATER
+        using var decompressedStream = new System.IO.Compression.BrotliStream(
+            rawStream, System.IO.Compression.CompressionMode.Decompress);
+        using var reader = new StreamReader(decompressedStream);
+#else
+        using var reader = new StreamReader(rawStream);
+#endif
 
         // ── Detect optimised format via optional #meta: first line ────────────
         string[]? tzIndex    = null;

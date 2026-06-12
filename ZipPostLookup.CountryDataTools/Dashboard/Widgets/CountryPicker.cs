@@ -33,9 +33,10 @@ internal static class CountryPicker
     {
         countries ??= ["US", "CA", "MX"];
 
-        var choices = new List<string>(countries);
+        var choices = new List<string>();
         if (allLabel is not null) choices.Add(allLabel);
         if (anyLabel is not null) choices.Add(anyLabel);
+        choices.AddRange(countries);
         choices.Add(cancelLabel);
 
         return CdtSelectMenu.Show(

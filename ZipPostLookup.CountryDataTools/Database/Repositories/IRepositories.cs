@@ -80,10 +80,10 @@ public interface IDiscrepancyRepository
         IReadOnlyList<DiscrepancyInput> inputs);
 
     /// <summary>
-    /// Returns all unresolved discrepancies (Process=0) for the given run.
+    /// Returns all unresolved discrepancies (Process=0) for the given country,
+    /// aggregated across all runs.
     /// </summary>
-    Task<IReadOnlyList<CodesDiscrepancies>> GetPendingAsync(string runId,
-        string countryCode);
+    Task<IReadOnlyList<CodesDiscrepancies>> GetPendingAsync(string countryCode);
 
     /// <summary>
     /// Bulk-inserts a batch of pre-built <see cref="PipelineDecisions"/> rows into

@@ -11,7 +11,6 @@ public static partial class CommonQueries
                 CAST(Process AS BIT) AS Process
               FROM codes.Discrepancies
               WHERE CountryId = @CountryId
-                AND RunId     = @RunId
                 AND Process   = 0
               ORDER BY ZpCode, PlaceName, FieldName";
 
@@ -25,13 +24,12 @@ public static partial class CommonQueries
                   END,
                   ResolvedAt     = SYSUTCDATETIME()
               WHERE CountryId = @CountryId
-                AND RunId     = @RunId
                 AND ZpCode    = @ZpCode
                 AND PlaceName = @PlaceName";
 
     public static readonly string GetDistinctNamesFromDiscrepancies =
         @"SELECT DISTINCT PlaceName FROM codes.Discrepancies
-              WHERE CountryId = @CountryId AND RunId = @RunId
+              WHERE CountryId = @CountryId
                 AND ZpCode = @ZpCode AND Process = 0";
 
     public static readonly string UpdateDiscrepancyWithOverride =
@@ -46,7 +44,6 @@ public static partial class CommonQueries
                   AcceptIncoming = 1,
                   Process        = 1
               WHERE CountryId = @CountryId
-                AND RunId     = @RunId
                 AND ZpCode    = @ZpCode
                 AND PlaceName = @PlaceName
                 AND Process   = 0";
@@ -56,7 +53,6 @@ public static partial class CommonQueries
               SET Process        = 1,
                   AcceptIncoming = 0
               WHERE CountryId = @CountryId
-                AND RunId     = @RunId
                 AND ZpCode    = @ZpCode
                 AND Process   = 0";
 }

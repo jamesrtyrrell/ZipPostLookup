@@ -1,9 +1,9 @@
 ﻿# ZipPostLookup
 
 Fast, extensible in-memory postal code lookup for .NET.  
-Built-in data for the **United States** (<!-- zpl:us:codes -->43,498<!-- /zpl:us:codes --> ZIP codes), **Canada** (~<!-- zpl:ca:codes -->900,686<!-- /zpl:ca:codes --> postal codes, <!-- zpl:ca:entries -->596k<!-- /zpl:ca:entries --> compressed entries via FSA range compression), and **Mexico** (<!-- zpl:mx:codes -->32,893<!-- /zpl:mx:codes --> postal codes). All three countries are fully curated ✅.
+Built-in data for the **United States** (<!-- zpl:us:codes -->43,498<!-- /zpl:us:codes --> ZIP codes), **Canada** (~<!-- zpl:ca:codes -->900,686<!-- /zpl:ca:codes --> postal codes, <!-- zpl:ca:entries -->603k<!-- /zpl:ca:entries --> compressed entries via FSA range compression), and **Mexico** (<!-- zpl:mx:codes -->32,893<!-- /zpl:mx:codes --> postal codes). All three countries are fully curated ✅.
 
-Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-10 13:02:18<!-- /zpl:updated -->)**
+Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-11 18:28:44<!-- /zpl:updated -->)**
 
 ---
 
@@ -180,7 +180,7 @@ var entry = await Task.Run(() => registry.GetByCode("M5V3L9"));
 
 ## Binary Image Lookup (net8.0+)
 
-On .NET 8 and later, `ZpImageLookup` loads a pre-built Brotli-compressed binary image instead of parsing CSV rows. It implements `IZipPostLookup` and is a drop-in replacement with 19–432× faster startup and 7–10× less memory at startup.
+On .NET 8 and later, `ZpImageLookup` loads a pre-built Brotli-compressed binary image instead of parsing CSV rows. It implements `IZipPostLookup` and is a drop-in replacement with 17–26× faster startup and ~30× less memory at startup.
 
 ```csharp
 using ZipPostLookup.ZPImage;
@@ -263,15 +263,20 @@ foreach (var (id, info) in CountryInfoRegistry.All)
 
 ## Performance
 
-On .NET 8+, all indexes use `FrozenDictionary`. The `.zpi.br` frozen image loads 19–432x faster than the CSV registry at startup with 7–10x less memory:
+On .NET 8+, all indexes use `FrozenDictionary`. The `.zpi.br` frozen image loads 17–26x faster than the CSV registry at startup with ~30x less memory:
 
 | Country | CSV registry build | ZP image load | Speedup |
 |---------|-------------------:|--------------:|--------:|
-| US      |             189 ms |     **10 ms** |     19x |
-| MX      |             654 ms |     **22 ms** |     30x |
-| CA      |          17,844 ms |     **41 ms** |    432x |
+| US      |             136 ms |    **7.8 ms** |     17x |
+| MX      |             375 ms |   **14.3 ms** |     26x |
+| CA      |           1,373 ms |   **55.2 ms** |     25x |
 
-`GetByCode` runs at ~6.2 ns (hit) / ~35 ns (miss) on .NET 8+ — 4.9x faster than Zip2City on hot-path lookups with zero allocations on hits. `GetBatch` is more efficient than a sequential loop when duplicate codes are expected; see [ZipPostLookup.Benchmarks/README.MD](https://github.com/jamesrtyrrell/ZipPostLookup/blob/main/ZipPostLookup.Benchmarks/README.MD) for full results including batch lookup guidance, international lookups, and ZPI vs CSV comparisons.
+> The CA build was ~33 s before the 2026-06-12 indexing fix (a quadratic insert in registry
+> construction); it is now ~1.4 s, which is why the image's cold-start lead over CSV is far
+> smaller than it once was. The image still wins decisively on **startup memory** (~30× less)
+> and remains the better default for cold-start-sensitive deployments.
+
+`GetByCode` runs at ~5.8 ns (hit) / ~31 ns (miss) on .NET 8+ — 5.6x faster than Zip2City on hot-path lookups with zero allocations on hits. `GetBatch` is more efficient than a sequential loop when duplicate codes are expected; see [ZipPostLookup.Benchmarks/README.MD](https://github.com/jamesrtyrrell/ZipPostLookup/blob/main/ZipPostLookup.Benchmarks/README.MD) for full results including batch lookup guidance, international lookups, and ZPI vs CSV comparisons.
 
 ---
 
@@ -279,13 +284,13 @@ On .NET 8+, all indexes use `FrozenDictionary`. The `.zpi.br` frozen image loads
 
 | Country |                                        Distinct Codes* | Admin Levels |                Timezones                | Status     |
 |---------|-------------------------------------------------------:|:------------:|:---------------------------------------:|------------|
-| US      |  **<!-- zpl:us:codes -->43,498<!-- /zpl:us:codes -->** |    State     | <!-- zpl:us:tz -->53<!-- /zpl:us:tz --> | ✅ Curated  |
-| CA      | **<!-- zpl:ca:codes -->900,686<!-- /zpl:ca:codes -->** |   Province   | <!-- zpl:ca:tz -->24<!-- /zpl:ca:tz --> | ✅ Curated  |
+| US      |  **<!-- zpl:us:codes -->43,498<!-- /zpl:us:codes -->** |    State     | <!-- zpl:us:tz -->54<!-- /zpl:us:tz --> | ✅ Curated  |
+| CA      | **<!-- zpl:ca:codes -->900,686<!-- /zpl:ca:codes -->** |   Province   | <!-- zpl:ca:tz -->25<!-- /zpl:ca:tz --> | ✅ Curated  |
 | MX      |  **<!-- zpl:mx:codes -->32,893<!-- /zpl:mx:codes -->** |    Estado    | <!-- zpl:mx:tz -->17<!-- /zpl:mx:tz --> | ✅ Curated  |
 
 \* Distinct codes are the number of unique Zip/Postal codes in the country's set.
 
-Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-10 13:02:18<!-- /zpl:updated -->)**
+Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-11 18:28:44<!-- /zpl:updated -->)**
 
 ---
 

@@ -139,8 +139,9 @@ public static partial class CommonQueries
           JOIN   codes.Discrepancies d
                  ON  d.CountryId = g.CountryId
                  AND d.ZpCode    = g.ZpCode
-          WHERE  g.CountryId   = @CountryId
-            AND  d.FieldName   = 'Name'
-            AND  d.ResolvedAt IS NULL
+          WHERE  g.CountryId    = @CountryId
+            AND  d.FieldName    = 'Name'
+            AND  d.ResolvedAt  IS NULL
+            AND  d.CreatedAt    > g.GoldAt
           ORDER  BY g.ZpCode";
 }

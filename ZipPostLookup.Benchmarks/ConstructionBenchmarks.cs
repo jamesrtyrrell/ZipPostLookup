@@ -16,26 +16,29 @@ namespace ZipPostLookup.Benchmarks;
 ///                 no per-row object construction, so this is the image's headline advantage
 ///   • Zip2City  — force the static constructor (compile-time baked data), US-only baseline
 ///
-/// Datasets:
-///   US  — 57,400 entries (curated)
-///   CA  — 412,403 entries (FSA-compressed from 908,745 rows)
-///   MX  — 145,826 entries
+/// Datasets (live row counts — keep in sync with the embedded CSVs after every export):
+///   US  — 59,719 entries (curated)
+///   CA  — 603,272 entries (includes 556 FSA-compressed range rows)
+///   MX  — 146,183 entries
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net80)]
+// Each invocation builds a whole registry (hundreds of ms, heavy GC-noisy allocation), so the
+// adaptive engine would otherwise drift toward MaxIterationCount (100) chasing convergence.
+// Pin modest counts — variance on a multi-hundred-ms operation is low, so a handful suffices.
+[SimpleJob(RuntimeMoniker.Net80, launchCount: 1, warmupCount: 3, iterationCount: 6)]
 public class ConstructionBenchmarks
 {
     // ── ZipPostLookup ─────────────────────────────────────────────────────────
 
-    [Benchmark(Baseline = true, Description = "ZipPostLookup — build US registry (57k rows, curated)")]
+    [Benchmark(Baseline = true, Description = "ZipPostLookup — build US registry (60k rows, curated)")]
     public ZipPostRegistry ZipPostLookup_BuildUs() =>
         new ZipPostRegistry(CountryCode.US);
 
-    [Benchmark(Description = "ZipPostLookup — build CA registry (412k rows, FSA-compressed)")]
+    [Benchmark(Description = "ZipPostLookup — build CA registry (603k rows, FSA-compressed)")]
     public ZipPostRegistry ZipPostLookup_BuildCa() =>
         new ZipPostRegistry(CountryCode.CA);
 
-    [Benchmark(Description = "ZipPostLookup — build MX registry (145k rows)")]
+    [Benchmark(Description = "ZipPostLookup — build MX registry (146k rows)")]
     public ZipPostRegistry ZipPostLookup_BuildMx() =>
         new ZipPostRegistry(CountryCode.MX);
 

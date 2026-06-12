@@ -79,7 +79,7 @@ public static class EnrichDirectCommand
         EnrichCandidatesDisplay.PrintDirectHeader(
             opts.Country,
             uncurated.Count, specialCodeSet.Count, enrichable.Count,
-            opts.Limit, DelayMs / 1000, opts.DryRun);
+            opts.Limit, DelayMs / 1000);
         Console.WriteLine();
 
         if (enrichable.Count == 0)

@@ -26,6 +26,8 @@ Console.Error.WriteLine("       dotnet run -c Release --project ZipPostLookup.Be
 Console.Error.WriteLine("       dotnet run -c Release --project ZipPostLookup.Benchmarks -- --filter \"*CaRange*\"");
 Console.Error.WriteLine("       dotnet run -c Release --project ZipPostLookup.Benchmarks -- --filter \"*Batch*\"");
 Console.Error.WriteLine();
+Console.Error.WriteLine("       dotnet run -c Release --project ZipPostLookup.Benchmarks -- --filter \"*CsvCompression*\"");
+Console.Error.WriteLine();
 Console.Error.WriteLine("     To run the full CSV vs ZP-image comparison (all countries):");
 Console.Error.WriteLine("       dotnet run -c Release --project ZipPostLookup.Benchmarks -- --filter \"*ZpImageBenchmarks*\" \"*ClosestImageBenchmarks*\" \"*ConstructionBenchmarks*\"");
 Console.Error.WriteLine();
@@ -69,10 +71,17 @@ else
         Console.WriteLine($"    • {className}");
 
     Console.WriteLine();
-    Console.Write("  Add results to History archive? [y/N] ");
-    var answer = Console.ReadLine()?.Trim().ToUpperInvariant();
 
-    if (answer == "Y")
+    // Don't prompt when stdin isn't interactive (CI / piped input): Console.ReadLine would
+    // either return null immediately or, on a detached terminal, block forever after the run.
+    if (Console.IsInputRedirected)
+    {
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine("  Stdin is not interactive — history archiving skipped.");
+        Console.WriteLine("  (Re-run in an interactive terminal to archive these reports.)");
+        Console.ResetColor();
+    }
+    else if (PromptForArchive() == "Y")
     {
         Console.WriteLine();
         Directory.CreateDirectory(historyDir);
@@ -130,5 +139,13 @@ else
 }
 
 Console.WriteLine();
+
+// Writes the archive prompt and reads a normalised answer. Only reached on an interactive
+// stdin (the IsInputRedirected guard above skips it for CI / piped runs).
+static string? PromptForArchive()
+{
+    Console.Write("  Add results to History archive? [y/N] ");
+    return Console.ReadLine()?.Trim().ToUpperInvariant();
+}
 
 #endif

@@ -27,10 +27,10 @@ namespace ZipPostLookup.Benchmarks;
 /// (CSV build vs <c>ZpImageLookup.FromBuiltIn</c> load). GetClosest is US/MX-only (it requires a
 /// 5-digit numeric code and throws for CA) so it lives in <see cref="ClosestImageBenchmarks"/>.
 ///
-/// Datasets:
-///   US — 57,400 entries (curated)
-///   CA — 412,403 entries (FSA-compressed from 908,745 rows)
-///   MX — 145,826 entries
+/// Datasets (live row counts — keep in sync with the embedded CSVs after every export):
+///   US — 59,719 entries (curated)
+///   CA — 603,272 entries (includes 556 FSA-compressed range rows)
+///   MX — 146,183 entries
 /// </summary>
 [MemoryDiagnoser]
 [SimpleJob(RuntimeMoniker.Net80)]
@@ -51,7 +51,7 @@ public class ZpImageBenchmarks
     private string _hit = null!;        // exact fast-path code
     private string _hitAlt = null!;     // second code exercising the other path (range vs exact)
     private string _miss = null!;       // valid-format code not present in the data
-    private string _multi = null!;      // code with >1 entry (resolved dynamically)
+    private string _multi = null!;      // code with >1 entry (baked in BenchCodes from live data)
     private string _name = null!;       // place name for reverse lookup
     private string _stateCode = null!;  // admin1 code
     private string _stateName = null!;  // admin1 name
@@ -69,7 +69,7 @@ public class ZpImageBenchmarks
         switch (Country)
         {
             case "US":
-                _hit = "90210"; _hitAlt = "00501"; _miss = "00000";
+                _hit = "90210"; _hitAlt = "00501"; _miss = "00000"; _multi = BenchCodes.US.Multi;
                 _name = "New York"; _stateCode = "CA"; _stateName = "California";
                 _adminValue = "California"; _adminLevel = "State"; _tz = "America/New_York";
                 _spread =
@@ -81,7 +81,7 @@ public class ZpImageBenchmarks
                 break;
 
             case "CA":
-                _hit = "M5V3L9"; _hitAlt = "T0A0A0"; _miss = "Z9Z9Z9";
+                _hit = "M5V3L9"; _hitAlt = "T0A0A0"; _miss = "Z9Z9Z9"; _multi = BenchCodes.CA.Multi;
                 _name = "Toronto"; _stateCode = "ON"; _stateName = "Ontario";
                 _adminValue = "Ontario"; _adminLevel = "Province"; _tz = "America/Toronto";
                 _spread =
@@ -93,7 +93,7 @@ public class ZpImageBenchmarks
                 break;
 
             case "MX":
-                _hit = "20000"; _hitAlt = "64000"; _miss = "00000";
+                _hit = "20000"; _hitAlt = "64000"; _miss = "00000"; _multi = BenchCodes.MX.Multi;
                 _name = "Zona Centro"; _stateCode = "JAL"; _stateName = "Jalisco";
                 _adminValue = "Jalisco"; _adminLevel = "Estado"; _tz = "America/Mexico_City";
                 _spread =
@@ -112,12 +112,9 @@ public class ZpImageBenchmarks
         _zpi = ZpImageLookup.FromBuiltIn(Country);
         if (Country == "US") _ = GetDefaultCityState("10001"); // warm Zip2City static ctor
 
-        // Resolve a genuinely multi-entry code from the data so GetAllByCode exercises the
-        // multi-name path where it exists. Falls back to the primary hit if the country has none.
-        _multi = _csv.GetAll()
-            .GroupBy(e => e.ZpCode, StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault(g => g.Count() > 1)?.Key
-            ?? _hit;
+        // _multi (a genuine multi-name code) is baked per country in BenchCodes — generated from
+        // the live CSV at export time. This avoids re-scanning the whole dataset with GroupBy in
+        // every benchmark case's GlobalSetup (BenchmarkDotNet runs this once per case).
 
         _batch = new CodeBatch(_spread);
 

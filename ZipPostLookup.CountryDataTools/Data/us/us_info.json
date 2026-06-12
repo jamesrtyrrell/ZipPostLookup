@@ -15,7 +15,7 @@
   "CodeRanges": false,
   "Curated": true,
   "CurationStatus": "Curated",
-  "LastUpdated": "2026-06-10",
+  "LastUpdated": "2026-06-11",
   "CodeFormat": "12345",
   "CodeRegex": "^\\d{5}([- ]\\d{4})?$",
   "Description": "US states, territories and associated areas. USPS codes are the authoritative postal codes used in data.reference. ANSI codes are the numeric FIPS codes per ANSI INCITS 38:2009. UM (U.S. Minor Outlying Islands) covers multiple individual islands listed under the \u0027islands\u0027 property.",
@@ -67,7 +67,7 @@
       "Code": "AZ",
       "Ansi": "4",
       "ZipCount": 585,
-      "NameCount": 745
+      "NameCount": 746
     },
     {
       "Name": "Arkansas",
@@ -88,7 +88,7 @@
       "Code": "CO",
       "Ansi": "8",
       "ZipCount": 672,
-      "NameCount": 1025
+      "NameCount": 1026
     },
     {
       "Name": "Connecticut",
@@ -130,7 +130,7 @@
       "Code": "HI",
       "Ansi": "15",
       "ZipCount": 140,
-      "NameCount": 157
+      "NameCount": 158
     },
     {
       "Name": "Idaho",
@@ -144,7 +144,7 @@
       "Code": "IL",
       "Ansi": "17",
       "ZipCount": 1599,
-      "NameCount": 2179
+      "NameCount": 2180
     },
     {
       "Name": "Indiana",
@@ -158,7 +158,7 @@
       "Code": "IA",
       "Ansi": "19",
       "ZipCount": 1072,
-      "NameCount": 1219
+      "NameCount": 1220
     },
     {
       "Name": "Kansas",
@@ -207,7 +207,7 @@
       "Code": "MI",
       "Ansi": "26",
       "ZipCount": 1192,
-      "NameCount": 1777
+      "NameCount": 1785
     },
     {
       "Name": "Minnesota",
@@ -305,14 +305,14 @@
       "Code": "OK",
       "Ansi": "40",
       "ZipCount": 786,
-      "NameCount": 932
+      "NameCount": 933
     },
     {
       "Name": "Oregon",
       "Code": "OR",
       "Ansi": "41",
       "ZipCount": 501,
-      "NameCount": 612
+      "NameCount": 613
     },
     {
       "Name": "Pennsylvania",
@@ -354,7 +354,7 @@
       "Code": "TX",
       "Ansi": "48",
       "ZipCount": 2694,
-      "NameCount": 3444
+      "NameCount": 3445
     },
     {
       "Name": "Utah",

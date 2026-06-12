@@ -1,4 +1,5 @@
-﻿using Dapper;
+﻿using System.IO.Compression;
+using Dapper;
 using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Commands.Display;
 using ZipPostLookup.CountryDataTools.Utilities;
@@ -579,7 +580,9 @@ public static class ExportReferenceCommand
             Console.WriteLine($"    Levels   : {string.Join(", ", levelNames)}");
             Console.WriteLine($"  ✓ Written to {output}");
             await FileHash.WriteSidecarAsync(output);
+            await WriteBrotliCompanionAsync(output);
             await TestableCodesGenerator.UpdateAsync(db.RepoRoot, ccUpper, output);
+            await BenchCodesGenerator.UpdateAsync(db.RepoRoot, ccUpper, output);
             await ReadmeUpdater.UpdateEntriesAsync(db.RepoRoot, cc, meta.RowCount);
             await UpdateCountryMetadataAsync(conn, cc, ccUpper, db.RepoRoot, sharedCountries);
             return 0;
@@ -850,6 +853,35 @@ public static class ExportReferenceCommand
 
     private static string AlwaysQuote(string value) =>
         $"\"{value.Replace("\"", "\"\"")}\"";
+
+    /// <summary>
+    /// Writes a Brotli-compressed copy of the CSV at <paramref name="csvPath"/>
+    /// to <c>{csvPath}.br</c> and writes a SHA-256 sidecar for it.
+    /// Returns the path of the compressed file.
+    /// </summary>
+    private static async Task<string> WriteBrotliCompanionAsync(string csvPath)
+    {
+        var brPath   = csvPath + ".br";
+        var csvBytes = await File.ReadAllBytesAsync(csvPath);
+
+        // The write handle must be fully closed before FileHash opens the file for reading.
+        // Using an explicit block scope (rather than `await using var`) ensures disposal —
+        // and therefore flushing — happens here, not at the end of the method.
+        await using (var file = new FileStream(
+            brPath, FileMode.Create, FileAccess.Write, FileShare.None,
+            bufferSize: 1 << 16, useAsync: true))
+        {
+            await using var brotli = new BrotliStream(file, CompressionLevel.SmallestSize, leaveOpen: false);
+            await brotli.WriteAsync(csvBytes);
+        }
+
+        await FileHash.WriteSidecarAsync(brPath);
+
+        var rawKb  = csvBytes.Length / 1024.0;
+        var brKb   = new FileInfo(brPath).Length / 1024.0;
+        Console.WriteLine($"  ✓ Brotli companion: {rawKb:F0} KB → {brKb:F0} KB ({Path.GetFileName(brPath)})");
+        return brPath;
+    }
 
     // =========================================================================
     // Argument parsing

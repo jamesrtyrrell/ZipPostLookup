@@ -6,24 +6,6 @@ public static partial class CommonQueries
     // Gold code queries
     // =========================================================================
 
-    // Run once to create the GoldCode table. Safe to repeat (IF NOT EXISTS guard).
-    public static readonly string MigrateAddGoldCodeTable =
-        @"IF NOT EXISTS (SELECT 1 FROM sys.tables
-                        WHERE  schema_id = SCHEMA_ID('data') AND name = 'GoldCode')
-          BEGIN
-              CREATE TABLE [data].[GoldCode] (
-                  [CountryId]     [nvarchar](2)       NOT NULL,
-                  [ZpCode]        [nvarchar](20)      NOT NULL,
-                  [GoldAt]        [datetimeoffset](7) NOT NULL
-                                  CONSTRAINT [DF_GoldCode_GoldAt] DEFAULT (SYSUTCDATETIME()),
-                  [ChecksVersion] [int]               NOT NULL
-                                  CONSTRAINT [DF_GoldCode_ChecksVersion] DEFAULT (1),
-                  CONSTRAINT [PK_GoldCode] PRIMARY KEY CLUSTERED ([CountryId] ASC, [ZpCode] ASC),
-                  CONSTRAINT [FK_GoldCode_Country] FOREIGN KEY ([CountryId])
-                      REFERENCES [data].[CountryInfo] ([CountryId])
-              );
-              PRINT 'data.GoldCode: table created.';
-          END";
 
     // Returns NULL when the code is eligible for gold, or a reason string when it is not.
     // Conditions: curated default row exists; all curated rows have admin1; all have timezone; at least one has lat/lng.

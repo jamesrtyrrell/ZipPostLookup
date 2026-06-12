@@ -9,7 +9,7 @@ public static class EnrichCandidatesDisplay
     // ── Job header ─────────────────────────────────────────────────────────────
 
     public static void PrintHeader(
-        string country, string runId,
+        string country,
         int totalDiscrepancies, int specialSkipped,
         int enrichable, int limit, int delaySeconds, bool dryRun)
     {
@@ -18,19 +18,17 @@ public static class EnrichCandidatesDisplay
             : "0";
 
         CommandDisplay.PrintTable($"Enrich Candidates — {country.ToUpperInvariant()}",
-            ("Run",                Markup.Escape(runId)),
             ("Total discrepancies", $"{totalDiscrepancies:N0}"),
-            ("Special codes",      specialNote),
-            ("Enrichable zips",    $"{enrichable:N0}"),
-            ("Limit this run",     $"{limit:N0}"),
-            ("Delay",              $"{delaySeconds}s per request"),
-            ("Dry run",            dryRun ? "[yellow]Yes[/]" : "No"));
+            ("Special codes", specialNote),
+            ("Enrichable zips", $"{enrichable:N0}"),
+            ("Limit this session", $"{limit:N0}"),
+            ("Delay", $"{delaySeconds}s per request"));
+        //("Dry run",            dryRun ? "[yellow]Yes[/]" : "No"));
     }
 
-    public static void PrintDirectHeader(
-        string country,
+    public static void PrintDirectHeader(string country,
         int totalUncurated, int specialSkipped, int enrichable,
-        int limit, int delaySeconds, bool dryRun)
+        int limit, int delaySeconds)
     {
         var specialNote = specialSkipped > 0
             ? $"{specialSkipped:N0}  [grey](APO/FPO/territory/PRS — skipped)[/]"
@@ -41,8 +39,7 @@ public static class EnrichCandidatesDisplay
             ("Special codes",   specialNote),
             ("Enrichable",      $"{enrichable:N0}"),
             ("Limit this run",  $"{limit:N0}"),
-            ("Delay",           $"{delaySeconds}s per request"),
-            ("Dry run",         dryRun ? "[yellow]Yes[/]" : "No"));
+            ("Delay",           $"{delaySeconds}s per request"));
     }
 
     // ── Live progress ─────────────────────────────────────────────────────────

@@ -28,9 +28,10 @@ public sealed class CaCountryRules : ICountryRules
 
     // ── FSA first letter → province/territory ISO 3166-2:CA code ──────────────
     // Canada Post allocates the first letter of every FSA to exactly one province
-    // or territory. This makes admin1 100% derivable from the code with 0 true
-    // exceptions in the current dataset. NU codes share the X prefix with NT
-    // (Canada Post treats them identically for routing).
+    // or territory, with one exception: the 'X' block is split between the
+    // Northwest Territories and Nunavut. X0A/X0B/X0C are Nunavut; every other X
+    // FSA (X0E/X0G/X1A) is NT. The 'X' entry below is the NT default; the NU
+    // FSAs are matched ahead of the first-letter lookup in ResolveAdmin1.
     // Source: Canada Post FSA allocation table.
 
     private static readonly IReadOnlyDictionary<char, (string Code, string Name)> _fsaProvince =
@@ -56,10 +57,21 @@ public sealed class CaCountryRules : ICountryRules
             ['Y'] = ("YT", "Yukon"),
         };
 
-    public (string Code, string Name)? ResolveAdmin1(string zpCode) =>
-        zpCode.Length > 0 && _fsaProvince.TryGetValue(char.ToUpperInvariant(zpCode[0]), out var v)
-            ? v
-            : null;
+    // Nunavut shares the 'X' first letter with the Northwest Territories but uses
+    // distinct FSAs: X0A/X0B/X0C → NU; every other X FSA (X0E/X0G/X1A) → NT.
+    private static readonly HashSet<string> _nunavutFsas =
+        new(StringComparer.OrdinalIgnoreCase) { "X0A", "X0B", "X0C" };
+
+    public (string Code, string Name)? ResolveAdmin1(string zpCode)
+    {
+        if (zpCode.Length == 0) return null;
+
+        var first = char.ToUpperInvariant(zpCode[0]);
+        if (first == 'X' && zpCode.Length >= 3 && _nunavutFsas.Contains(zpCode[..3]))
+            return ("NU", "Nunavut");
+
+        return _fsaProvince.TryGetValue(first, out var v) ? v : null;
+    }
 
     // ── Province/territory name → ISO 3166-2:CA code ──────────────────────────
     // Covers the English names returned by the GeoLocator API.

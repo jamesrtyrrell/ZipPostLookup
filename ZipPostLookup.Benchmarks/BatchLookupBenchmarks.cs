@@ -15,7 +15,7 @@ namespace ZipPostLookup.Benchmarks;
 ///   1. Is batch faster than a loop of individual lookups?
 ///   2. How does the gap scale with input size (10, 100, 1000 codes)?
 /// 
-/// US data: 57,400 entries — fully curated.
+/// US data: 59,719 entries — fully curated.
 /// </summary>
 [MemoryDiagnoser]
 [SimpleJob(RuntimeMoniker.Net80)]

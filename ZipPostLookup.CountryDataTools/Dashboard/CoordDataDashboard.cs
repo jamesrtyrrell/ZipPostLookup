@@ -31,7 +31,7 @@ internal static class CoordDataDashboard
                     ? ValidationResult.Success()
                     : ValidationResult.Error("[red]Must be positive[/]")));
 
-        var dryRun = AnsiConsole.Confirm("  Dry run?", false);
+        //var dryRun = AnsiConsole.Confirm("  Dry run?", false);
 
         var country = countryChoice == "Any (no filter)" ? "US" : countryChoice;
 
@@ -41,8 +41,7 @@ internal static class CoordDataDashboard
             new EnrichReferenceFromCoordinatesCommand.Options(
                 Source:    source,
                 Country:   country,
-                BatchSize: batch,
-                DryRun:    dryRun));
+                BatchSize: batch));
 
         FooterBar.ShowResultAndPause(exitCode);
         return exitCode;

@@ -16,7 +16,7 @@ namespace ZipPostLookup.Benchmarks;
 ///   ZipPostLookup.GetClosest   ↔  Zip2City.GetClosestCityState
 ///
 /// Zip2City only supports US zips; reverse lookups have no equivalent.
-/// US data: 57,400 rows — fully curated.
+/// US data: 59,719 rows — fully curated.
 /// </summary>
 [MemoryDiagnoser]
 [SimpleJob(RuntimeMoniker.Net80)]

@@ -1,0 +1,17 @@
+{
+  "US": {
+    "Multi": "00603",
+    "MultiPrimaryName": "Aguadilla",
+    "MultiSecondaryName": "Ramey"
+  },
+  "CA": {
+    "Multi": "A0A1J0",
+    "MultiPrimaryName": "St. John's",
+    "MultiSecondaryName": "Shea Heights"
+  },
+  "MX": {
+    "Multi": "01000",
+    "MultiPrimaryName": "San Ángel",
+    "MultiSecondaryName": "San Angel"
+  }
+}

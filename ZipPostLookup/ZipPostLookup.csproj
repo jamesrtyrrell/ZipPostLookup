@@ -35,9 +35,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="Data\us\us.csv" />
-		<EmbeddedResource Include="Data\ca\ca.csv" />
-		<EmbeddedResource Include="Data\mx\mx.csv" />
+		<EmbeddedResource Include="Data\us\us.csv.br" />
+		<EmbeddedResource Include="Data\ca\ca.csv.br" />
+		<EmbeddedResource Include="Data\mx\mx.csv.br" />
 	</ItemGroup>
 
 	<!-- ZP frozen images. Filename convention: {cc}.u16.zpi.br or {cc}.u32.zpi.br. -->

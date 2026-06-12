@@ -49,13 +49,12 @@ public sealed class SqlDiscrepancyRepository : IDiscrepancyRepository
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<CodesDiscrepancies>> GetPendingAsync(
-        string runId, string countryCode)
+    public async Task<IReadOnlyList<CodesDiscrepancies>> GetPendingAsync(string countryCode)
     {
         using var conn = _factory.CreateConnection();
         var rows = await conn.QueryAsync<CodesDiscrepancies>(
             CommonQueries.GetPendingDiscrepancies,
-            new { CountryId = countryCode.ToUpperInvariant(), RunId = runId });
+            new { CountryId = countryCode.ToUpperInvariant() });
 
         return rows.ToList();
     }

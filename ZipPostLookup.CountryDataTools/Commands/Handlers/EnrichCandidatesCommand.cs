@@ -17,11 +17,11 @@ using ZipPostLookup.CountryDataTools.Enrichment.Api;
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 
 /// <summary>
-/// CountryDataTools enrichcandidates --country US [--run run_20260528_001] [--limit 100] [--dry-run]
+/// CountryDataTools enrichcandidates --country US [--limit 100] [--dry-run]
 ///
-/// For each unresolved discrepancy in [codes].[discrepancies], queries the enrichment API
-/// round-robin (Zippopotam.us, Ziptastic) for the zip code and resolves Name, state,
-/// state_name, and timezone authoritatively.
+/// For each unresolved discrepancy across all runs for the country, queries the
+/// enrichment API round-robin (Zippopotam.us, Ziptastic, etc.) for the zip code
+/// and resolves Name, state, state_name, and timezone authoritatively.
 ///
 /// Per zip:
 ///   1. Call configured APIs round-robin (429 removes an API from rotation)
@@ -33,16 +33,16 @@ namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 ///   7. Update [data].[reference] with verified values + TimezoneChecked=1, NameChecked=1
 ///   8. If the new PlaceName not in [data].[reference] → insert it
 ///   9. 404 → mark [codes].[candidate] row as unfound
-///  10. Transient error → leave in place for next run
+///  10. Transient error → leave in place for next session
 ///
-/// Default limit: 100 zips per run. At 2s delay that's ~3 minutes.
-/// Full 3,988 discrepancies ≈ 5.5 hours across multiple runs.
+/// Default limit: 100 zips per session. At 2s delay that's ~3 minutes.
+/// Full 3,988 discrepancies ≈ 5.5 hours across multiple sessions.
 /// </summary>
 public static class EnrichCandidatesCommand
 {
     private const int DelayMs = 0_800;
 
-    public sealed record Options(string Country = "", string RunId = "", int Limit = 100, bool DryRun = false, bool All = false);
+    public sealed record Options(string Country = "", int Limit = 100, bool DryRun = false, bool All = false);
 
     public static async Task<int> RunAsync(string[] args)
     {
@@ -54,7 +54,6 @@ public static class EnrichCandidatesCommand
     public static async Task<int> RunAsync(Options opts)
     {
         if (opts.All)
-            // Run ID auto-detected per country; --run ignored in --all mode
             return await CountryRunner.ForEachWithRuleAsync(cc => RunAsync(opts with { Country = cc, All = false }));
 
         WorkDbContext db;
@@ -68,44 +67,22 @@ public static class EnrichCandidatesCommand
             return 1;
         }
 
-        // Resolve run ID: --run > activeRunId in workdb.json > latest run in pipeline.Runs.
-        // Always validate the candidate ID actually exists for this country — workdb.json
-        // can become stale if new runs are created without updating it.
-        var runId = opts.RunId;
-        var candidateRunId = string.IsNullOrWhiteSpace(runId) ? db.ActiveRunId : runId;
-        runId = await ResolveRunIdAsync(db, candidateRunId, opts.Country);
-
-        if (runId == null)
+        // Resolve the latest run for this country — used only as the audit RunId in
+        // pipeline.Decisions (FK requirement). Not shown to the user; enrichment
+        // aggregates discrepancies across all runs for the country.
+        var auditRunId = await GetLatestRunIdAsync(db, opts.Country);
+        if (auditRunId == null)
         {
             await Console.Error.WriteLineAsync(
-                $"  ✗ No runs found for {opts.Country.ToUpperInvariant()}.");
-            await Console.Error.WriteLineAsync(
-                "  Use 'workdb newrun --source <file>' to create one, or pass --run explicitly.");
+                $"  ✗ No runs found for {opts.Country.ToUpperInvariant()}. " +
+                "Import a candidates file first with 'importcandidates'.");
             return 1;
         }
 
-        // When the resolved run differs from what was requested, give the user a chance
-        // to pick. In --all mode keep it silent (batch run, no interactive prompt).
-        if (runId != candidateRunId)
-        {
-            if (opts.All)
-            {
-                AnsiConsole.MarkupLine($"  [grey]Auto-selected run: {Markup.Escape(runId)}[/]");
-            }
-            else
-            {
-                var picked = await PickRunAsync(db, opts.Country, candidateRunId);
-                if (picked == null) { Console.WriteLine("  Cancelled."); return 0; }
-                runId = picked;
-            }
-        }
-
-        // Load unresolved discrepancies for this run
-        var pending = await db.Discrepancies.GetPendingAsync(runId, opts.Country);
+        // Load all unresolved discrepancies for this country across all runs
+        var pending = await db.Discrepancies.GetPendingAsync(opts.Country);
 
         // Filter out special-domain codes before enrichment.
-        // Checks both code range AND name — catches rows inserted directly into
-        // codes.discrepancies that bypassed the normal import classification.
         var rules = CountryRulesFactory.For(opts.Country);
         var specialCodeSet = pending
             .Where(d => rules.IsEnrichmentSkipped(d.ZpCode) || rules.IsKnownSpecialName(d.PlaceName))
@@ -120,7 +97,7 @@ public static class EnrichCandidatesCommand
             .ToList();
 
         EnrichCandidatesDisplay.PrintHeader(
-            opts.Country, runId,
+            opts.Country,
             zips.Count + specialCodeSet.Count, specialCodeSet.Count,
             zips.Count, opts.Limit, DelayMs / 1000, opts.DryRun);
         Console.WriteLine();
@@ -151,16 +128,15 @@ public static class EnrichCandidatesCommand
         {
             SpecialCodes = specialCodeSet.Count
         };
-        // Run-scoped unfound log in <repo>/Logs — records codes downgraded to unfound for an
-        // over-long place name (>100 chars), appended as they arrive so the record survives a
-        // crash/kill/Escape. The codes themselves stay in place for retry.
+
         var unfoundCount = 0;
         string? unfoundLogPath = null;
         try
         {
             var logDir = Path.Combine(db.RepoRoot, "Logs");
             Directory.CreateDirectory(logDir);
-            unfoundLogPath = Path.Combine(logDir, $"enrich-unfound_{runId}.log");
+            unfoundLogPath = Path.Combine(logDir,
+                $"enrich-unfound_{opts.Country.ToUpperInvariant()}_{DateTimeOffset.UtcNow:yyyyMMdd}.log");
         }
         catch (Exception ex)
         {
@@ -173,13 +149,10 @@ public static class EnrichCandidatesCommand
         var apis = EnrichmentApiFactory.GetApisForCountry(opts.Country, http, apiKeys);
         var router = new RoundRobinEnrichmentRouter(apis);
 
-        // Seed router with current-period persisted counts so limits are enforced
-        // across sessions (daily: today's count; monthly: this month's total).
         var periodUsage = await ApiUsageRepository.GetCurrentPeriodUsageAsync(conn);
         foreach (var (name, count) in periodUsage)
             router.SeedCallCount(name, count);
 
-        // Initialise per-API period usage in counters for display.
         foreach (var api in apis)
             counters.InitDailyUsage(api.Name,
                 periodUsage.GetValueOrDefault(api.Name, 0),
@@ -196,15 +169,15 @@ public static class EnrichCandidatesCommand
             Apis          = apis,
             DelayMs       = DelayMs,
             IsDirectMode  = false,
-            GetStateAsync = async code => await GetCandidateStateAsync(conn, opts.Country, runId, code),
+            GetStateAsync = async code => await GetCandidateStateAsync(conn, opts.Country, code),
             PersistAsync  = async (c, tx, items) =>
             {
                 foreach (var item in items)
                 {
                     if (item.Outcome == FetchOutcome.NotFound)
-                        await MarkUnfoundAsync(c, opts.Country, runId, item.Zip, tx);
+                        await MarkUnfoundAsync(c, opts.Country, item.Zip, tx);
                     else
-                        await ResolveDiscrepanciesAsync(c, opts.Country, runId, item.Zip, item.Result!, item.ApiName!, tx);
+                        await ResolveDiscrepanciesAsync(c, opts.Country, auditRunId, item.Zip, item.Result!, item.ApiName!, tx);
 
                     if (item.Outcome == FetchOutcome.Found)
                     {
@@ -243,7 +216,6 @@ public static class EnrichCandidatesCommand
         else if (gold.Certified > 0)
             AnsiConsole.MarkupLine($"  [bold yellow]⭐ Gold: {gold.Certified:N0} new code(s) certified[/]");
 
-        // Over-long names downgraded to unfound were appended to the run log; point the user at it.
         if (unfoundCount > 0 && unfoundLogPath != null)
         {
             Console.WriteLine();
@@ -257,7 +229,7 @@ public static class EnrichCandidatesCommand
             var etaMinutes = remaining * (DelayMs / 1000.0) / 60;
             Console.WriteLine();
             Console.WriteLine($"  {remaining:N0} zips remaining — " +
-                              $"run again to continue (~{etaMinutes:F0} min at {opts.Limit}/run).");
+                              $"run again to continue (~{etaMinutes:F0} min at {opts.Limit}/session).");
         }
 
         return 0;
@@ -269,18 +241,17 @@ public static class EnrichCandidatesCommand
 
     private static async Task ResolveDiscrepanciesAsync(
         SqlConnection conn,
-        string country, string runId, string code,
+        string country, string auditRunId, string code,
         ApiLookupResult result, string apiName, SqlTransaction tx)
     {
-        // Get all cities for this code in discrepancies
+        // Get all cities for this code with unresolved discrepancies (across all runs)
         var cities = await conn.QueryAsync<string>(
             CommonQueries.GetDistinctNamesFromDiscrepancies,
-            new { CountryId = country.ToUpperInvariant(), RunId = runId, ZpCode = code },
+            new { CountryId = country.ToUpperInvariant(), ZpCode = code },
             transaction: tx);
 
         var parameters = new DynamicParameters();
         parameters.Add("CountryId", country.ToUpperInvariant());
-        parameters.Add("RunId", runId);
         parameters.Add("ZpCode", code);
         parameters.Add("OverrideName", result.PlaceName);
         parameters.Add("State", result.Admin1Code);
@@ -300,18 +271,15 @@ public static class EnrichCandidatesCommand
         {
             var loopParameters = new DynamicParameters(parameters);
             loopParameters.Add("PlaceName", name);
-            // PlaceName = the actual PlaceName value in codes.discrepancies (original candidate)
-            // result.PlaceName = the authoritative name from the API (override value)
             await conn.ExecuteAsync(
                 CommonQueries.UpdateDiscrepancyWithOverride,
                 loopParameters,
                 transaction: tx);
 
-            // Record in pipeline.decisions using the PipelineDecisions model
             await conn.InsertAsync(new PipelineDecisions
             {
                 CountryId = country.ToUpperInvariant(),
-                RunId = runId,
+                RunId = auditRunId,
                 ZpCode = code,
                 PlaceName = name,
                 AcceptIncoming = true,
@@ -320,7 +288,6 @@ public static class EnrichCandidatesCommand
                 CreatedAt = DateTimeOffset.UtcNow,
             }, tx);
 
-            // Update candidate status to clean
             await conn.ExecuteAsync(
                 CommonQueries.UpdateCandidateStatus,
                 loopParameters,
@@ -333,14 +300,13 @@ public static class EnrichCandidatesCommand
     // -------------------------------------------------------------------------
 
     private static async Task MarkUnfoundAsync(
-        SqlConnection conn, string country, string runId, string zip, SqlTransaction tx)
+        SqlConnection conn, string country, string zip, SqlTransaction tx)
     {
         await conn.ExecuteAsync(
             CommonQueries.UpdateCandidateStatusUnfound,
             new
             {
                 CountryId = country.ToUpperInvariant(),
-                RunId = runId,
                 ZpCode = zip,
             },
             transaction: tx);
@@ -350,7 +316,6 @@ public static class EnrichCandidatesCommand
             new
             {
                 CountryId = country.ToUpperInvariant(),
-                RunId = runId,
                 ZpCode = zip,
             },
             transaction: tx);
@@ -361,20 +326,35 @@ public static class EnrichCandidatesCommand
     // -------------------------------------------------------------------------
 
     private static async Task<string> GetCandidateStateAsync(
-        SqlConnection conn, string country, string runId, string zip)
+        SqlConnection conn, string country, string zip)
     {
-        // Admin level 1 code (e.g. state abbreviation) is now stored in
-        // [codes].[candidate]_admins. Used only for Armed Forces territory routing (AA/AE/AP).
         var code = await conn.ExecuteScalarAsync<string?>(
             CommonQueries.GetCandidateStateCode,
             new
             {
                 CountryId = country.ToUpperInvariant(),
-                RunId = runId,
                 ZpCode = zip,
             });
 
         return code ?? "";
+    }
+
+    // -------------------------------------------------------------------------
+    // Internal helpers
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Returns the most recent RunId for the country from pipeline.Runs.
+    /// Used only as the audit RunId for pipeline.Decisions inserts — never
+    /// shown to the user.
+    /// </summary>
+    private static async Task<string?> GetLatestRunIdAsync(WorkDbContext db, string country)
+    {
+        using var conn = db.GetFactory().CreateConnection();
+        var latest = await conn.QueryFirstOrDefaultAsync<PipelineRuns>(
+            CommonQueries.GetLatestRun,
+            new { CountryId = country.ToUpperInvariant() });
+        return latest?.RunId;
     }
 
     private static bool TryParseArgs(string[] args, out Options opts)
@@ -382,98 +362,20 @@ public static class EnrichCandidatesCommand
         var country = args.OptionValue("--country", rejectFlagValue: true) ?? "";
         opts = new Options(
             Country: country,
-            RunId:   args.OptionValue("--run") ?? "",
             Limit:   args.IntOption("--limit", 100, min: 1),
             DryRun:  args.HasFlag("--dry-run"),
             All:     args.HasFlag("--all"));
         return opts.All || !string.IsNullOrWhiteSpace(country);
     }
 
-    // -------------------------------------------------------------------------
-    // Run ID resolution
-    // -------------------------------------------------------------------------
-
-    /// <summary>
-    /// Resolves a run ID for the given country:
-    ///   1. If <paramref name="candidateRunId"/> is non-empty and exists in pipeline.Runs
-    ///      for the country, return it unchanged.
-    ///   2. Otherwise query pipeline.Runs for the most recent run for the country.
-    ///   3. Return null if no runs exist for the country.
-    /// This prevents workdb.json's activeRunId from silently pointing at a stale / wrong-country run.
-    /// </summary>
-    private static async Task<string?> ResolveRunIdAsync(
-        WorkDbContext db, string? candidateRunId, string country)
-    {
-        using var conn = db.GetFactory().CreateConnection();
-        var ccUpper = country.ToUpperInvariant();
-
-        if (!string.IsNullOrWhiteSpace(candidateRunId))
-        {
-            var exists = await conn.ExecuteScalarAsync<int>(
-                CommonQueries.CheckRunExistsForCountry,
-                new { RunId = candidateRunId, CountryId = ccUpper });
-            if (exists > 0) return candidateRunId;
-        }
-
-        var latest = await conn.QueryFirstOrDefaultAsync<PipelineRuns>(
-            CommonQueries.GetLatestRun, new { CountryId = ccUpper });
-        return latest?.RunId;
-    }
-
-    /// <summary>
-    /// Lists all pipeline runs for the country and lets the user pick one interactively.
-    /// Returns the selected run ID, or null if the user cancels.
-    /// Called when the requested run ID is stale or missing.
-    /// </summary>
-    private static async Task<string?> PickRunAsync(
-        WorkDbContext db, string country, string? missingRunId)
-    {
-        using var conn = db.GetFactory().CreateConnection();
-        var ccUpper = country.ToUpperInvariant();
-
-        var runs = (await conn.QueryAsync<PipelineRuns>(
-            CommonQueries.GetAllRuns, new { CountryId = ccUpper })).ToList();
-
-        if (runs.Count == 0)
-        {
-            await Console.Error.WriteLineAsync($"  ✗ No runs found for {ccUpper}.");
-            return null;
-        }
-
-        var title = string.IsNullOrWhiteSpace(missingRunId)
-            ? $"Select a run for [bold]{ccUpper}[/]:"
-            : $"Run '[yellow]{Markup.Escape(missingRunId)}[/]' not found for [bold]{ccUpper}[/]. Select a run:";
-
-        // Build display strings: RunId  [Status]  StartedAt  SourceFile
-        // Use [[ ]] (double brackets) for literal brackets — single brackets are Spectre markup tags.
-        var choices = runs
-            .Select(r => $"{Markup.Escape(r.RunId),-30}  [[{Markup.Escape(r.Status ?? ""),-12}]]  {r.StartedAt:yyyy-MM-dd HH:mm}  {Markup.Escape(r.SourceFilename ?? "")}")
-            .ToList();
-        var cancelLabel = "[grey]Cancel[/]";
-        choices.Add(cancelLabel);
-
-        var selected = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title($"  {title}")
-                .UseConverter(s => s)
-                .AddChoices(choices));
-
-        if (selected == cancelLabel) return null;
-
-        // The RunId is the first whitespace-delimited token
-        return selected.Split(' ', 2)[0].Trim();
-    }
-
     private static void PrintUsage() =>
         Console.WriteLine("""
-            Usage: countrydatatools enrichcandidates --country XX [--run ID] [--limit N] [--dry-run]
+            Usage: countrydatatools enrichcandidates --country XX [--limit N] [--dry-run]
                 or countrydatatools enrichcandidates --all         [--limit N] [--dry-run]
 
               --country XX    Country code (US / CA / MX)
               --all           Run for all pipeline countries (US, CA, MX) in sequence
-              --run ID        Run ID to enrich (defaults to latest run for the country)
-              --limit N       Max zips to enrich this run (default: 100)
+              --limit N       Max zips to enrich this session (default: 100)
               --dry-run       Show what would be processed without making requests
             """);
-
 }

@@ -54,7 +54,7 @@ internal static class EnrichDashboard
                         ? ValidationResult.Success()
                         : ValidationResult.Error("[red]Enter a positive number[/]")));
 
-            var dryRun = AnsiConsole.Confirm("  Dry run?", false);
+            //var dryRun = AnsiConsole.Confirm("  Dry run?", false);
 
             var isAll = countryChoice.StartsWith("All");
             var country = isAll ? "" : countryChoice;
@@ -65,9 +65,7 @@ internal static class EnrichDashboard
                 exitCode = await EnrichCandidatesCommand.RunAsync(
                     new EnrichCandidatesCommand.Options(
                         Country: country,
-                        RunId:   "",
                         Limit:   limit,
-                        DryRun:  dryRun,
                         All:     isAll));
             }
             else
@@ -75,8 +73,7 @@ internal static class EnrichDashboard
                 exitCode = await EnrichDirectCommand.RunAsync(
                     new EnrichDirectCommand.Options(
                         Country: country,
-                        Limit:   limit,
-                        DryRun:  dryRun,
+                        Limit: limit,
                         All:     isAll));
             }
 

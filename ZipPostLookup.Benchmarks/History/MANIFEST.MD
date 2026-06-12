@@ -43,7 +43,38 @@ For details on what each benchmark measures, see the [README](../README.MD).
 
 ## Release history
 
-### ZPI v4 fused directory + lazy NamePool — 2026-06-08 (current)
+### CA construction quadratic fix + Brotli-CSV embedding — 2026-06-12 (current)
+
+Two changes reshape `ConstructionBenchmarks` and the embedded-resource story. Lookup hot paths are
+unchanged (within noise across the whole suite).
+
+- **CA construction quadratic fix.** `ZipPostRegistry.AddToIndex` used `list.Insert(0, entry)` for
+  every default entry — an O(n) memmove that became quadratic on CA's huge reverse-lookup buckets
+  (`byAdmin1Code["ON"]`, `byTimeZone["America/Toronto"]`, etc.). It now appends, with one linear
+  post-load pass (`ReorderDefaultsFirst`) reproducing the exact previous element order. **CA build:
+  32,962 ms → 1,373 ms (24×); US 189 → 136 ms; MX 609 → 375 ms; US+CA+MX 34.2 s → 2.19 s.** Per-row
+  build cost is now uniform across countries (~2.3 µs/row for CA, equal to US — the superlinearity is
+  gone). Allocations and all lookup paths are unchanged. Full write-up:
+  [`CA-CONSTRUCTION-INVESTIGATION.md`](CA-CONSTRUCTION-INVESTIGATION.md).
+
+  > **Comparing across this date:** pre-06-12 CA/combined `ConstructionBenchmarks` Means are not
+  > comparable to current — the build algorithm changed. Lookup classes are unaffected.
+
+- **Data regenerated and grown.** CA 412,403 → **603,272** FSA-compressed entries; US 57,400 →
+  **59,719** rows; MX 145,826 → **146,183** rows. Distinct codes: US 43,498 · CA ~900,686 · MX 32,893.
+  Benchmark `[Description]` row-count labels were updated to match.
+
+- **Brotli-CSV embedding.** The library now embeds the Brotli-compressed `{cc}.csv.br` (the CSV
+  backend decompresses at load) alongside `{cc}.zpi.br`, instead of the plain `.csv`. Consequence:
+  the `.zpi.br` image is **no longer the smallest artifact on disk** (CA: `ca.csv.br` 784 KB vs
+  `ca.u16.zpi.br` 5,882 KB) — the image's win is now load time and startup memory, not footprint.
+
+- **Cold-start comparison reshaped.** Because the CSV build is now fast, the image's load-vs-build
+  *time* lead fell from ~340–430× (CA) to ~17–28×; its *memory* lead grew to ~29–31× less allocation.
+  CA ZPI load rose to ~55 ms (from ~41 ms) tracking the larger dataset. See
+  [`ZpiVsCsvBenchmark.MD`](../../ZpiVsCsvBenchmark.MD) §3.3.
+
+### ZPI v4 fused directory + lazy NamePool — 2026-06-08
 
 Two ZPI reader/format changes from the "Must go faster" project affect `ConstructionBenchmarks`
 and the ZPI hot path. **When comparing `ConstructionBenchmarks` runs across this date, note that

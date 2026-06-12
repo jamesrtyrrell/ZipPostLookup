@@ -112,6 +112,10 @@ public sealed class ZipPostRegistry : IZipPostLookup
             LoadSource(source, byCode, byName, byAdmin1Code, byAdmin1Name, byAdmin, byTimeZone, rangeIndex);
         }
 
+        // Entries were appended in load order; one linear pass puts defaults first in every
+        // posting list (identical ordering to the old per-insert behaviour — see method doc).
+        ReorderDefaultsFirst(byCode, byName, byAdmin1Code, byAdmin1Name, byAdmin, byTimeZone);
+
         _all = byCode.Values
             .SelectMany(e => e)
             .OrderBy(e => e.ZpCode)
@@ -277,13 +281,75 @@ public sealed class ZipPostRegistry : IZipPostLookup
             index[key] = list;
         }
 
-        if (entry.IsDefault)
+        // Append in load order; ReorderDefaultsFirst moves defaults to the front afterwards.
+        // (The previous per-default list.Insert(0, ...) was O(bucket size) per insert — quadratic
+        // on CA's huge province/timezone buckets, accounting for ~32 s of the ~33 s CA build.)
+        list.Add(entry);
+    }
+
+    /// <summary>
+    /// Rebuilds every posting list as [defaults in reverse load order] + [non-defaults in load
+    /// order] — element-for-element identical to the previous Insert(0)-per-default behaviour,
+    /// but linear instead of quadratic in bucket size. Called once after all sources are loaded,
+    /// before <c>_all</c> materialisation (whose stable OrderBy preserves within-code order).
+    /// </summary>
+    private static void ReorderDefaultsFirst(params Dictionary<string, List<CodeEntry>>[] indexes)
+    {
+        var buffer = new CodeEntry[16];
+
+        foreach (var index in indexes)
         {
-            list.Insert(0, entry);
-        }
-        else
-        {
-            list.Add(entry);
+            foreach (var list in index.Values)
+            {
+                var count = list.Count;
+
+                if (count < 2)
+                {
+                    continue;
+                }
+
+                var defaults = 0;
+
+                for (var i = 0; i < count; i++)
+                {
+                    if (list[i].IsDefault)
+                    {
+                        defaults++;
+                    }
+                }
+
+                if (defaults == 0)
+                {
+                    continue;
+                }
+
+                if (buffer.Length < count)
+                {
+                    buffer = new CodeEntry[Math.Max(count, buffer.Length * 2)];
+                }
+
+                var d = defaults - 1;
+                var n = defaults;
+
+                for (var i = 0; i < count; i++)
+                {
+                    var entry = list[i];
+
+                    if (entry.IsDefault)
+                    {
+                        buffer[d--] = entry;
+                    }
+                    else
+                    {
+                        buffer[n++] = entry;
+                    }
+                }
+
+                for (var i = 0; i < count; i++)
+                {
+                    list[i] = buffer[i];
+                }
+            }
         }
     }
 
