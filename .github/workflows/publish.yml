@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Package version (e.g. 1.5.1-beta, 1.0.0-rc.1, 1.0.0)'
+        description: 'Package version (e.g. 1.0.0, 1.0.1, 1.5.0-beta, 1.0.0-rc.1)'
         required: true
-        default: '1.0.0-rc.2'
+        default: '1.0.0'
 
 permissions:
   contents: write   # push the git tag
@@ -66,9 +66,16 @@ jobs:
           --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
           --skip-duplicate
 
-      - name: Tag release
+      - name: Tag and create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag v${{ github.event.inputs.version }}
           git push origin v${{ github.event.inputs.version }}
+          if [[ "${{ github.event.inputs.version }}" == *"-"* ]]; then
+            gh release create v${{ github.event.inputs.version }} --prerelease --title "v${{ github.event.inputs.version }}" --generate-notes
+          else
+            gh release create v${{ github.event.inputs.version }} --title "v${{ github.event.inputs.version }}" --generate-notes
+          fi
