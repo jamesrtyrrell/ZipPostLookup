@@ -124,6 +124,17 @@ public sealed class UsCountryRules : ICountryRules
             or 56999;
     }
 
+    // ── Deprecated IANA timezones → canonical ─────────────────────────────────
+    // GeoTimeZone may still emit these retired zone IDs from an older boundary set.
+    // America/Shiprock is a long-standing link to America/Denver.
+    private static readonly IReadOnlyDictionary<string, string> _deprecatedTimezones =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["America/Shiprock"] = "America/Denver",
+        };
+
+    public IReadOnlyDictionary<string, string> DeprecatedTimezoneAliases => _deprecatedTimezones;
+
     // ── SCF prefix → Admin1 ───────────────────────────────────────────────────
     // Derived from curated data.Reference grouped by LEFT(ZpCode,3).
     // The first three digits of a US ZIP identify the Sectional Center Facility (SCF).

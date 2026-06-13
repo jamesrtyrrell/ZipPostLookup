@@ -1,6 +1,7 @@
 using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Commands.Handlers;
 using ZipPostLookup.CountryDataTools.Dashboard.Layout;
+using ZipPostLookup.CountryDataTools.Utilities;
 
 namespace ZipPostLookup.CountryDataTools.Dashboard;
 
@@ -19,14 +20,14 @@ internal static class ConvertDashboard
                 new TextPrompt<string>("  Input TSV path [grey](or blank to go back)[/]:")
                     .AllowEmpty());
 
-            file = StripPathQuotes(file);
+            file = FileTools.StripPathQuotes(file);
             if (string.IsNullOrWhiteSpace(file)) break;
 
             var countryOverride = AnsiConsole.Prompt(
                 new TextPrompt<string>("  Country override [grey](blank = derive from filename or data)[/]:")
                     .AllowEmpty());
 
-            var outputOverride = StripPathQuotes(AnsiConsole.Prompt(
+            var outputOverride = FileTools.StripPathQuotes(AnsiConsole.Prompt(
                 new TextPrompt<string>("  Output path [grey](blank = {cc}-candidate.csv alongside input)[/]:")
                     .AllowEmpty()));
 
@@ -47,13 +48,5 @@ internal static class ConvertDashboard
         return 0;
     }
 
-    private static string StripPathQuotes(string path)
-    {
-        path = path.Trim();
-        if (path.Length >= 2 &&
-            ((path[0] == '"'  && path[^1] == '"') ||
-             (path[0] == '\'' && path[^1] == '\'')))
-            path = path[1..^1].Trim();
-        return path;
-    }
+    
 }

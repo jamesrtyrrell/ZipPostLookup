@@ -11,11 +11,11 @@
     }
   ],
   "NameLabel": "City",
-  "CodeCount": 43498,
+  "CodeCount": 43501,
   "CodeRanges": false,
   "Curated": true,
   "CurationStatus": "Curated",
-  "LastUpdated": "2026-06-11",
+  "LastUpdated": "2026-06-13",
   "CodeFormat": "12345",
   "CodeRegex": "^\\d{5}([- ]\\d{4})?$",
   "Description": "US states, territories and associated areas. USPS codes are the authoritative postal codes used in data.reference. ANSI codes are the numeric FIPS codes per ANSI INCITS 38:2009. UM (U.S. Minor Outlying Islands) covers multiple individual islands listed under the \u0027islands\u0027 property.",
@@ -80,8 +80,8 @@
       "Name": "California",
       "Code": "CA",
       "Ansi": "6",
-      "ZipCount": 2714,
-      "NameCount": 3697
+      "ZipCount": 2717,
+      "NameCount": 3700
     },
     {
       "Name": "Colorado",

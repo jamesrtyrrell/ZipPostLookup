@@ -116,4 +116,26 @@ public interface ICountryRules
     /// Override in country rules where the format differs (e.g. CA FSA format).
     /// </summary>
     string ZpCodeLikePattern => "[0-9][0-9][0-9][0-9][0-9]";
+
+    /// <summary>
+    /// Maps obsolete/deprecated IANA timezone identifiers to their canonical equivalents for
+    /// this country — e.g. CA <c>"America/Nipigon"</c> → <c>"America/Toronto"</c> (retired in
+    /// tzdata 2022b). GeoTimeZone can still emit retired zone IDs from an older boundary
+    /// dataset, so every coordinate-resolved timezone must be passed through
+    /// <see cref="CanonicalizeTimezone"/> before it is stored. Default: no aliases.
+    /// </summary>
+    IReadOnlyDictionary<string, string> DeprecatedTimezoneAliases => NoTimezoneAliases;
+
+    /// <summary>
+    /// Returns the canonical IANA timezone for <paramref name="timezone"/> when it is a known
+    /// deprecated alias for this country; otherwise returns it unchanged (null-safe).
+    /// </summary>
+    string? CanonicalizeTimezone(string? timezone) =>
+        timezone is not null && DeprecatedTimezoneAliases.TryGetValue(timezone, out var canonical)
+            ? canonical
+            : timezone;
+
+    /// <summary>Shared empty alias map for countries with no deprecated timezones.</summary>
+    private static readonly IReadOnlyDictionary<string, string> NoTimezoneAliases =
+        new Dictionary<string, string>(0);
 }

@@ -130,7 +130,13 @@ public class DataServices : IDataServices
     public async Task<bool> MergeDataRecordsAsync(List<IDataSchema> dataRecords)
     {
         if (dataRecords.Count == 0) { return true; }
-        
+
+        // Enforce the lat/lng pairing rule on every reference row before it is written:
+        // a row may never persist one coordinate without the other.
+        foreach (var record in dataRecords)
+            if (record is DataReference reference)
+                reference.NormalizeCoordinatePair();
+
         await using var conn = (SqlConnection)_factory.CreateConnection();
         try
         {

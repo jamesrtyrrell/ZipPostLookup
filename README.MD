@@ -1,9 +1,9 @@
 ﻿# ZipPostLookup
 
 Fast, extensible in-memory postal code lookup for .NET.  
-Built-in data for the **United States** (<!-- zpl:us:codes -->43,498<!-- /zpl:us:codes --> ZIP codes), **Canada** (~<!-- zpl:ca:codes -->900,686<!-- /zpl:ca:codes --> postal codes, <!-- zpl:ca:entries -->603k<!-- /zpl:ca:entries --> compressed entries via FSA range compression), and **Mexico** (<!-- zpl:mx:codes -->32,893<!-- /zpl:mx:codes --> postal codes). All three countries are fully curated ✅.
+Built-in data for the **United States** (<!-- zpl:us:codes -->43,501<!-- /zpl:us:codes --> ZIP codes), **Canada** (~<!-- zpl:ca:codes -->901,512<!-- /zpl:ca:codes --> postal codes, <!-- zpl:ca:entries -->621k<!-- /zpl:ca:entries --> compressed entries via FSA range compression), and **Mexico** (<!-- zpl:mx:codes -->32,893<!-- /zpl:mx:codes --> postal codes). All three countries are fully curated ✅.
 
-Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-11 18:28:44<!-- /zpl:updated -->)**
+Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-13 10:48:49<!-- /zpl:updated -->)**
 
 ---
 
@@ -152,6 +152,20 @@ ZipPostRegistry na2 = ZipPostLookup.CreateRegistry("us", "ca");
 
 ---
 
+## Roadmap to Version 2
+
+Planned work toward the 2.0 release. The runtime library's public API is stable; most of this is data coverage, tooling, and ports.
+
+| Item | Description |
+|------|-------------|
+| **Audit CDT** | Harden the `CountryDataTools` data-curation CLI — route all DB access through its service layer and centralise every SQL string, so the pipeline is consistent and maintainable. |
+| **AI Import Helper** | An `import auto` command that ingests any CSV/TSV/JSON, auto-detects the postal-code column, and maps the remaining fields — using the built-in data as a ground-truth oracle — so new sources need no manual format description. |
+| **More countries** | Expand built-in data beyond US, CA, and MX. The embedded CSV format is the contract; each new country ships as an embedded resource. |
+| **Unit Tests on CDT** | Add automated test coverage to the `CountryDataTools` pipeline (currently covered only by the library's own test suite). |
+| **Python Port** | A PyPI package mirroring the lookup API (`get_by_code`, `get_by_name`, `get_by_state`, …), backed by the same embedded CSV data. |
+
+---
+
 ## Why No Async Methods?
 
 All lookup methods (`GetByCode`, `GetByName`, `GetByState`, etc.) are synchronous by design. Every registry is fully in-memory — `GetByCode` does a `FrozenDictionary` lookup that completes in ~6 ns. There is no I/O, no network, no disk access at query time.
@@ -284,13 +298,13 @@ On .NET 8+, all indexes use `FrozenDictionary`. The `.zpi.br` frozen image loads
 
 | Country |                                        Distinct Codes* | Admin Levels |                Timezones                | Status     |
 |---------|-------------------------------------------------------:|:------------:|:---------------------------------------:|------------|
-| US      |  **<!-- zpl:us:codes -->43,498<!-- /zpl:us:codes -->** |    State     | <!-- zpl:us:tz -->54<!-- /zpl:us:tz --> | ✅ Curated  |
-| CA      | **<!-- zpl:ca:codes -->900,686<!-- /zpl:ca:codes -->** |   Province   | <!-- zpl:ca:tz -->25<!-- /zpl:ca:tz --> | ✅ Curated  |
+| US      |  **<!-- zpl:us:codes -->43,501<!-- /zpl:us:codes -->** |    State     | <!-- zpl:us:tz -->54<!-- /zpl:us:tz --> | ✅ Curated  |
+| CA      | **<!-- zpl:ca:codes -->901,512<!-- /zpl:ca:codes -->** |   Province   | <!-- zpl:ca:tz -->28<!-- /zpl:ca:tz --> | ✅ Curated  |
 | MX      |  **<!-- zpl:mx:codes -->32,893<!-- /zpl:mx:codes -->** |    Estado    | <!-- zpl:mx:tz -->17<!-- /zpl:mx:tz --> | ✅ Curated  |
 
 \* Distinct codes are the number of unique Zip/Postal codes in the country's set.
 
-Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-11 18:28:44<!-- /zpl:updated -->)**
+Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-13 10:48:49<!-- /zpl:updated -->)**
 
 ---
 

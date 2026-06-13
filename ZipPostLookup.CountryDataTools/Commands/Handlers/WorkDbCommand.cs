@@ -345,8 +345,18 @@ public static class WorkDbCommand
                 AnsiConsole.MarkupLine("  [green]✓ No blank-timezone rows with false TimezoneChecked.[/]");
 
             Console.WriteLine("  Normalising deprecated IANA timezone aliases...");
-            var updated = await Dapper.SqlMapper.ExecuteAsync(conn,
-                CommonQueries.NormalizeDeprecatedTimezones, transaction: tx);
+            var updated = 0;
+            foreach (var pipelineCountry in new[] { "US", "CA", "MX" })
+            {
+                var rules = CountryRules.CountryRulesFactory.For(pipelineCountry);
+                foreach (var (deprecated, canonical) in rules.DeprecatedTimezoneAliases)
+                {
+                    updated += await Dapper.SqlMapper.ExecuteAsync(conn,
+                        CommonQueries.NormalizeTimezoneAlias,
+                        new { CountryId = pipelineCountry, Deprecated = deprecated, Canonical = canonical },
+                        transaction: tx);
+                }
+            }
             AnsiConsole.MarkupLine($"  [green]✓ {updated} row(s) updated to canonical timezone.[/]");
 
             Console.WriteLine("  Collecting duplicate ReferenceIds (IsDefault=0 now matching an IsDefault=1 row)...");
@@ -394,13 +404,14 @@ public static class WorkDbCommand
         // Covers both TimezoneChecked=0 AND rows where TimezoneChecked=1 but
         // Timezone is empty/--- (data quality fix).
         Console.WriteLine("  Resolving IANA timezones from coordinates for unverified rows...");
-        var unverified = new List<(long ReferenceId, string ZpCode, string Lat, string Lng, string Timezone)>();
+        var unverified = new List<(string Country, long ReferenceId, string ZpCode, string Lat, string Lng, string Timezone)>();
         foreach (var pipelineCountry in new[] { "US", "CA", "MX" })
         {
             var countryRows = await conn.QueryAsync<(long ReferenceId, string ZpCode, string Lat, string Lng, string Timezone)>(
                 CommonQueries.GetUnverifiedWithCoords,
                 new { CountryId = pipelineCountry });
-            unverified.AddRange(countryRows);
+            unverified.AddRange(countryRows.Select(r =>
+                (pipelineCountry, r.ReferenceId, r.ZpCode, r.Lat, r.Lng, r.Timezone)));
         }
 
         if (unverified.Count > 0)
@@ -408,24 +419,40 @@ public static class WorkDbCommand
             Console.WriteLine($"    Found {unverified.Count:N0} row(s) with coordinates and TimezoneChecked=0.");
             var tzResolved = 0;
             var tzConfirmed = 0;
+            var conflicts = new List<(string ZpCode, string Existing, string FromCoords)>();
+
+            // Per-country rules canonicalise retired zone IDs (e.g. America/Nipigon → Toronto)
+            // that GeoTimeZone may still emit from an older boundary dataset.
+            var rulesByCountry = new[] { "US", "CA", "MX" }
+                .ToDictionary(c => c, c => CountryRules.CountryRulesFactory.For(c));
 
             foreach (var row in unverified)
             {
                 var resolved = TimezoneResolver.TryResolveWithCoordinates(row.Lat, row.Lng);
                 if (resolved == null) continue;
 
+                resolved = rulesByCountry[row.Country].CanonicalizeTimezone(resolved);
+                if (resolved == null) continue;   // canonicalise never nulls a non-null input
+
                 var tzMissing = string.IsNullOrEmpty(row.Timezone) || row.Timezone == "---";
                 var tzDiffers = !string.Equals(resolved, row.Timezone, StringComparison.OrdinalIgnoreCase);
 
-                if (tzMissing || tzDiffers)
+                if (tzMissing)
                 {
-                    // Timezone missing or coords give a different value — update it
+                    // Blank/placeholder timezone — fill it in from the coordinates.
                     await conn.ExecuteAsync(
                         @"UPDATE data.Reference
                           SET Timezone = @Timezone, TimezoneChecked = 1, UpdatedAt = SYSUTCDATETIME()
                           WHERE ReferenceId = @ReferenceId",
                         new { Timezone = resolved, row.ReferenceId });
                     tzResolved++;
+                }
+                else if (tzDiffers)
+                {
+                    // A real timezone is already set but the coordinates disagree.
+                    // Report only — never overwrite an existing value. Leave
+                    // TimezoneChecked untouched so the row resurfaces for review.
+                    conflicts.Add((row.ZpCode, row.Timezone, resolved));
                 }
                 else
                 {
@@ -443,8 +470,16 @@ public static class WorkDbCommand
                 AnsiConsole.MarkupLine($"  [green]✓ {tzResolved:N0} timezone(s) updated from coordinates.[/]");
             if (tzConfirmed > 0)
                 AnsiConsole.MarkupLine($"  [green]✓ {tzConfirmed:N0} timezone(s) confirmed correct and marked verified.[/]");
-            if (tzResolved == 0 && tzConfirmed == 0)
+            if (tzResolved == 0 && tzConfirmed == 0 && conflicts.Count == 0)
                 Console.WriteLine("  ✓ Coordinates present but no timezone could be resolved.");
+
+            if (conflicts.Count > 0)
+            {
+                AnsiConsole.MarkupLine(
+                    $"  [yellow]⚠  {conflicts.Count:N0} row(s) already have a timezone that disagrees with coordinates — left unchanged for review:[/]");
+                foreach (var c in conflicts)
+                    Console.WriteLine($"    {c.ZpCode}: existing '{c.Existing}' vs coords '{c.FromCoords}'");
+            }
         }
         else
         {

@@ -91,6 +91,11 @@ public sealed class SqlReferenceRepository : IReferenceRepository
             return;
         }
 
+        // Enforce the lat/lng pairing rule: a row may never persist one coordinate
+        // without the other (both are blanked to "---" if the pair is incomplete).
+        foreach (var dataRange in dataRangeList)
+            dataRange.NormalizeCoordinatePair();
+
         try
         {
             conn.BulkMerge(dataRangeList)

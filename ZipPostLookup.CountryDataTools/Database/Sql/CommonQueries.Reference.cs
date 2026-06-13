@@ -15,6 +15,32 @@ public static partial class CommonQueries
     public static readonly string HasReferenceData =
         @"SELECT COUNT(*) FROM data.Reference WHERE CountryId = @CountryId";
 
+    // Distinct ZpCodes already present for a country — used to skip codes that
+    // already exist when importing a bare code-only set (ImportCodesOnlyCommand).
+    public static readonly string GetReferenceCodesForCountry =
+        @"SELECT DISTINCT ZpCode FROM data.Reference WHERE CountryId = @CountryId";
+
+    // Reference row whose AltNameOf alias matches an incoming place name (enrichment).
+    public static readonly string GetReferenceByCodeAndAltName =
+        @"SELECT * FROM data.Reference
+          WHERE CountryId = @CountryId AND ZpCode = @ZpCode AND AltNameOf = @PlaceName";
+
+    // First "---" placeholder row for a code (left by ImportCodesOnlyCommand) so
+    // enrichment can rename it in place instead of inserting a second row.
+    public static readonly string GetReferencePlaceholderByCode =
+        @"SELECT TOP 1 * FROM data.Reference
+          WHERE CountryId = @CountryId AND ZpCode = @ZpCode AND PlaceName = @Placeholder
+          ORDER BY ReferenceId";
+
+    // Propagate an API timezone to sibling rows of the same code that still have a
+    // blank/placeholder timezone, so MarkCodeAsCurated's TimezoneChecked guard passes.
+    public static readonly string PropagateTimezoneToBlankSiblings =
+        @"UPDATE data.Reference
+          SET    Timezone  = @Timezone, UpdatedAt = SYSUTCDATETIME()
+          WHERE  CountryId = @CountryId
+            AND  ZpCode    = @ZpCode
+            AND  (Timezone IS NULL OR Timezone = '' OR Timezone = '---')";
+
     public static readonly string GetAdminLevels =
         @"SELECT LevelNumber, AdminLevelId FROM data.AdminLevels WHERE CountryId = @CountryId";
 
@@ -647,6 +673,24 @@ public static partial class CommonQueries
                 AND r.ZpCode    = src.ZpCode
             WHERE  r.TimezoneChecked = 0;";
 
+    // Back-fill Lat/Lng from a coordinates source, but ONLY on rows whose existing pair is
+    // incomplete (one side missing/placeholder). Both coordinates are written together — never
+    // a half-pair — so an existing complete pair is left untouched. TimezoneChecked is reset to
+    // 0 because the coordinates changed: the prior timezone is no longer verified and must be
+    // re-derived (by normalize-tz, or the next coord run). Used by 'Coord Data'.
+    public static readonly string UpdateReferenceCoordsBatch =
+        @"UPDATE r
+            SET    r.Lat             = src.Lat,
+                   r.Lng             = src.Lng,
+                   r.TimezoneChecked = 0,
+                   r.UpdatedAt       = SYSUTCDATETIME()
+            FROM   data.Reference r
+            JOIN  (VALUES {0}) AS src(ZpCode, Lat, Lng)
+                ON  r.CountryId = @CountryId
+                AND r.ZpCode    = src.ZpCode
+            WHERE  (r.Lat IS NULL OR r.Lat IN ('', '---')
+                 OR r.Lng IS NULL OR r.Lng IN ('', '---'));";
+
     public static readonly string UpdateReferenceNameCheckedBatch =
         @"UPDATE r
             SET    r.NameChecked = 1
@@ -668,24 +712,16 @@ public static partial class CommonQueries
           WHERE  TimezoneChecked = 1
             AND  (Timezone IS NULL OR Timezone = '' OR Timezone = '---')";
 
-    // Normalise all deprecated IANA timezone aliases to their canonical equivalents.
-    // Run this across all countries; it is safe to repeat (idempotent).
-    public static readonly string NormalizeDeprecatedTimezones =
+    // Replace one deprecated IANA timezone with its canonical form for a single country.
+    // The deprecated→canonical mapping is a country rule and lives in CountryRules
+    // (ICountryRules.DeprecatedTimezoneAliases); normalize-tz loops over those maps and runs
+    // this generic, idempotent statement once per alias. No timezone rules belong in SQL.
+    public static readonly string NormalizeTimezoneAlias =
         @"UPDATE data.Reference
-          SET Timezone = CASE Timezone
-              WHEN 'America/Nipigon'     THEN 'America/Toronto'
-              WHEN 'America/Thunder_Bay' THEN 'America/Toronto'
-              WHEN 'America/Rainy_River' THEN 'America/Winnipeg'
-              WHEN 'America/Pangnirtung' THEN 'America/Iqaluit'
-              WHEN 'America/Glace_Bay'   THEN 'America/Halifax'
-              WHEN 'America/Creston'     THEN 'America/Phoenix'
-              WHEN 'America/Shiprock'    THEN 'America/Denver'
-          END
-          WHERE Timezone IN (
-              'America/Nipigon', 'America/Thunder_Bay', 'America/Rainy_River',
-              'America/Pangnirtung', 'America/Glace_Bay', 'America/Creston',
-              'America/Shiprock'
-          );";
+          SET    Timezone  = @Canonical,
+                 UpdatedAt = SYSUTCDATETIME()
+          WHERE  CountryId = @CountryId
+            AND  Timezone  = @Deprecated";
 
     // Remove US reference rows whose ZIP code is outside the USPS-assigned range.
     // Bounds are supplied as @MinZip/@MaxZip params — the single source of truth is

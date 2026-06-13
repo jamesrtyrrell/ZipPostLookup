@@ -95,6 +95,41 @@ public class DataReference : IDataSchema
     /// <summary>Gold certification flag — set by Dapper from EXISTS subquery (GetCodeDetailRows). Not written to DB.</summary>
     [Write(false)] public bool IsGold { get; set; }
     
+    /// <summary>The placeholder stored when a coordinate is absent.</summary>
+    public const string CoordinatePlaceholder = "---";
+
+    /// <summary>
+    /// True when this row's coordinates do NOT form a usable pair — i.e. either
+    /// <see cref="Lat"/> or <see cref="Lng"/> is unset (null/empty/"---") or cannot be
+    /// parsed as a double. Coordinates must only ever be stored as a complete pair, so the
+    /// import, export, and enrichment paths use this to blank BOTH coordinates (via
+    /// <see cref="NormalizeCoordinatePair"/>) instead of writing a half-populated row — the
+    /// fault that stranded 735k CA rows with a latitude but no longitude.
+    /// </summary>
+    public bool HasIncompleteCoordinates() =>
+        !IsParsableCoordinate(Lat) || !IsParsableCoordinate(Lng);
+
+    /// <summary>
+    /// Enforces the lat/lng pairing rule on this row: when the pair is incomplete
+    /// (see <see cref="HasIncompleteCoordinates"/>) BOTH coordinates are reset to the
+    /// <see cref="CoordinatePlaceholder"/>. Idempotent; returns true if it changed the row.
+    /// </summary>
+    public bool NormalizeCoordinatePair()
+    {
+        if (!HasIncompleteCoordinates()) return false;
+        if (Lat == CoordinatePlaceholder && Lng == CoordinatePlaceholder) return false;
+
+        Lat = CoordinatePlaceholder;
+        Lng = CoordinatePlaceholder;
+        return true;
+    }
+
+    private static bool IsParsableCoordinate(string? value) =>
+        !string.IsNullOrWhiteSpace(value)
+        && value != CoordinatePlaceholder
+        && double.TryParse(value, System.Globalization.NumberStyles.Float,
+               System.Globalization.CultureInfo.InvariantCulture, out _);
+
     public override string ToString()
     {
         var sb = new StringBuilder();

@@ -6,7 +6,7 @@ on:
       version:
         description: 'Package version (e.g. 1.0.0, 1.0.1, 1.5.0-beta, 1.0.0-rc.1)'
         required: true
-        default: '1.0.0'
+        default: '1.0.1'
 
 permissions:
   contents: write   # push the git tag

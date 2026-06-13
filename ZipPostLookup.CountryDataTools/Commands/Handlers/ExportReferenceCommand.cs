@@ -314,6 +314,9 @@ public static class ExportReferenceCommand
         }
 
         NormalizeZips(rows, normalizer);
+        int coordsBlanked = EnforceCoordinatePairs(rows);
+        if (coordsBlanked > 0)
+            Console.WriteLine($"  ⚠ {coordsBlanked:N0} row(s) had an incomplete lat/lng pair — both coordinates blanked.");
         int defaultsFixed = EnforceOneDefaultPerZip(rows);
         if (defaultsFixed > 0)
         {
@@ -540,6 +543,9 @@ public static class ExportReferenceCommand
         }
 
         NormalizeZips(rows, normalizer);
+        int coordsBlanked = EnforceCoordinatePairs(rows);
+        if (coordsBlanked > 0)
+            Console.WriteLine($"  ⚠ {coordsBlanked:N0} row(s) had an incomplete lat/lng pair — both coordinates blanked.");
         int defaultsFixed = EnforceOneDefaultPerZip(rows);
         if (defaultsFixed > 0)
         {
@@ -658,6 +664,9 @@ public static class ExportReferenceCommand
         }
 
         NormalizeZips(rows, normalizer);
+        int coordsBlanked = EnforceCoordinatePairs(rows);
+        if (coordsBlanked > 0)
+            Console.WriteLine($"  ⚠ {coordsBlanked:N0} row(s) had an incomplete lat/lng pair — both coordinates blanked.");
         int defaultsFixed = EnforceOneDefaultPerZip(rows);
         if (defaultsFixed > 0)
         {
@@ -775,6 +784,15 @@ public static class ExportReferenceCommand
             "MX" => new MxCountryCodeRules(),
             _    => null
         };
+
+    /// <summary>
+    /// Enforces the lat/lng pairing rule before export: any row whose coordinates do not
+    /// form a complete, parseable pair has BOTH coordinates blanked to "---" (via
+    /// <see cref="DataReference.NormalizeCoordinatePair"/>), so a half-populated pair is
+    /// never written into an exported CSV / ZP image. Returns the number of rows changed.
+    /// </summary>
+    private static int EnforceCoordinatePairs(IEnumerable<DataReference> rows) =>
+        rows.Count(r => r.NormalizeCoordinatePair());
 
     private static void NormalizeZips(IEnumerable<DataReference> rows, ICountryCodeRules? normalizer)
     {

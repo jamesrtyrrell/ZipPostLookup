@@ -97,4 +97,20 @@ public sealed class CaCountryRules : ICountryRules
 
     public string? ResolveAdmin1CodeFromName(string admin1Name) =>
         _provinceCode.TryGetValue(admin1Name, out var code) ? code : null;
+
+    // ── Deprecated IANA timezones → canonical ─────────────────────────────────
+    // GeoTimeZone may still emit these retired zone IDs from an older boundary set.
+    // Nipigon/Thunder_Bay/Rainy_River/Pangnirtung were merged in tzdata 2022b.
+    private static readonly IReadOnlyDictionary<string, string> _deprecatedTimezones =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["America/Nipigon"]     = "America/Toronto",
+            ["America/Thunder_Bay"] = "America/Toronto",
+            ["America/Rainy_River"] = "America/Winnipeg",
+            ["America/Pangnirtung"] = "America/Iqaluit",
+            ["America/Glace_Bay"]   = "America/Halifax",
+            ["America/Creston"]     = "America/Phoenix",
+        };
+
+    public IReadOnlyDictionary<string, string> DeprecatedTimezoneAliases => _deprecatedTimezones;
 }

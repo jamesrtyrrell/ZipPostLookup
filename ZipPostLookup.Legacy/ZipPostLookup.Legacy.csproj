@@ -21,6 +21,8 @@
 		<Description>Fast postal code lookup for .NET Standard 2.0 — compatible with .NET Framework 4.6.1+, .NET Core 2+, .NET 5–7, and Unity. Built-in data for US (41k zip codes), Canada (891k postal codes) and Mexico (32k postal codes). Lookup by zip/postal code, city, state, province and IANA timezone. For .NET 8+ apps use the ZipPostLookup package instead (FrozenDictionary-backed, binary ZPI format).</Description>
 		<PackageTags>dotnet;csharp;zipcode;postal-code;geocoding;address-lookup;timezone;nuget;canada;mexico;netstandard;netframework</PackageTags>
 		<PackageReadmeFile>README.MD</PackageReadmeFile>
+		<PackageReleaseNotes>See https://github.com/jamesrtyrrell/ZipPostLookup/releases</PackageReleaseNotes>
+		<PackageIcon>zpl-logo.png</PackageIcon>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 
 		<!-- Repository links -->
@@ -56,6 +58,7 @@
 
 	<ItemGroup>
 		<None Include="..\README.MD" Pack="true" PackagePath="\" />
+		<None Include="..\ZipPostLookup\zpl-logo.png" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
 </Project>

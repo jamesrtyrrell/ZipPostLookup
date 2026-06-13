@@ -19,6 +19,7 @@ public static class DashboardCommand
             new MenuItem("Enrichment",   "Enrich uncurated DB or candidate data via APIs",    EnrichDashboard.RunAsync),
             new MenuItem("Normalize",    "Fix timezone aliases, names, and admin data",        NormalizeDashboard.RunAsync),
             new MenuItem("Editor",       "Browse and curate uncurated reference codes",        ZpCodeEditorDashboard.RunAsync),
+            new MenuItem("Find Gold",    "Certify all reference ZpCodes that are Gold Standard", FindGoldDashboard.RunAsync),
             new MenuItem("Db Integrity", "Scan DB for admin errors, orphans, duplicates",     DbIntegrityDashboard.RunAsync),
         ]),
 
@@ -26,6 +27,7 @@ public static class DashboardCommand
         [
             new MenuItem("Import Pipeline",    "Entire process, step by step",                    null, IsFuture: true),
             new MenuItem("Ingest",             "Import ref data or candidate CSVs",               IngestDashboard.RunAsync),
+            new MenuItem("ZpCodes Only",       "Import a flat csv of codes to check",             CodesOnlyDashboard.RunAsync),
             new MenuItem("Convert",            "Convert known formats from OSM, GeoNames, etc.",  ConvertDashboard.RunAsync),
             new MenuItem("Validate Candidate", "Check candidate files for issues",                ValidateDashboard.RunAsync),
             new MenuItem("Fix and Extract",    "Fix structural and extract problem rows",          null, IsFuture: true),

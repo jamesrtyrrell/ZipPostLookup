@@ -2,6 +2,7 @@ using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Commands.Handlers;
 using ZipPostLookup.CountryDataTools.Dashboard.Layout;
 using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
+using ZipPostLookup.CountryDataTools.Utilities;
 
 namespace ZipPostLookup.CountryDataTools.Dashboard;
 
@@ -99,6 +100,8 @@ internal static class EnrichDashboard
                     ? ValidationResult.Success()
                     : ValidationResult.Error("[red]Path is required[/]")));
 
+        var file = FileTools.StripPathQuotes(source);
+        
         var countryChoice = CountryPicker.Show(
             title: "Country (optional):",
             cancelLabel: "← Cancel",
@@ -121,7 +124,7 @@ internal static class EnrichDashboard
 
         var exitCode = await EnrichReferenceFromCoordinatesCommand.RunAsync(
             new EnrichReferenceFromCoordinatesCommand.Options(
-                Source:    source,
+                Source:    file,
                 Country:   country,
                 BatchSize: batch,
                 DryRun:    dryRun));

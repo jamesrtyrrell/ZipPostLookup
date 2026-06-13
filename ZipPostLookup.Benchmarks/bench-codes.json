@@ -1,4 +1,4 @@
-{
+﻿{
   "US": {
     "Multi": "00603",
     "MultiPrimaryName": "Aguadilla",
@@ -6,12 +6,12 @@
   },
   "CA": {
     "Multi": "A0A1J0",
-    "MultiPrimaryName": "St. John's",
+    "MultiPrimaryName": "St. John\u0027s",
     "MultiSecondaryName": "Shea Heights"
   },
   "MX": {
     "Multi": "01000",
-    "MultiPrimaryName": "San Ángel",
+    "MultiPrimaryName": "San \u00C1ngel",
     "MultiSecondaryName": "San Angel"
   }
 }
