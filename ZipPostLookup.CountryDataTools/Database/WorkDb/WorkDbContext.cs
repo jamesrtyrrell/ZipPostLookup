@@ -53,6 +53,9 @@ public sealed class WorkDbContext
     /// <summary>Executes DELETE statements with transactional safety.</summary>
     public IDeleteServices Delete { get; }
 
+    /// <summary>Runs parameterised INSERT/UPDATE/DELETE writes from a CommonQueries constant.</summary>
+    public ICommandServices Exec { get; }
+
     // -------------------------------------------------------------------------
 
     private WorkDbContext(
@@ -73,6 +76,7 @@ public sealed class WorkDbContext
         Codes         = new CodeServices(factory);
         Pipeline      = new PipelineServices(factory);
         Delete        = new DeleteServices(factory);
+        Exec          = new CommandServices(factory);
     }
 
     /// <summary>

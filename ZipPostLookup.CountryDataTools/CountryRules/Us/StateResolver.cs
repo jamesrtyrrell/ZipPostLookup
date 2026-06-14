@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
-using System.Text.Json.Serialization;
 using ZipPostLookup.Core;
+using ZipPostLookup.CountryDataTools.Models.Json;
 
 namespace ZipPostLookup.CountryDataTools.CountryRules.Us;
 
@@ -75,7 +75,7 @@ public static class StateResolver
             : typeof(CountryInfo).Assembly;
 
         using var stream = targetAssembly.GetManifestResourceStream(resourceName)!;
-        var doc = JsonSerializer.Deserialize<UsStatesDoc>(stream,
+        var doc = JsonSerializer.Deserialize<CountryInfoJson>(stream,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
             ?? throw new InvalidOperationException("Failed to deserialise us_info.json.");
 
@@ -83,30 +83,46 @@ public static class StateResolver
         var byUsps = new Dictionary<string, StateMatch>(StringComparer.OrdinalIgnoreCase);
         var byName = new Dictionary<string, StateMatch>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var s in doc.States)
+        // State data lives under "Divisions": Code = USPS postal code, Name = full name,
+        // Ansi = numeric FIPS code. (The old "states"/"usps" shape this once expected no
+        // longer exists, which had silently made every lookup return null.)
+        foreach (var division in doc.Divisions)
         {
-            var match = new StateMatch(s.Usps, s.Name);
+            var code = division.Code;
+            if (string.IsNullOrWhiteSpace(code)) { continue; }
 
-            if (!byUsps.ContainsKey(s.Usps))
-                byUsps[s.Usps] = match;
+            var match = new StateMatch(code, division.Name);
 
-            if (!byName.ContainsKey(s.Name.ToLowerInvariant()))
-                byName[s.Name.ToLowerInvariant()] = match;
-
-            if (!string.IsNullOrWhiteSpace(s.Ansi) && !byAnsi.ContainsKey(s.Ansi))
-                byAnsi[s.Ansi] = match;
-
-            // Also index individual UM islands by ANSI code
-            if (s.Islands != null)
+            if (!byUsps.ContainsKey(code))
             {
-                foreach (var island in s.Islands)
+                byUsps[code] = match;
+            }
+
+            if (!byName.ContainsKey(division.Name.ToLowerInvariant()))
+            {
+                byName[division.Name.ToLowerInvariant()] = match;
+            }
+
+            if (!string.IsNullOrWhiteSpace(division.Ansi) && !byAnsi.ContainsKey(division.Ansi))
+            {
+                byAnsi[division.Ansi] = match;
+            }
+
+            // Individual islands (e.g. U.S. Minor Outlying Islands) — index by ANSI + name,
+            // mapping back to the parent division's USPS code.
+            if (division.Islands != null)
+            {
+                foreach (var island in division.Islands)
                 {
-                    if (!string.IsNullOrWhiteSpace(island.Ansi) &&
-                        !byAnsi.ContainsKey(island.Ansi))
-                        byAnsi[island.Ansi] = new StateMatch(s.Usps, island.Name);
+                    if (!string.IsNullOrWhiteSpace(island.Ansi) && !byAnsi.ContainsKey(island.Ansi))
+                    {
+                        byAnsi[island.Ansi] = new StateMatch(code, island.Name);
+                    }
 
                     if (!byName.ContainsKey(island.Name.ToLowerInvariant()))
-                        byName[island.Name.ToLowerInvariant()] = new StateMatch(s.Usps, island.Name);
+                    {
+                        byName[island.Name.ToLowerInvariant()] = new StateMatch(code, island.Name);
+                    }
                 }
             }
         }
@@ -123,26 +139,6 @@ public static class StateResolver
         IReadOnlyDictionary<string, StateMatch> ByUsps,
         IReadOnlyDictionary<string, StateMatch> ByName
     );
-
-    private sealed class UsStatesDoc
-    {
-        [JsonPropertyName("states")]
-        public List<StateEntry> States { get; set; } = [];
-    }
-
-    private sealed class StateEntry
-    {
-        [JsonPropertyName("usps")] public string Usps { get; set; } = "";
-        [JsonPropertyName("name")] public string Name { get; set; } = "";
-        [JsonPropertyName("ansi")] public string? Ansi { get; set; }
-        [JsonPropertyName("islands")] public List<IslandEntry>? Islands { get; set; }
-    }
-
-    private sealed class IslandEntry
-    {
-        [JsonPropertyName("name")] public string Name { get; set; } = "";
-        [JsonPropertyName("ansi")] public string? Ansi { get; set; }
-    }
 }
 
 /// <summary>

@@ -15,7 +15,7 @@
   "CodeRanges": false,
   "Curated": true,
   "CurationStatus": "Curated",
-  "LastUpdated": "2026-06-13",
+  "LastUpdated": "2026-06-14",
   "CodeFormat": "12345",
   "CodeRegex": "^\\d{5}([- ]\\d{4})?$",
   "Description": "US states, territories and associated areas. USPS codes are the authoritative postal codes used in data.reference. ANSI codes are the numeric FIPS codes per ANSI INCITS 38:2009. UM (U.S. Minor Outlying Islands) covers multiple individual islands listed under the \u0027islands\u0027 property.",
@@ -53,7 +53,7 @@
       "Code": "AL",
       "Ansi": "1",
       "ZipCount": 848,
-      "NameCount": 1084
+      "NameCount": 1093
     },
     {
       "Name": "Alaska",
@@ -67,35 +67,35 @@
       "Code": "AZ",
       "Ansi": "4",
       "ZipCount": 585,
-      "NameCount": 746
+      "NameCount": 752
     },
     {
       "Name": "Arkansas",
       "Code": "AR",
       "Ansi": "5",
       "ZipCount": 721,
-      "NameCount": 875
+      "NameCount": 878
     },
     {
       "Name": "California",
       "Code": "CA",
       "Ansi": "6",
       "ZipCount": 2717,
-      "NameCount": 3700
+      "NameCount": 3713
     },
     {
       "Name": "Colorado",
       "Code": "CO",
       "Ansi": "8",
       "ZipCount": 672,
-      "NameCount": 1026
+      "NameCount": 1029
     },
     {
       "Name": "Connecticut",
       "Code": "CT",
       "Ansi": "9",
       "ZipCount": 444,
-      "NameCount": 597
+      "NameCount": 603
     },
     {
       "Name": "Delaware",
@@ -116,56 +116,56 @@
       "Code": "FL",
       "Ansi": "12",
       "ZipCount": 1526,
-      "NameCount": 2690
+      "NameCount": 2701
     },
     {
       "Name": "Georgia",
       "Code": "GA",
       "Ansi": "13",
       "ZipCount": 988,
-      "NameCount": 1215
+      "NameCount": 1220
     },
     {
       "Name": "Hawaii",
       "Code": "HI",
       "Ansi": "15",
       "ZipCount": 140,
-      "NameCount": 158
+      "NameCount": 160
     },
     {
       "Name": "Idaho",
       "Code": "ID",
       "Ansi": "16",
       "ZipCount": 331,
-      "NameCount": 432
+      "NameCount": 433
     },
     {
       "Name": "Illinois",
       "Code": "IL",
       "Ansi": "17",
       "ZipCount": 1599,
-      "NameCount": 2180
+      "NameCount": 2183
     },
     {
       "Name": "Indiana",
       "Code": "IN",
       "Ansi": "18",
       "ZipCount": 999,
-      "NameCount": 1221
+      "NameCount": 1224
     },
     {
       "Name": "Iowa",
       "Code": "IA",
       "Ansi": "19",
       "ZipCount": 1072,
-      "NameCount": 1220
+      "NameCount": 1222
     },
     {
       "Name": "Kansas",
       "Code": "KS",
       "Ansi": "20",
       "ZipCount": 766,
-      "NameCount": 1024
+      "NameCount": 1027
     },
     {
       "Name": "Kentucky",
@@ -179,7 +179,7 @@
       "Code": "LA",
       "Ansi": "22",
       "ZipCount": 732,
-      "NameCount": 854
+      "NameCount": 856
     },
     {
       "Name": "Maine",
@@ -193,49 +193,49 @@
       "Code": "MD",
       "Ansi": "24",
       "ZipCount": 633,
-      "NameCount": 956
+      "NameCount": 959
     },
     {
       "Name": "Massachusetts",
       "Code": "MA",
       "Ansi": "25",
       "ZipCount": 737,
-      "NameCount": 1016
+      "NameCount": 1020
     },
     {
       "Name": "Michigan",
       "Code": "MI",
       "Ansi": "26",
       "ZipCount": 1192,
-      "NameCount": 1785
+      "NameCount": 1788
     },
     {
       "Name": "Minnesota",
       "Code": "MN",
       "Ansi": "27",
       "ZipCount": 1038,
-      "NameCount": 1457
+      "NameCount": 1459
     },
     {
       "Name": "Mississippi",
       "Code": "MS",
       "Ansi": "28",
       "ZipCount": 541,
-      "NameCount": 641
+      "NameCount": 642
     },
     {
       "Name": "Missouri",
       "Code": "MO",
       "Ansi": "29",
       "ZipCount": 1186,
-      "NameCount": 1524
+      "NameCount": 1526
     },
     {
       "Name": "Montana",
       "Code": "MT",
       "Ansi": "30",
       "ZipCount": 408,
-      "NameCount": 465
+      "NameCount": 466
     },
     {
       "Name": "Nebraska",
@@ -249,21 +249,21 @@
       "Code": "NV",
       "Ansi": "32",
       "ZipCount": 258,
-      "NameCount": 335
+      "NameCount": 336
     },
     {
       "Name": "New Hampshire",
       "Code": "NH",
       "Ansi": "33",
       "ZipCount": 294,
-      "NameCount": 386
+      "NameCount": 388
     },
     {
       "Name": "New Jersey",
       "Code": "NJ",
       "Ansi": "34",
       "ZipCount": 752,
-      "NameCount": 1170
+      "NameCount": 1173
     },
     {
       "Name": "New Mexico",
@@ -277,14 +277,14 @@
       "Code": "NY",
       "Ansi": "36",
       "ZipCount": 2230,
-      "NameCount": 3681
+      "NameCount": 3751
     },
     {
       "Name": "North Carolina",
       "Code": "NC",
       "Ansi": "37",
       "ZipCount": 1125,
-      "NameCount": 1362
+      "NameCount": 1367
     },
     {
       "Name": "North Dakota",
@@ -298,28 +298,28 @@
       "Code": "OH",
       "Ansi": "39",
       "ZipCount": 1466,
-      "NameCount": 2198
+      "NameCount": 2203
     },
     {
       "Name": "Oklahoma",
       "Code": "OK",
       "Ansi": "40",
       "ZipCount": 786,
-      "NameCount": 933
+      "NameCount": 935
     },
     {
       "Name": "Oregon",
       "Code": "OR",
       "Ansi": "41",
       "ZipCount": 501,
-      "NameCount": 613
+      "NameCount": 619
     },
     {
       "Name": "Pennsylvania",
       "Code": "PA",
       "Ansi": "42",
       "ZipCount": 2231,
-      "NameCount": 3556
+      "NameCount": 3566
     },
     {
       "Name": "Rhode Island",
@@ -333,28 +333,28 @@
       "Code": "SC",
       "Ansi": "45",
       "ZipCount": 550,
-      "NameCount": 692
+      "NameCount": 698
     },
     {
       "Name": "South Dakota",
       "Code": "SD",
       "Ansi": "46",
       "ZipCount": 396,
-      "NameCount": 504
+      "NameCount": 508
     },
     {
       "Name": "Tennessee",
       "Code": "TN",
       "Ansi": "47",
       "ZipCount": 806,
-      "NameCount": 975
+      "NameCount": 980
     },
     {
       "Name": "Texas",
       "Code": "TX",
       "Ansi": "48",
       "ZipCount": 2694,
-      "NameCount": 3445
+      "NameCount": 3450
     },
     {
       "Name": "Utah",
@@ -375,21 +375,21 @@
       "Code": "VA",
       "Ansi": "51",
       "ZipCount": 1268,
-      "NameCount": 1707
+      "NameCount": 1718
     },
     {
       "Name": "Washington",
       "Code": "WA",
       "Ansi": "53",
       "ZipCount": 753,
-      "NameCount": 957
+      "NameCount": 964
     },
     {
       "Name": "West Virginia",
       "Code": "WV",
       "Ansi": "54",
       "ZipCount": 865,
-      "NameCount": 1297
+      "NameCount": 1298
     },
     {
       "Name": "Wisconsin",

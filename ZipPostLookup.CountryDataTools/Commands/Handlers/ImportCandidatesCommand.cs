@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Dapper;
 using Microsoft.Data.SqlClient;
-using Z.Dapper.Plus;
 using ZipPostLookup.CountryDataTools.Database.Repositories;
 using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
@@ -138,7 +137,7 @@ public static class ImportCandidatesCommand
 
                 foreach (var candidateChunk in codesCandidateList.Chunk(ChunkSize))
                 {
-                    conn.BulkInsert(candidateChunk).AlsoBulkMerge(x => x.AdminCandidateList);
+                    await db.Exec.BulkInsertWithChildrenAsync(candidateChunk, x => x.AdminCandidateList);
                     insertedCount += candidateChunk.Length;
                     insertTask.Increment(candidateChunk.Length);
                 }
@@ -180,7 +179,7 @@ public static class ImportCandidatesCommand
                     ProcessChunkCandidates(chunkCandidates, refLookup,
                         acc, pendingCoordUpdates, counters, countryRules);
 
-                    await FlushChunkAsync(conn, db, opts.Country, runId, acc);
+                    await FlushChunkAsync(db, opts.Country, runId, acc);
 
                     processTask.Increment(chunkCandidates.Count);
                 }
@@ -189,7 +188,7 @@ public static class ImportCandidatesCommand
         // Flush coord enrichments across all chunks in one bulk round-trip.
         if (pendingCoordUpdates.Count > 0)
         {
-            conn.BulkUpdate("CoordUpdate", pendingCoordUpdates);
+            await db.Exec.BulkUpdateAsync("CoordUpdate", pendingCoordUpdates);
         }
 
         await db.Runs.CompleteRunAsync(runId);
@@ -226,7 +225,6 @@ public static class ImportCandidatesCommand
     ///   4. Status updates    — BulkUpdate("CandidateStatusOnly"), one round-trip.
     /// </summary>
     private static async Task FlushChunkAsync(
-        SqlConnection     conn,
         WorkDbContext     db,
         string            country,
         string            runId,
@@ -235,7 +233,7 @@ public static class ImportCandidatesCommand
         // 1. Bulk-insert all genuinely new code+Name rows into data.reference.
         if (acc.NewReferenceRows.Count > 0)
         {
-            conn.BulkInsert("NewReference", acc.NewReferenceRows);
+            await db.Exec.BulkInsertAsync("NewReference", acc.NewReferenceRows);
         }
 
         // 2. Append field-level discrepancies (Name and timezone mismatches).
@@ -270,7 +268,7 @@ public static class ImportCandidatesCommand
         // 4. Bulk-update candidate statuses (clean / discrepancy / rejected) — one round-trip.
         if (acc.StatusUpdates.Count > 0)
         {
-            conn.BulkUpdate("CandidateStatusOnly", acc.StatusUpdates);
+            await db.Exec.BulkUpdateAsync("CandidateStatusOnly", acc.StatusUpdates);
         }
 
         acc.Clear();
@@ -338,7 +336,7 @@ public static class ImportCandidatesCommand
 
             // Step 5b — flagged-code guard: this code is a known bad actor.
             // Flagged codes are suppressed from ingest regardless of name or timezone match.
-            if (refRows.Any(r => r.Flagged))
+            if (refRows.Any(r => r.Flagged != DataFlagReasonType.Valid))
             {
                 candidate.Status = StatusString(CandidateStatus.Clean);
                 acc.StatusUpdates.Add(candidate);

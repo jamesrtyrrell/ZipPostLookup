@@ -275,7 +275,13 @@ public static class WorkDbCommand
     // db normalize-tz
     // -------------------------------------------------------------------------
 
-    internal static async Task<int> RunNormalizeTzAsync()
+    /// <param name="acceptCoordsOverride">
+    /// Policy for rows whose existing timezone differs from the coordinate-derived one:
+    /// <c>true</c> = overwrite from coordinates, <c>false</c> = report only. When <c>null</c>
+    /// (the CLI default) the operator is prompted interactively. The dashboard passes an explicit
+    /// value so the choice is made up front and the inline prompt is skipped.
+    /// </param>
+    internal static async Task<int> RunNormalizeTzAsync(bool? acceptCoordsOverride = null)
     {
         var db = await LoadDbAsync();
         if (db == null) return 1;
@@ -371,24 +377,28 @@ public static class WorkDbCommand
             AnsiConsole.MarkupLine($"  [green]✓ {refsDeleted} Reference row(s) deleted.[/]");
 
             Console.WriteLine("  Normalising admin level 1 name variants...");
-            var ccUpper = db.CountryCode.ToUpperInvariant();
-            var variants = (await conn.QueryAsync<AdminNameVariant>(
-                CommonQueries.DetectAdminNameVariants,
-                new { CountryId = ccUpper }, transaction: tx)).ToList();
+            var adminFixed = 0;
+            var anyVariants = false;
+            foreach (var pipelineCountry in new[] { "US", "CA", "MX" })
+            {
+                var variants = (await conn.QueryAsync<AdminNameVariant>(
+                    CommonQueries.DetectAdminNameVariants,
+                    new { CountryId = pipelineCountry }, transaction: tx)).ToList();
 
-            if (variants.Count > 0)
-            {
+                if (variants.Count == 0) continue;
+
+                anyVariants = true;
                 foreach (var v in variants)
-                    Console.WriteLine($"    {v.Code}: '{v.MinorityValue}' ({v.MinorityCnt}) → '{v.DominantValue}'");
-                var adminFixed = await Dapper.SqlMapper.ExecuteAsync(conn,
+                    Console.WriteLine($"    [{pipelineCountry}] {v.Code}: '{v.MinorityValue}' ({v.MinorityCnt}) → '{v.DominantValue}'");
+                adminFixed += await Dapper.SqlMapper.ExecuteAsync(conn,
                     CommonQueries.NormalizeAdminNames,
-                    new { CountryId = ccUpper }, transaction: tx);
+                    new { CountryId = pipelineCountry }, transaction: tx);
+            }
+
+            if (anyVariants)
                 AnsiConsole.MarkupLine($"  [green]✓ {adminFixed} admin name variant(s) normalised.[/]");
-            }
             else
-            {
                 Console.WriteLine("  ✓ Admin names consistent — no variants found.");
-            }
 
             tx.Commit();
         }
@@ -417,14 +427,32 @@ public static class WorkDbCommand
         if (unverified.Count > 0)
         {
             Console.WriteLine($"    Found {unverified.Count:N0} row(s) with coordinates and TimezoneChecked=0.");
+
+            // Policy for rows that already have a timezone which disagrees with the coordinate-derived
+            // one. true = treat the coordinates as truth and overwrite the existing value (+ mark
+            // verified). false = leave the row unchanged and just report the difference for review.
+            // The dashboard supplies this up front; the CLI prompts when no override is given.
+            var acceptCoordsAsTruth = acceptCoordsOverride ?? AnsiConsole.Confirm(
+                "  Accept lat/lng coordinate timezone as 'truth' and overwrite existing timezones that differ? " +
+                "(No = leave unchanged and report differences for review)",
+                defaultValue: false);
+
             var tzResolved = 0;
             var tzConfirmed = 0;
+            var tzOverwritten = 0;
             var conflicts = new List<(string ZpCode, string Existing, string FromCoords)>();
 
             // Per-country rules canonicalise retired zone IDs (e.g. America/Nipigon → Toronto)
             // that GeoTimeZone may still emit from an older boundary dataset.
             var rulesByCountry = new[] { "US", "CA", "MX" }
                 .ToDictionary(c => c, c => CountryRules.CountryRulesFactory.For(c));
+
+            // Classify every row first (no per-row DB round-trips), then write each set in
+            // chunked set-based batches via the write service. A row-per-connection loop here
+            // would open thousands of connections on large datasets.
+            var tzVerifyUpdates = new List<(long ReferenceId, string Timezone)>();
+            var tzOverwrites    = new List<(long ReferenceId, string Timezone)>();
+            var tzConfirmIds    = new List<long>();
 
             foreach (var row in unverified)
             {
@@ -440,37 +468,63 @@ public static class WorkDbCommand
                 if (tzMissing)
                 {
                     // Blank/placeholder timezone — fill it in from the coordinates.
-                    await conn.ExecuteAsync(
-                        @"UPDATE data.Reference
-                          SET Timezone = @Timezone, TimezoneChecked = 1, UpdatedAt = SYSUTCDATETIME()
-                          WHERE ReferenceId = @ReferenceId",
-                        new { Timezone = resolved, row.ReferenceId });
-                    tzResolved++;
+                    tzVerifyUpdates.Add((row.ReferenceId, resolved));
                 }
                 else if (tzDiffers)
                 {
-                    // A real timezone is already set but the coordinates disagree.
-                    // Report only — never overwrite an existing value. Leave
-                    // TimezoneChecked untouched so the row resurfaces for review.
-                    conflicts.Add((row.ZpCode, row.Timezone, resolved));
+                    if (acceptCoordsAsTruth)
+                    {
+                        // Operator chose to treat coordinates as truth — overwrite the existing
+                        // timezone with the coordinate-derived value and mark it verified.
+                        tzOverwrites.Add((row.ReferenceId, resolved));
+                    }
+                    else
+                    {
+                        // Report only — never overwrite an existing value. Leave
+                        // TimezoneChecked untouched so the row resurfaces for review.
+                        conflicts.Add((row.ZpCode, row.Timezone, resolved));
+                    }
                 }
                 else
                 {
-                    // Timezone already correct — just ensure TimezoneChecked = 1
-                    await conn.ExecuteAsync(
-                        @"UPDATE data.Reference
-                          SET TimezoneChecked = 1, UpdatedAt = SYSUTCDATETIME()
-                          WHERE ReferenceId = @ReferenceId AND TimezoneChecked = 0",
-                        new { row.ReferenceId });
-                    tzConfirmed++;
+                    // Timezone already correct — just ensure TimezoneChecked = 1.
+                    tzConfirmIds.Add(row.ReferenceId);
                 }
+            }
+
+            // Chunk to <= 1000 rows per VALUES clause (SQL Server table-value-constructor limit).
+            foreach (var chunk in tzVerifyUpdates.Chunk(1000))
+            {
+                var values = string.Join(",\n    ",
+                    chunk.Select(u => $"({u.ReferenceId}, N'{u.Timezone.Replace("'", "''")}')"));
+                tzResolved += await db.Exec.ExecuteAsync(
+                    string.Format(CommonQueries.SetReferenceTimezoneVerifiedBatch, values));
+            }
+
+            // Same set-based write path — overwrites of a pre-existing (differing) timezone when the
+            // operator accepted coordinates as truth.
+            foreach (var chunk in tzOverwrites.Chunk(1000))
+            {
+                var values = string.Join(",\n    ",
+                    chunk.Select(u => $"({u.ReferenceId}, N'{u.Timezone.Replace("'", "''")}')"));
+                tzOverwritten += await db.Exec.ExecuteAsync(
+                    string.Format(CommonQueries.SetReferenceTimezoneVerifiedBatch, values));
+            }
+
+            foreach (var chunk in tzConfirmIds.Chunk(1000))
+            {
+                var values = string.Join(", ", chunk.Select(id => $"({id})"));
+                tzConfirmed += await db.Exec.ExecuteAsync(
+                    string.Format(CommonQueries.MarkReferenceTimezoneCheckedBatch, values));
             }
 
             if (tzResolved > 0)
                 AnsiConsole.MarkupLine($"  [green]✓ {tzResolved:N0} timezone(s) updated from coordinates.[/]");
+            if (tzOverwritten > 0)
+                AnsiConsole.MarkupLine($"  [yellow]✓ {tzOverwritten:N0} existing timezone(s) overwritten from coordinates (accepted as truth).[/]");
             if (tzConfirmed > 0)
                 AnsiConsole.MarkupLine($"  [green]✓ {tzConfirmed:N0} timezone(s) confirmed correct and marked verified.[/]");
-            if (tzResolved == 0 && tzConfirmed == 0 && conflicts.Count == 0)
+            if (tzResolved == 0 && tzOverwritten == 0 && tzConfirmed == 0 && conflicts.Count == 0)
                 Console.WriteLine("  ✓ Coordinates present but no timezone could be resolved.");
 
             if (conflicts.Count > 0)

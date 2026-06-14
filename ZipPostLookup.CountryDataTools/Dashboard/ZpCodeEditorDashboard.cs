@@ -2,8 +2,10 @@ using Dapper;
 using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Dashboard.Layout;
 using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
+using ZipPostLookup.CountryDataTools.Database;
 using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
+using ZipPostLookup.CountryDataTools.Models.Enums;
 
 namespace ZipPostLookup.CountryDataTools.Dashboard;
 
@@ -26,7 +28,7 @@ internal static class ZpCodeEditorDashboard
         public string  Admin1Code      { get; set; } = "---";
         public bool    TimezoneChecked { get; set; }
         public bool    NameChecked     { get; set; }
-        public bool    Flagged         { get; set; }
+        public DataFlagReasonType Flagged { get; set; }
     }
 
     private sealed class DetailRow
@@ -45,7 +47,7 @@ internal static class ZpCodeEditorDashboard
         public string  Admin2Code      { get; set; } = "---";
         public bool    TimezoneChecked { get; set; }
         public bool    NameChecked     { get; set; }
-        public bool    Flagged         { get; set; }
+        public DataFlagReasonType Flagged { get; set; }
         public bool    IsGold          { get; set; }
     }
 
@@ -223,13 +225,15 @@ internal static class ZpCodeEditorDashboard
 
         while (true)
         {
-            var flagged = rows.Any(r => r.Flagged);
+            var flagReason = rows.Count > 0 ? rows[selectedIndex].Flagged : DataFlagReasonType.Valid;
             HeaderBar.Render($"ZpCode Editor › {country} › {zpCode}");
 
             AnsiConsole.Write(BuildDetailTable(rows, selectedIndex));
             AnsiConsole.WriteLine();
 
-            var flagHint = flagged ? "[red bold]F[/][grey] unflag[/]" : "[bold]F[/][grey] flag[/]";
+            var flagHint = flagReason != DataFlagReasonType.Valid
+                ? $"[red bold]F[/][grey] flag row ([/][red]{flagReason}[/][grey])[/]"
+                : "[bold]F[/][grey] flag row[/]";
             CdtCommandMenu.Render(
                 $"  [bold]C[/][grey] curate all   [/][bold]T[/][grey] TZ checked   [/]" +
                 $"[bold]N[/][grey] names checked   [/][bold]E[/][grey] edit   {flagHint}   Esc back[/]");
@@ -247,9 +251,8 @@ internal static class ZpCodeEditorDashboard
                     break;
 
                 case ConsoleKey.C:
-                    await RunUpdateAsync(factory, country, zpCode, "mark curated",
-                        async conn => await conn.ExecuteAsync(
-                            CommonQueries.MarkCodeAsCurated,
+                    await RunUpdateAsync("mark curated",
+                        () => ExecAsync(factory, CommonQueries.MarkCodeAsCurated,
                             new { CountryId = country, ZpCode = zpCode }));
                     rows = await LoadDetailRowsAsync(factory, country, zpCode) ?? rows;
                     if (rows.All(r => r.TimezoneChecked && r.NameChecked))
@@ -260,9 +263,8 @@ internal static class ZpCodeEditorDashboard
                     break;
 
                 case ConsoleKey.T:
-                    await RunUpdateAsync(factory, country, zpCode, "mark TZ checked",
-                        async conn => await conn.ExecuteAsync(
-                            CommonQueries.MarkCodeTimezoneChecked,
+                    await RunUpdateAsync("mark TZ checked",
+                        () => ExecAsync(factory, CommonQueries.MarkCodeTimezoneChecked,
                             new { CountryId = country, ZpCode = zpCode }));
                     rows = await LoadDetailRowsAsync(factory, country, zpCode) ?? rows;
                     if (rows.All(r => r.TimezoneChecked && r.NameChecked))
@@ -273,9 +275,8 @@ internal static class ZpCodeEditorDashboard
                     break;
 
                 case ConsoleKey.N:
-                    await RunUpdateAsync(factory, country, zpCode, "mark names checked",
-                        async conn => await conn.ExecuteAsync(
-                            CommonQueries.MarkCodeNameChecked,
+                    await RunUpdateAsync("mark names checked",
+                        () => ExecAsync(factory, CommonQueries.MarkCodeNameChecked,
                             new { CountryId = country, ZpCode = zpCode }));
                     rows = await LoadDetailRowsAsync(factory, country, zpCode) ?? rows;
                     if (rows.All(r => r.TimezoneChecked && r.NameChecked))
@@ -292,14 +293,17 @@ internal static class ZpCodeEditorDashboard
                     selectedIndex = Math.Min(selectedIndex, Math.Max(0, rows.Count - 1));
                     break;
 
-                case ConsoleKey.F:
-                    var setFlagged = !flagged;
-                    await RunUpdateAsync(factory, country, zpCode,
-                        setFlagged ? "flag code" : "unflag code",
-                        async conn => await conn.ExecuteAsync(
-                            setFlagged ? CommonQueries.FlagCode : CommonQueries.UnflagCode,
-                            new { CountryId = country, ZpCode = zpCode }));
-                    rows = await LoadDetailRowsAsync(factory, country, zpCode) ?? rows;
+                case ConsoleKey.F when rows.Count > 0:
+                    var target = rows[selectedIndex];
+                    var chosen = PromptFlagReason(target.Flagged, target.PlaceName);
+                    if (chosen is { } reason && reason != target.Flagged)
+                    {
+                        await RunUpdateAsync(
+                            $"set flag reason → {reason}",
+                            () => ExecAsync(factory, CommonQueries.SetReferenceFlagReasonById,
+                                new { target.ReferenceId, Flagged = (int)reason }));
+                        rows = await LoadDetailRowsAsync(factory, country, zpCode) ?? rows;
+                    }
                     break;
 
                 case ConsoleKey.Escape:
@@ -311,7 +315,7 @@ internal static class ZpCodeEditorDashboard
     // ── Edit row (ZpCode Editor › {CC} › {ZpCode} › Edit) ────────────────────
 
     private static readonly string[] EditableFields =
-        ["Code", "PlaceName", "Timezone", "Lat", "Lng", "AltNameOf",
+        ["Code", "PlaceName", "Timezone", "Coordinates", "AltNameOf",
          "Admin1Code", "Admin1Name", "Admin2Code", "Admin2Name"];
 
     private static async Task<string?> EditRowAsync(
@@ -363,6 +367,14 @@ internal static class ZpCodeEditorDashboard
         HeaderBar.Render(
             $"ZpCode Editor › {country} › {zpCode} › Edit › {fieldName}");
 
+        // Coordinates are edited as a pair on their own page — you cannot set Lat or Lng
+        // independently (the lat/lng pairing rule would blank a half-populated pair).
+        if (fieldName == "Coordinates")
+        {
+            await EditCoordinatesAsync(factory, row);
+            return null;
+        }
+
         var currentValue = GetFieldValue(row, fieldName);
         AnsiConsole.MarkupLine(
             $"  Current: [grey]{Markup.Escape(currentValue)}[/]  [grey](blank = cancel)[/]");
@@ -396,34 +408,24 @@ internal static class ZpCodeEditorDashboard
                         AnsiConsole.MarkupLine("[grey]  Cancelled.[/]");
                         return null;
                     }
-                    await conn.ExecuteAsync(
+                    await ExecAsync(factory,
                         CommonQueries.RenameZpCode,
                         new { row.ReferenceId, NewCode = newValue });
                     return newValue;
 
                 case "PlaceName":
-                    await conn.ExecuteAsync(CommonQueries.UpdateReferencePlaceNameById,
+                    await ExecAsync(factory, CommonQueries.UpdateReferencePlaceNameById,
                         new { ReferenceId = row.ReferenceId, PlaceName = newValue });
                     break;
 
                 case "Timezone":
-                    await conn.ExecuteAsync(CommonQueries.UpdateReferenceTimezoneById,
+                    await ExecAsync(factory, CommonQueries.UpdateReferenceTimezoneById,
                         new { ReferenceId = row.ReferenceId, Timezone = newValue });
-                    break;
-
-                case "Lat":
-                    await conn.ExecuteAsync(CommonQueries.UpdateReferenceLatById,
-                        new { ReferenceId = row.ReferenceId, Lat = newValue });
-                    break;
-
-                case "Lng":
-                    await conn.ExecuteAsync(CommonQueries.UpdateReferenceLngById,
-                        new { ReferenceId = row.ReferenceId, Lng = newValue });
                     break;
 
                 case "AltNameOf":
                     var altValue = newValue == "---" || newValue == "—" ? null : newValue;
-                    await conn.ExecuteAsync(CommonQueries.UpdateReferenceAltNameOfById,
+                    await ExecAsync(factory, CommonQueries.UpdateReferenceAltNameOfById,
                         new { ReferenceId = row.ReferenceId, AltNameOf = altValue });
                     break;
 
@@ -439,7 +441,7 @@ internal static class ZpCodeEditorDashboard
                         Console.ReadKey(intercept: true);
                         break;
                     }
-                    await conn.ExecuteAsync(CommonQueries.UpsertReferenceAdmin,
+                    await ExecAsync(factory, CommonQueries.UpsertReferenceAdmin,
                         new
                         {
                             ReferenceId  = row.ReferenceId,
@@ -461,7 +463,7 @@ internal static class ZpCodeEditorDashboard
                         Console.ReadKey(intercept: true);
                         break;
                     }
-                    await conn.ExecuteAsync(CommonQueries.UpsertReferenceAdmin,
+                    await ExecAsync(factory, CommonQueries.UpsertReferenceAdmin,
                         new
                         {
                             ReferenceId  = row.ReferenceId,
@@ -483,16 +485,62 @@ internal static class ZpCodeEditorDashboard
         return null;
     }
 
+    /// <summary>
+    /// Dedicated page to edit a row's Lat + Lng together. Each prompt defaults to the current value
+    /// so either can be kept by pressing Enter. The pair is run through
+    /// <see cref="Models.Dbo.DataReference.NormalizeCoordinatePair"/> before writing, so an incomplete
+    /// pair is stored as ('---','---') rather than a stranded coordinate. Writes both via one UPDATE.
+    /// </summary>
+    private static async Task EditCoordinatesAsync(IWorkDbConnectionFactory factory, DetailRow row)
+    {
+        AnsiConsole.MarkupLine(
+            $"  [grey]Current: Lat [/][white]{Markup.Escape(row.Lat)}[/][grey]  Lng [/][white]{Markup.Escape(row.Lng)}[/]");
+        AnsiConsole.MarkupLine(
+            "  [grey]Edit both — Enter keeps the current value. Set both to '---' to clear coordinates.[/]");
+        AnsiConsole.WriteLine();
+
+        var latInput = AnsiConsole.Prompt(
+            new TextPrompt<string>("  Lat:").DefaultValue(row.Lat).AllowEmpty());
+        var lngInput = AnsiConsole.Prompt(
+            new TextPrompt<string>("  Lng:").DefaultValue(row.Lng).AllowEmpty());
+
+        var coord = new Models.Dbo.DataReference
+        {
+            Lat = string.IsNullOrWhiteSpace(latInput) ? "---" : latInput.Trim(),
+            Lng = string.IsNullOrWhiteSpace(lngInput) ? "---" : lngInput.Trim(),
+        };
+        var blanked = coord.NormalizeCoordinatePair();
+
+        try
+        {
+            await ExecAsync(factory, CommonQueries.UpdateReferenceCoordsById,
+                new { row.ReferenceId, coord.Lat, coord.Lng });
+
+            if (blanked)
+                AnsiConsole.MarkupLine(
+                    "  [yellow]⚠  Coordinates must be a complete pair — both cleared to '---' (one coordinate was missing or invalid).[/]");
+            else
+                AnsiConsole.MarkupLine(
+                    $"  [green]✓ Coordinates set to Lat {Markup.Escape(coord.Lat)}, Lng {Markup.Escape(coord.Lng)}.[/]");
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine($"[red]  ✗ Update failed: {Markup.Escape(ex.Message)}[/]");
+            AnsiConsole.MarkupLine("[grey]  Press any key...[/]");
+            Console.ReadKey(intercept: true);
+        }
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     private static string GetFieldValue(DetailRow row, string fieldName) => fieldName switch
     {
-        "Code"       => row.ZpCode,
-        "PlaceName"  => row.PlaceName,
-        "Timezone"   => row.Timezone,
-        "Lat"        => row.Lat,
-        "Lng"        => row.Lng,
-        "AltNameOf"  => row.AltNameOf ?? "—",
+        "Code"        => row.ZpCode,
+        "PlaceName"   => row.PlaceName,
+        "Timezone"    => row.Timezone,
+        "Coordinates" => $"{row.Lat}, {row.Lng}",
+        "AltNameOf"   => row.AltNameOf ?? "—",
         "Admin1Code" => row.Admin1Code,
         "Admin1Name" => row.Admin1,
         "Admin2Code" => row.Admin2Code,
@@ -504,8 +552,7 @@ internal static class ZpCodeEditorDashboard
     {
         try
         {
-            using var conn = factory.CreateConnection();
-            var affected = await conn.ExecuteAsync(
+            var affected = await ExecAsync(factory,
                 CommonQueries.FixOrphanAltNames,
                 new { CountryId = country });
             AnsiConsole.WriteLine();
@@ -520,17 +567,39 @@ internal static class ZpCodeEditorDashboard
         Console.ReadKey(intercept: true);
     }
 
-    private static async Task RunUpdateAsync(
-        IWorkDbConnectionFactory factory,
-        string country,
-        string zpCode,
-        string label,
-        Func<System.Data.IDbConnection, Task> action)
+    /// <summary>
+    /// Prompts for a flag reason (v/f/c/o → <see cref="DataFlagReasonType"/>) for a single row.
+    /// Returns the chosen reason, or <c>null</c> if cancelled (Esc). The target place name and its
+    /// current reason are shown for context.
+    /// </summary>
+    private static DataFlagReasonType? PromptFlagReason(DataFlagReasonType current, string placeName)
+    {
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine(
+            $"  [grey]Flagging row [/][bold]{Markup.Escape(placeName)}[/][grey] — current: [/][bold]{current}[/]");
+        AnsiConsole.MarkupLine(
+            "  [grey]Set reason — [/]" +
+            "[bold]V[/][grey]alid  [/][bold]F[/][grey]lagged  [/][bold]C[/][grey]ommonFake  [/]" +
+            "[bold]O[/][grey]bsolete   Esc cancel[/]");
+
+        while (true)
+        {
+            switch (Console.ReadKey(intercept: true).Key)
+            {
+                case ConsoleKey.V: return DataFlagReasonType.Valid;
+                case ConsoleKey.F: return DataFlagReasonType.Flagged;
+                case ConsoleKey.C: return DataFlagReasonType.CommonFake;
+                case ConsoleKey.O: return DataFlagReasonType.Obsolete;
+                case ConsoleKey.Escape: return null;
+            }
+        }
+    }
+
+    private static async Task RunUpdateAsync(string label, Func<Task> action)
     {
         try
         {
-            using var conn = factory.CreateConnection();
-            await action(conn);
+            await action();
         }
         catch (Exception ex)
         {
@@ -540,6 +609,15 @@ internal static class ZpCodeEditorDashboard
             Console.ReadKey(intercept: true);
         }
     }
+
+    /// <summary>
+    /// Runs a single write through the sanctioned <see cref="CommandServices"/> (Rule 1:
+    /// writes go through services, never a raw connection). The editor holds only the
+    /// connection factory, which is all the service needs. Reads stay inline (sanctioned).
+    /// </summary>
+    private static Task<int> ExecAsync(
+        IWorkDbConnectionFactory factory, string commonQuery, object? parameters = null)
+        => new CommandServices(factory).ExecuteAsync(commonQuery, parameters);
 
     private static async Task<List<DetailRow>?> LoadDetailRowsAsync(
         IWorkDbConnectionFactory factory, string country, string zpCode)
@@ -588,7 +666,7 @@ internal static class ZpCodeEditorDashboard
                 new { CountryId = country, ZpCode = zpCode });
             if (reason is null)
             {
-                await conn.ExecuteAsync(
+                await ExecAsync(factory,
                     CommonQueries.SetGoldCode,
                     new { CountryId = country, ZpCode = zpCode, ChecksVersion = 1 });
                 AnsiConsole.MarkupLine("[bold yellow]  ⭐ Gold certified[/]");
@@ -635,6 +713,19 @@ internal static class ZpCodeEditorDashboard
         CdtCommandMenu.Render(hint);
     }
 
+    /// <summary>
+    /// Single-letter glyph for the flag-reason column: F=Flagged, C=CommonFake, O=Obsolete,
+    /// blank for Valid. Lets the Flagged browse page distinguish a generic flag from a
+    /// CommonFake / Obsolete one at a glance.
+    /// </summary>
+    private static string FlagReasonGlyph(DataFlagReasonType reason) => reason switch
+    {
+        DataFlagReasonType.Flagged    => "[red]F[/]",
+        DataFlagReasonType.CommonFake => "[red]C[/]",
+        DataFlagReasonType.Obsolete   => "[red]O[/]",
+        _                             => " ",
+    };
+
     private static Table BuildBrowseTable(
         List<BrowseRow> page,
         int selectedIndex,
@@ -677,9 +768,9 @@ internal static class ZpCodeEditorDashboard
             var def = r.IsDefault       ? "[cyan]✓[/]"  : "[grey]–[/]";
             var tz  = r.TimezoneChecked ? "[green]✓[/]" : "[red]✗[/]";
             var nm  = r.NameChecked     ? "[green]✓[/]" : "[red]✗[/]";
-            var flg = r.Flagged         ? "[red]⚑[/]"   : " ";
+            var flg = FlagReasonGlyph(r.Flagged);
 
-            var code = r.Flagged
+            var code = r.Flagged != DataFlagReasonType.Valid
                 ? $"[red]{Markup.Escape(r.ZpCode)}[/]"
                 : Markup.Escape(r.ZpCode);
             var name = Markup.Escape(r.PlaceName.Length > 20 ? r.PlaceName[..18] + "…" : r.PlaceName);
@@ -715,6 +806,7 @@ internal static class ZpCodeEditorDashboard
             .AddColumn(new TableColumn("[grey]Place Name[/]"))
             .AddColumn(new TableColumn("[grey]TZ[/]").Centered())
             .AddColumn(new TableColumn("[grey]Nm[/]").Centered())
+            .AddColumn(new TableColumn("[grey]⚑[/]").Centered())
             .AddColumn(new TableColumn("[grey]Timezone[/]"))
             .AddColumn(new TableColumn("[grey]Lat[/]").RightAligned())
             .AddColumn(new TableColumn("[grey]Lng[/]").RightAligned())
@@ -733,8 +825,9 @@ internal static class ZpCodeEditorDashboard
             var def  = r.IsDefault       ? "[cyan]✓[/]"       : "[grey]–[/]";
             var tz   = r.TimezoneChecked ? "[green]✓[/]"      : "[red]✗[/]";
             var nm   = r.NameChecked     ? "[green]✓[/]"      : "[red]✗[/]";
+            var flg  = FlagReasonGlyph(r.Flagged);
 
-            var code = r.Flagged
+            var code = r.Flagged != DataFlagReasonType.Valid
                 ? $"[red]{Markup.Escape(r.ZpCode)}[/]"
                 : Markup.Escape(r.ZpCode);
             var name = Markup.Escape(r.PlaceName.Length > 22 ? r.PlaceName[..20] + "…" : r.PlaceName);
@@ -754,9 +847,9 @@ internal static class ZpCodeEditorDashboard
 
             if (sel)
                 table.AddRow(ind, gold, def, $"[bold]{code}[/]", $"[bold]{name}[/]",
-                    tz, nm, zone, lat, lng, alt, adm);
+                    tz, nm, flg, zone, lat, lng, alt, adm);
             else
-                table.AddRow(ind, gold, def, code, name, tz, nm, zone, lat, lng, alt, adm);
+                table.AddRow(ind, gold, def, code, name, tz, nm, flg, zone, lat, lng, alt, adm);
         }
 
         return table;
@@ -996,39 +1089,11 @@ internal static class ZpCodeEditorDashboard
                 using var conn = factory.CreateConnection();
 
                 candidateRows = (await conn.QueryAsync<CandidateBrowseRow>(
-                    @"SELECT c.ZpCode, c.PlaceName, c.Timezone,
-                             CAST(c.IsDefault AS BIT)    AS IsDefault,
-                             c.Status,
-                             ISNULL(ca.Value, '---')     AS Admin1,
-                             ISNULL(ca.Code,  '---')     AS Admin1Code
-                      FROM   codes.Candidate c
-                      LEFT   JOIN codes.CandidateAdmins ca
-                             ON  ca.CandidateId  = c.CandidateId
-                             AND ca.AdminLevelId = (SELECT MIN(AdminLevelId)
-                                                    FROM   codes.AdminLevels
-                                                    WHERE  CountryId = c.CountryId AND LevelNumber = 1)
-                      WHERE  c.CountryId = @CountryId AND c.ZpCode = @ZpCode
-                      ORDER  BY c.PlaceName",
+                    CommonQueries.GetCandidateRowsByCode,
                     new { CountryId = country, ZpCode = zpCode })).ToList();
 
                 refRows = (await conn.QueryAsync<BrowseRow>(
-                    @"SELECT r.ZpCode, r.PlaceName, r.Timezone,
-                             CAST(r.IsDefault       AS BIT) AS IsDefault,
-                             ISNULL(r.Lat,  '---')          AS Lat,
-                             ISNULL(r.Lng,  '---')          AS Lng,
-                             r.AltNameOf,
-                             ISNULL(ra.Value, '---')        AS Admin1,
-                             ISNULL(ra.Code,  '---')        AS Admin1Code,
-                             CAST(r.TimezoneChecked AS BIT) AS TimezoneChecked,
-                             CAST(r.NameChecked     AS BIT) AS NameChecked,
-                             CAST(r.Flagged         AS BIT) AS Flagged
-                      FROM   data.Reference r
-                      LEFT   JOIN data.ReferenceAdmins ra
-                             ON  ra.ReferenceId  = r.ReferenceId
-                             AND ra.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
-                                                    WHERE CountryId = r.CountryId AND LevelNumber = 1)
-                      WHERE  r.CountryId = @CountryId AND r.ZpCode = @ZpCode AND r.Flagged = 0
-                      ORDER  BY r.IsDefault DESC, r.PlaceName",
+                    CommonQueries.GetReferenceBrowseRowsByCode,
                     new { CountryId = country, ZpCode = zpCode })).ToList();
             }
             catch (Exception ex)
@@ -1104,8 +1169,7 @@ internal static class ZpCodeEditorDashboard
                 case ConsoleKey.R when !isRejected:
                     try
                     {
-                        using var conn = factory.CreateConnection();
-                        await conn.ExecuteAsync(CommonQueries.RejectCandidateZpCode,
+                        await ExecAsync(factory, CommonQueries.RejectCandidateZpCode,
                             new { CountryId = country, ZpCode = zpCode });
                     }
                     catch (Exception ex)
@@ -1119,10 +1183,8 @@ internal static class ZpCodeEditorDashboard
                 case ConsoleKey.U when isRejected:
                     try
                     {
-                        using var conn = factory.CreateConnection();
-                        await conn.ExecuteAsync(
-                            @"UPDATE codes.Candidate SET Status = 'Pending'
-                              WHERE CountryId = @CountryId AND ZpCode = @ZpCode",
+                        await ExecAsync(factory,
+                            CommonQueries.SetCandidatePendingByZpCode,
                             new { CountryId = country, ZpCode = zpCode });
                     }
                     catch (Exception ex)

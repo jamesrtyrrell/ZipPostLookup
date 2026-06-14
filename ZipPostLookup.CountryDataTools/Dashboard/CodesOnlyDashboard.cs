@@ -2,6 +2,7 @@ using Spectre.Console;
 using ZipPostLookup.CountryDataTools.Commands.Handlers;
 using ZipPostLookup.CountryDataTools.Dashboard.Layout;
 using ZipPostLookup.CountryDataTools.Dashboard.Widgets;
+using ZipPostLookup.CountryDataTools.Utilities;
 
 namespace ZipPostLookup.CountryDataTools.Dashboard;
 
@@ -13,12 +14,14 @@ internal static class CodesOnlyDashboard
         {
             HeaderBar.Render("ZpCodes Only");
 
-            var file = AnsiConsole.Prompt(
+            var source = AnsiConsole.Prompt(
                 new TextPrompt<string>("  Codes file path [grey](csv of bare codes, one per line or comma-separated)[/]:")
                     .Validate(s => !string.IsNullOrWhiteSpace(s)
                         ? ValidationResult.Success()
                         : ValidationResult.Error("[red]Path is required[/]")));
 
+            var file = FileTools.StripPathQuotes(source);
+            
             if (!File.Exists(file))
             {
                 AnsiConsole.MarkupLine("[red]  File not found.[/]");

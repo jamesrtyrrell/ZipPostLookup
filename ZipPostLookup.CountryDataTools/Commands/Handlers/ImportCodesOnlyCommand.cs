@@ -9,7 +9,8 @@ using ZipPostLookup.Normalizers;
 namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 
 /// <summary>
-/// CountryDataTools import codes &lt;file&gt; --country CA [--dry-run]
+/// "ZpCodes Only" import — invoked from the dashboard (Importing Data › ZpCodes Only),
+/// not the CLI. Entry point is <see cref="RunAsync(Options)"/>.
 ///
 /// Accepts a flat file of bare postal codes (one per line or comma-separated),
 /// validates each code's format via the library's per-country normalizer rules,
@@ -24,27 +25,6 @@ public static class ImportCodesOnlyCommand
     public const string PlaceNamePlaceholder = "---";
 
     public sealed record Options(string File, string Country, bool DryRun = false);
-
-    public static async Task<int> RunAsync(string[] args)
-    {
-        if (args.Any(a => a is "-h" or "--help")) { PrintUsage(); return 0; }
-
-        var file    = args.Length > 0 ? args[0] : "";
-        var country = args.OptionValue("--country") ?? "";
-        var dryRun  = args.Any(a => a is "--dry-run");
-
-        if (string.IsNullOrEmpty(file)) { PrintUsage(); return 2; }
-
-        if (!File.Exists(file))
-        {
-            await Console.Error.WriteLineAsync($"File not found: {file}");
-            return 2;
-        }
-
-        if (!CommandArgs.ResolveCountry(file, country, out country)) { return 2; }
-
-        return await RunAsync(new Options(file, country, dryRun));
-    }
 
     public static async Task<int> RunAsync(Options opts)
     {
@@ -183,7 +163,4 @@ public static class ImportCodesOnlyCommand
             "MX" => new MxCountryCodeRules(),
             _    => new UsCountryCodeRules(),
         };
-
-    private static void PrintUsage() =>
-        Console.WriteLine("Usage: countrydatatools import codes <file> --country CA [--dry-run]");
 }

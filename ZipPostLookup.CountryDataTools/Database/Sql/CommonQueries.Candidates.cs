@@ -115,4 +115,27 @@ public static partial class CommonQueries
         $@"UPDATE codes.Candidate
            SET    Status = '{nameof(CandidateStatus.Rejected)}'
            WHERE  CountryId = @CountryId AND ZpCode = @ZpCode";
+
+    // Set every row for a ZpCode back to Pending (un-reject), regardless of PlaceName.
+    public static readonly string SetCandidatePendingByZpCode =
+        $@"UPDATE codes.Candidate
+           SET    Status = '{nameof(CandidateStatus.Pending)}'
+           WHERE  CountryId = @CountryId AND ZpCode = @ZpCode";
+
+    // All candidate rows for a ZpCode — the candidate-vs-reference comparison view in the
+    // ZpCode editor. Maps to CandidateBrowseRow (ZpCode/PlaceName/Timezone/IsDefault/Status/Admin1).
+    public static readonly string GetCandidateRowsByCode =
+        @"SELECT c.ZpCode, c.PlaceName, c.Timezone,
+                 CAST(c.IsDefault AS BIT)    AS IsDefault,
+                 c.Status,
+                 ISNULL(ca.Value, '---')     AS Admin1,
+                 ISNULL(ca.Code,  '---')     AS Admin1Code
+          FROM   codes.Candidate c
+          LEFT   JOIN codes.CandidateAdmins ca
+                 ON  ca.CandidateId  = c.CandidateId
+                 AND ca.AdminLevelId = (SELECT MIN(AdminLevelId)
+                                        FROM   codes.AdminLevels
+                                        WHERE  CountryId = c.CountryId AND LevelNumber = 1)
+          WHERE  c.CountryId = @CountryId AND c.ZpCode = @ZpCode
+          ORDER  BY c.PlaceName";
 }

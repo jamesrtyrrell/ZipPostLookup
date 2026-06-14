@@ -23,21 +23,33 @@ internal static class ColumnMappingWidget
 {
     private const int PreviewRowCount = 5;
 
+    private static readonly IReadOnlyDictionary<string, string> NoDerivedValues =
+        new Dictionary<string, string>(0);
+
+    /// <param name="derivedValues">
+    /// Optional provider of read-only values for fields not mapped from a column but populated
+    /// downstream — admin levels resolved at the country level, timezone created from coordinates,
+    /// IsDefault's default. Invoked per row (current mapping + that row) so it reacts to the bound
+    /// key/coordinate columns. Returns field-name → value; shown greyed + "(auto)" on the left
+    /// pane and as extra "auto" columns in the bottom validation table, never editable.
+    /// </param>
     public static ColumnMappingResult Show(
         string pageTitle,
         ColumnMapping mapping,
-        IReadOnlyList<string[]> sampleRows)
+        IReadOnlyList<string[]> sampleRows,
+        bool showValidation = false,
+        Func<ColumnMapping, string[], IReadOnlyDictionary<string, string>>? derivedValues = null)
     {
         var editable = mapping.EditableFields;
         var columnCount = sampleRows.Count > 0 ? sampleRows.Max(r => r.Length) : 0;
 
         var selected = 0;          // index into editable fields
-        var showPreview = false;
+        var showPreview = showValidation;   // start with the validation table visible when asked
         string? message = null;
 
         while (true)
         {
-            Render(pageTitle, mapping, sampleRows, columnCount, editable, selected, showPreview, message);
+            Render(pageTitle, mapping, sampleRows, columnCount, editable, selected, showPreview, message, derivedValues);
             message = null;
 
             var keyInfo = Console.ReadKey(intercept: true);
@@ -133,19 +145,23 @@ internal static class ColumnMappingWidget
         IReadOnlyList<ColumnMappingField> editable,
         int selected,
         bool showPreview,
-        string? message)
+        string? message,
+        Func<ColumnMapping, string[], IReadOnlyDictionary<string, string>>? derivedValues)
     {
         HeaderBar.Render(pageTitle);
 
-        var template = BuildTemplateTable(mapping, sampleRows, editable, selected);
+        var firstRow     = sampleRows.Count > 0 ? sampleRows[0] : Array.Empty<string>();
+        var derivedFirst = derivedValues?.Invoke(mapping, firstRow) ?? NoDerivedValues;
+
+        var template = BuildTemplateTable(mapping, sampleRows, editable, selected, derivedFirst);
         var incoming = BuildIncomingTable(sampleRows, columnCount);
         AnsiConsole.Write(new Columns(template, incoming).Collapse());
         AnsiConsole.WriteLine();
 
         if (showPreview)
         {
-            AnsiConsole.Write(new Rule("[grey]Validation — first rows through current mapping[/]").LeftJustified());
-            AnsiConsole.Write(BuildPreviewTable(mapping, sampleRows));
+            AnsiConsole.Write(new Rule("[grey]Validation — first rows through current mapping (auto = populated downstream)[/]").LeftJustified());
+            AnsiConsole.Write(BuildPreviewTable(mapping, sampleRows, derivedValues));
             AnsiConsole.WriteLine();
         }
 
@@ -163,7 +179,8 @@ internal static class ColumnMappingWidget
         ColumnMapping mapping,
         IReadOnlyList<string[]> sampleRows,
         IReadOnlyList<ColumnMappingField> editable,
-        int selected)
+        int selected,
+        IReadOnlyDictionary<string, string> derived)
     {
         var table = new Table()
             .Title("[bold]ZipPostLookup Data[/]")
@@ -181,10 +198,25 @@ internal static class ColumnMappingWidget
             var cursor     = isSelected ? "[bold green]❯[/]" : " ";
             var star       = field.Mandatory ? "[yellow]*[/]" : " ";
 
-            var value = field.IsMapped
-                ? Markup.Escape(Sample(sampleRows, field.ColumnIndex!.Value))
-                : "—";
-            var colTag = field.IsMapped ? $" [grey](col {field.ColumnIndex})[/]" : "";
+            string value;
+            string colTag;
+            if (field.IsMapped)
+            {
+                value  = Markup.Escape(Sample(sampleRows, field.ColumnIndex!.Value));
+                colTag = $" [grey](col {field.ColumnIndex})[/]";
+            }
+            else if (derived.TryGetValue(field.Name, out var dv) && !string.IsNullOrEmpty(dv))
+            {
+                // Not mapped from a column, but populated downstream (e.g. admin from the
+                // country, timezone from coords, IsDefault default). Show it, never editable.
+                value  = Markup.Escape(dv);
+                colTag = " [grey](auto)[/]";
+            }
+            else
+            {
+                value  = "—";
+                colTag = "";
+            }
 
             string name, val;
             if (!field.Mandatory)
@@ -227,26 +259,55 @@ internal static class ColumnMappingWidget
         return table;
     }
 
-    private static Table BuildPreviewTable(ColumnMapping mapping, IReadOnlyList<string[]> sampleRows)
+    private static Table BuildPreviewTable(
+        ColumnMapping mapping,
+        IReadOnlyList<string[]> sampleRows,
+        Func<ColumnMapping, string[], IReadOnlyDictionary<string, string>>? derivedValues)
     {
-        var starred = mapping.Fields.Where(f => f.Mandatory).ToList();
+        var firstRow     = sampleRows.Count > 0 ? sampleRows[0] : Array.Empty<string>();
+        var derivedFirst = derivedValues?.Invoke(mapping, firstRow) ?? NoDerivedValues;
+
+        // Full picture: every field that will be populated — mapped from a column, or
+        // auto-populated downstream (admin from the country, timezone from coords, IsDefault).
+        var columns = mapping.Fields
+            .Where(f => f.IsMapped || derivedFirst.ContainsKey(f.Name))
+            .ToList();
 
         var table = new Table().Border(TableBorder.Minimal);
-        foreach (var f in starred)
-            table.AddColumn($"[bold]{Markup.Escape(f.Name)}[/]");
+
+        if (columns.Count == 0)
+        {
+            table.AddColumn("[grey](map a column to preview)[/]");
+            return table;
+        }
+
+        foreach (var f in columns)
+        {
+            table.AddColumn(f.IsMapped
+                ? $"[bold]{Markup.Escape(f.Name)}[/]"
+                : $"[bold]{Markup.Escape(f.Name)}[/] [grey]auto[/]");
+        }
 
         foreach (var row in sampleRows.Take(PreviewRowCount))
         {
-            var cells = starred.Select(f =>
+            var derived = derivedValues?.Invoke(mapping, row) ?? NoDerivedValues;
+            var cells = columns.Select(f =>
             {
-                if (!f.IsMapped) { return "[grey]—[/]"; }
-                var raw = Cell(row, f.ColumnIndex!.Value);
+                if (f.IsMapped)
+                {
+                    var raw = Cell(row, f.ColumnIndex!.Value);
 
-                // Lat/Lng must parse as doubles — flag bad mappings in red.
-                var isCoord = f.Name is "Lat" or "Lng";
-                var bad = isCoord && !double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
-                var text = Markup.Escape(string.IsNullOrEmpty(raw) ? "—" : raw);
-                return bad ? $"[red]{text}[/]" : text;
+                    // Lat/Lng must parse as doubles — flag bad mappings in red.
+                    var isCoord = f.Name is "Lat" or "Lng";
+                    var bad = isCoord && !double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
+                    var text = Markup.Escape(string.IsNullOrEmpty(raw) ? "—" : raw);
+                    return bad ? $"[red]{text}[/]" : text;
+                }
+
+                // Auto-populated value for this row (derived / default).
+                return derived.TryGetValue(f.Name, out var dv) && !string.IsNullOrEmpty(dv)
+                    ? $"[grey]{Markup.Escape(dv)}[/]"
+                    : "[grey]—[/]";
             });
 
             table.AddRow(cells.ToArray());

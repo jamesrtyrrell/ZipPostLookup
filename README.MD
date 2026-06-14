@@ -1,9 +1,9 @@
 ﻿# ZipPostLookup
 
 Fast, extensible in-memory postal code lookup for .NET.  
-Built-in data for the **United States** (<!-- zpl:us:codes -->43,501<!-- /zpl:us:codes --> ZIP codes), **Canada** (~<!-- zpl:ca:codes -->901,512<!-- /zpl:ca:codes --> postal codes, <!-- zpl:ca:entries -->621k<!-- /zpl:ca:entries --> compressed entries via FSA range compression), and **Mexico** (<!-- zpl:mx:codes -->32,893<!-- /zpl:mx:codes --> postal codes). All three countries are fully curated ✅.
+Built-in data for the **United States** (<!-- zpl:us:codes -->43,501<!-- /zpl:us:codes --> ZIP codes), **Canada** (~<!-- zpl:ca:codes -->901,482<!-- /zpl:ca:codes --> postal codes, <!-- zpl:ca:entries -->620k<!-- /zpl:ca:entries --> compressed entries via FSA range compression), and **Mexico** (<!-- zpl:mx:codes -->32,896<!-- /zpl:mx:codes --> postal codes). All three countries are fully curated ✅.
 
-Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-13 10:48:49<!-- /zpl:updated -->)**
+Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-14 16:39:09<!-- /zpl:updated -->)**
 
 ---
 
@@ -62,6 +62,7 @@ All static methods on `ZipPostLookup` target the built-in US registry. `GetByCod
 | `GetRandom(random)`             | `CodeEntry`                               | Random entry using a provided `Random` instance                                |
 | `GetAll()`                      | `IReadOnlyList<CodeEntry>`                | All entries sorted by postal code                                              |
 | `GetCountryInfo(country)`       | `CountryInfo?`                            | Country metadata (code count, curation status, format rules)                   |
+| `ThrowReasonExceptions(on)`     | `void`                                    | Opt in to exceptions explaining *why* a lookup missed (default off) — see below |
 
 ---
 
@@ -152,6 +153,56 @@ ZipPostRegistry na2 = ZipPostLookup.CreateRegistry("us", "ca");
 
 ---
 
+## Lookup Exceptions (Opt-in)
+
+By default a lookup that finds nothing returns `null` (or an empty list) — a silent miss. If you'd
+rather be **told why** a lookup yielded nothing, opt in:
+
+```csharp
+ZipPostLookup.ThrowReasonExceptions(true);   // default is false — behaviour is unchanged unless you call this
+
+ZipPostLookup.GetByCode("NOTAZIP");          // throws BadlyFormattedCodeException
+ZipPostLookup.GetByCode("X0X0X0");           // still null — a valid format that simply isn't present
+ZipPostLookup.GetByCode("10001");            // returns the entry as normal
+```
+
+When the toggle is on, `GetByCode` / `GetByZip` / `GetAllByCode` throw
+`BadlyFormattedCodeException` for input that isn't a valid postal-code format for **any** supported
+country (US, CA, MX) — the format is checked against the same per-country normalizers used for
+lookups, so **no data is needed**. A well-formed code that just isn't in the data still returns
+`null`/empty, and `null` input still returns `null`.
+
+```csharp
+try
+{
+    var entry = ZipPostLookup.GetByCode(userInput);
+    // ... use entry, or handle a null (well-formed but unknown) code
+}
+catch (BadlyFormattedCodeException ex)
+{
+    Console.WriteLine($"'{ex.Code}' is not a valid US/CA/MX postal-code format.");
+}
+```
+
+The toggle is **per-registry** — `ThrowReasonExceptions` on the static facade affects the default US
+registry; registries from `CreateRegistry` / `CreateCustomRegistry` and `ZpImageLookup` instances each
+carry their own setting. All exceptions derive from `CodeReasonException`, which exposes the offending
+`Code`.
+
+> Roadmap: a future release adds per-code reason flags so a *found* code can also report that it is
+> **obsolete** or **known fake data** (via `ObsoleteCodeException` / `CommonFakeDataException`, already
+> present as types). Today only the format-based `BadlyFormattedCodeException` is thrown.
+
+---
+
+## ZipPostLookup Data Quality & Curation
+
+ZipPostLookup is a fast, extensible, in-memory postal-code lookup library for .NET — but its real focus is **data quality, integrity, and long-term maintainability**.
+
+→ [Data Quality & Curation](https://github.com/jamesrtyrrell/ZipPostLookup/blob/main/ZipPostLookup-Data-Curation.md) — the safeguards, data validation checks, and Gold Standard behind every release.
+
+---
+
 ## Roadmap to Version 2
 
 Planned work toward the 2.0 release. The runtime library's public API is stable; most of this is data coverage, tooling, and ports.
@@ -160,6 +211,7 @@ Planned work toward the 2.0 release. The runtime library's public API is stable;
 |------|-------------|
 | **Audit CDT** | Harden the `CountryDataTools` data-curation CLI — route all DB access through its service layer and centralise every SQL string, so the pipeline is consistent and maintainable. |
 | **AI Import Helper** | An `import auto` command that ingests any CSV/TSV/JSON, auto-detects the postal-code column, and maps the remaining fields — using the built-in data as a ground-truth oracle — so new sources need no manual format description. |
+| **Code Reason Flags** | Mark codes as *obsolete* or *known fake data* and let lookups throw to explain a miss. The opt-in format check (`BadlyFormattedCodeException` via `ThrowReasonExceptions`) has shipped; per-code obsolete/fake flags are the next phase. |
 | **More countries** | Expand built-in data beyond US, CA, and MX. The embedded CSV format is the contract; each new country ships as an embedded resource. |
 | **Unit Tests on CDT** | Add automated test coverage to the `CountryDataTools` pipeline (currently covered only by the library's own test suite). |
 | **Python Port** | A PyPI package mirroring the lookup API (`get_by_code`, `get_by_name`, `get_by_state`, …), backed by the same embedded CSV data. |
@@ -298,13 +350,13 @@ On .NET 8+, all indexes use `FrozenDictionary`. The `.zpi.br` frozen image loads
 
 | Country |                                        Distinct Codes* | Admin Levels |                Timezones                | Status     |
 |---------|-------------------------------------------------------:|:------------:|:---------------------------------------:|------------|
-| US      |  **<!-- zpl:us:codes -->43,501<!-- /zpl:us:codes -->** |    State     | <!-- zpl:us:tz -->54<!-- /zpl:us:tz --> | ✅ Curated  |
-| CA      | **<!-- zpl:ca:codes -->901,512<!-- /zpl:ca:codes -->** |   Province   | <!-- zpl:ca:tz -->28<!-- /zpl:ca:tz --> | ✅ Curated  |
-| MX      |  **<!-- zpl:mx:codes -->32,893<!-- /zpl:mx:codes -->** |    Estado    | <!-- zpl:mx:tz -->17<!-- /zpl:mx:tz --> | ✅ Curated  |
+| US      |  **<!-- zpl:us:codes -->43,501<!-- /zpl:us:codes -->** |    State     | <!-- zpl:us:tz -->56<!-- /zpl:us:tz --> | ✅ Curated  |
+| CA      | **<!-- zpl:ca:codes -->901,482<!-- /zpl:ca:codes -->** |   Province   | <!-- zpl:ca:tz -->28<!-- /zpl:ca:tz --> | ✅ Curated  |
+| MX      |  **<!-- zpl:mx:codes -->32,896<!-- /zpl:mx:codes -->** |    Estado    | <!-- zpl:mx:tz -->20<!-- /zpl:mx:tz --> | ✅ Curated  |
 
 \* Distinct codes are the number of unique Zip/Postal codes in the country's set.
 
-Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-13 10:48:49<!-- /zpl:updated -->)**
+Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-14 16:39:09<!-- /zpl:updated -->)**
 
 ---
 

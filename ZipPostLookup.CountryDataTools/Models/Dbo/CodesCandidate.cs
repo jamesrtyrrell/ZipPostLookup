@@ -58,8 +58,18 @@ public class CodesCandidate : ICodesSchema
     /// <summary>Admin level 1 code. Set by Dapper from JOIN results; populated from AdminCandidateList by the CsvRow constructor.</summary>
     [Write(false)] public string Admin1Code { get; set; } = "";
 
-    
-    
+    // Flat admin levels 2–5 (name + code). GeoNames carries up to five administrative
+    // levels; these mirror Admin1/Admin1Code so the column-mapping widget can bind each
+    // level by column. Fanned into AdminCandidateList by CodesCandidateExtension.BuildAdminLevels().
+    [Write(false)] public string Admin2 { get; set; } = "";
+    [Write(false)] public string Admin2Code { get; set; } = "";
+    [Write(false)] public string Admin3 { get; set; } = "";
+    [Write(false)] public string Admin3Code { get; set; } = "";
+    [Write(false)] public string Admin4 { get; set; } = "";
+    [Write(false)] public string Admin4Code { get; set; } = "";
+    [Write(false)] public string Admin5 { get; set; } = "";
+    [Write(false)] public string Admin5Code { get; set; } = "";
+
     public override string ToString()
     {
         return GetType().GetProperties()
@@ -70,29 +80,22 @@ public class CodesCandidate : ICodesSchema
                 sb => sb.ToString());
     }
 
+    /// <summary>
+    /// Remaps every admin entry's level number (1..5) to the country's real
+    /// <c>codes.admin_levels.AdminLevelId</c> FK. Returns false (so the caller skips the
+    /// candidate) if any level isn't defined for the country yet. Must process ALL levels —
+    /// the previous version returned after the first, which silently left levels 2+ unmapped.
+    /// </summary>
     public bool RemapCandidatesList(Dictionary<int, int> adminLevelMap)
     {
         foreach (var admin in AdminCandidateList)
         {
-            // Remap level number to the real AdminLevelId FK.
-            // Skip if the admin level is not defined for this country yet.
             if (!adminLevelMap.TryGetValue(admin.AdminLevelId, out var resolvedAdminLevelId))
             {
                 return false;
             }
-            
-            admin.AdminLevelId = resolvedAdminLevelId;
 
-            return true;
-            // await conn.ExecuteAsync(
-            //     CommonQueries.InsertCandidateAdmin,
-            //     new
-            //     {
-            //         CandidateId = candidateId,
-            //         AdminLevelId = resolvedAdminLevelId,
-            //         admin.Value,
-            //         admin.Code,
-            //     });
+            admin.AdminLevelId = resolvedAdminLevelId;
         }
 
         return true;

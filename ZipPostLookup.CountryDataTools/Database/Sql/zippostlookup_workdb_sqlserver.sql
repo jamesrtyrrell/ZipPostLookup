@@ -242,9 +242,19 @@ CREATE TABLE [data].[Reference] (
                     ELSE (0)
                   END)) PERSISTED,
     [AltNameOf]         [nvarchar](100)     NULL,
-    [Flagged]           [bit]               NOT NULL  CONSTRAINT [DF_Reference_Flagged]          DEFAULT (0),
+    -- Flagged is a reason code, not just a bool: 0=Valid, 1=Flagged (generic), 2=CommonFake,
+    -- 3=Obsolete. Dapper maps 0/1 to the bool model property automatically; an enum is layered
+    -- on later. Any non-zero value excludes the code from every export query.
+    [Flagged]           [int]               NOT NULL  CONSTRAINT [DF_Reference_Flagged]          DEFAULT (0),
     CONSTRAINT [PK_Reference] PRIMARY KEY CLUSTERED ([ReferenceId] ASC),
-    CONSTRAINT [FK_Reference_Country] FOREIGN KEY ([CountryId]) REFERENCES [data].[CountryInfo] ([CountryId])
+    CONSTRAINT [FK_Reference_Country] FOREIGN KEY ([CountryId]) REFERENCES [data].[CountryInfo] ([CountryId]),
+    -- Coordinates must be stored as a complete pair: either both Lat and Lng are present,
+    -- or both are absent (NULL / '' / '---'). Blocks a stranded lone coordinate from ANY
+    -- write path (import guardrail, ZpCode editor, ad-hoc SQL). See DataReference.NormalizeCoordinatePair().
+    CONSTRAINT [CK_Reference_CoordPair] CHECK (
+        (CASE WHEN [Lat] IS NULL OR [Lat] IN ('', '---') THEN 0 ELSE 1 END)
+      = (CASE WHEN [Lng] IS NULL OR [Lng] IN ('', '---') THEN 0 ELSE 1 END)
+    )
 ) ON [PRIMARY]
 GO
 
@@ -404,9 +414,56 @@ GO
 IF NOT EXISTS (SELECT 1 FROM sys.columns
                WHERE  object_id = OBJECT_ID(N'data.Reference') AND name = N'Flagged')
 BEGIN
-    ALTER TABLE [data].[Reference] ADD [Flagged] [bit] NOT NULL
+    ALTER TABLE [data].[Reference] ADD [Flagged] [int] NOT NULL
         CONSTRAINT [DF_Reference_Flagged] DEFAULT (0);
     PRINT 'data.Reference: Flagged column added.';
+END
+GO
+
+-- ============================================================================
+-- Migration: widen data.Reference.Flagged from bit to int (existing installs).
+-- Run on any DB created before 2026-06-14. Safe to re-run. Lets Flagged carry a
+-- reason code (0=Valid, 1=Flagged, 2=CommonFake, 3=Obsolete) rather than a plain
+-- bool. Existing 0/1 values are preserved; Dapper still maps them to the bool model
+-- property. The default constraint is dropped/re-added because ALTER COLUMN cannot
+-- run while it is attached.
+-- ============================================================================
+IF EXISTS (SELECT 1 FROM sys.columns c
+           JOIN sys.types t ON t.user_type_id = c.user_type_id
+           WHERE c.object_id = OBJECT_ID(N'data.Reference')
+             AND c.name = N'Flagged' AND t.name = N'bit')
+BEGIN
+    DECLARE @dfFlagged sysname = (
+        SELECT dc.name FROM sys.default_constraints dc
+        JOIN sys.columns c ON c.object_id = dc.parent_object_id
+                          AND c.column_id = dc.parent_column_id
+        WHERE dc.parent_object_id = OBJECT_ID(N'data.Reference') AND c.name = N'Flagged');
+
+    IF @dfFlagged IS NOT NULL
+        EXEC('ALTER TABLE [data].[Reference] DROP CONSTRAINT [' + @dfFlagged + ']');
+
+    ALTER TABLE [data].[Reference] ALTER COLUMN [Flagged] [int] NOT NULL;
+    ALTER TABLE [data].[Reference] ADD CONSTRAINT [DF_Reference_Flagged] DEFAULT (0) FOR [Flagged];
+    PRINT 'data.Reference: Flagged widened from bit to int.';
+END
+GO
+
+-- ============================================================================
+-- Migration: add CK_Reference_CoordPair to data.Reference (existing installs).
+-- Run on any DB created before 2026-06-14. Safe to re-run.
+-- Enforces the lat/lng pairing rule at the data layer so no write path can strand a
+-- lone coordinate. PRECONDITION: no existing row may violate it — blank any half-pairs
+-- first (UPDATE data.Reference SET Lat='---', Lng='---' WHERE one is set and the other blank).
+-- ============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints
+               WHERE  name = N'CK_Reference_CoordPair'
+                 AND  parent_object_id = OBJECT_ID(N'data.Reference'))
+BEGIN
+    ALTER TABLE [data].[Reference] WITH CHECK ADD CONSTRAINT [CK_Reference_CoordPair] CHECK (
+        (CASE WHEN [Lat] IS NULL OR [Lat] IN ('', '---') THEN 0 ELSE 1 END)
+      = (CASE WHEN [Lng] IS NULL OR [Lng] IN ('', '---') THEN 0 ELSE 1 END)
+    );
+    PRINT 'data.Reference: CK_Reference_CoordPair constraint added.';
 END
 GO
 

@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <!-- net8.0 exercises the shipped library; net10.0 is required to reference and test
+         ZipPostLookup.CountryDataTools (which targets net10.0 only). -->
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -19,6 +21,20 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZipPostLookup\ZipPostLookup.csproj" />
+  </ItemGroup>
+
+  <!-- CountryDataTools is net10.0-only. Reference it, and compile the Cdt/ tests, only on net10.0. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <ProjectReference Include="..\ZipPostLookup.CountryDataTools\ZipPostLookup.CountryDataTools.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != 'net10.0'">
+    <Compile Remove="Cdt\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Cdt\" />
+    <Folder Include="Core\" />
   </ItemGroup>
 
 </Project>

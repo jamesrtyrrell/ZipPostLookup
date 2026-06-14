@@ -29,6 +29,11 @@
     <ProjectReference Include="..\ZipPostLookup\ZipPostLookup.csproj" />
   </ItemGroup>
 
+  <!-- Expose internal types (ColumnMapping, ArgScanner, …) to the unit-test project. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="ZipPostLookup.Tests" />
+  </ItemGroup>
+
 	<ItemGroup>
 		<EmbeddedResource Include="Data\us\us_info.json" />
 		<EmbeddedResource Include="Data\ca\ca_info.json" />

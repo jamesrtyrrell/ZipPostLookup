@@ -51,10 +51,31 @@ internal static class NormalizeDashboard
 
     // ── normalize-tz: no country picker — always runs for all pipeline countries ─
 
+    private sealed record TzPolicy(string Key, string Label, string Desc);
+
     private static async Task<int> RunNormalizeTzAsync()
     {
         HeaderBar.Render("Normalize › normalize-tz");
-        var exitCode = await WorkDbCommand.RunNormalizeTzAsync();
+
+        // Up-front policy for rows whose existing timezone differs from the coordinate-derived one.
+        var accept = new TzPolicy("accept", "Accept coordinates as truth",
+            "Overwrite existing timezones that differ from lat/lng (+ mark verified)");
+        var report = new TzPolicy("report", "Report differences only",
+            "Leave existing timezones unchanged; list conflicts for review (default)");
+        var cancel = new TzPolicy("cancel", "← Cancel", "");
+
+        var choice = CdtSelectMenu.Show(
+            [report, accept, cancel],
+            p => p == cancel
+                ? "[grey]← Cancel[/]"
+                : $"[bold cyan]{p.Label,-28}[/]  [grey]{p.Desc}[/]",
+            escapeReturns: cancel,
+            title: "When a coordinate timezone differs from the existing value:");
+
+        if (choice == cancel) return 0;
+
+        HeaderBar.Render("Normalize › normalize-tz");
+        var exitCode = await WorkDbCommand.RunNormalizeTzAsync(acceptCoordsOverride: choice == accept);
         FooterBar.ShowResultAndPause(exitCode);
         return exitCode;
     }

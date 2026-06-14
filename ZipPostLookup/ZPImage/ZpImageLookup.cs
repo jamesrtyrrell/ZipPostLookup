@@ -28,10 +28,45 @@ public sealed class ZpImageLookup : IZipPostLookup
     // manifest up to three times per call).
     private static string[]? _manifestResourceNames;
 
+    // ── Opt-in reason exceptions (default off — behaviour unchanged) ───────────
+    private volatile bool _throwReasonExceptions;
+
     internal ZpImageLookup(ZpImageReader reader, IEnumerable<ICountryCodeRules> rules)
     {
         _reader = reader;
         _rules  = rules.ToArray();
+    }
+
+    /// <summary>
+    /// Opts this image-backed lookup in (or out) of throwing <see cref="CodeReasonException"/>s
+    /// from the code-lookup path instead of returning a silent <c>null</c>/empty miss. Default
+    /// <c>false</c>. Mirrors <see cref="ZipPostRegistry.ThrowReasonExceptions(bool)"/> so the CSV
+    /// and ZP-image lookups stay semantically identical.
+    /// </summary>
+    public void ThrowReasonExceptions(bool enabled) => _throwReasonExceptions = enabled;
+
+    /// <summary>
+    /// True when <paramref name="code"/> is a valid format for any supported country rule
+    /// (raw or normalised). Used to decide whether a miss is a malformed-input case.
+    /// </summary>
+    private bool IsWellFormedCode(string code)
+    {
+        foreach (var rule in _rules)
+        {
+            if (rule.Validate(code))
+            {
+                return true;
+            }
+
+            var normalized = rule.Normalize(code);
+
+            if (rule.Validate(normalized))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // =========================================================================
@@ -164,7 +199,14 @@ public sealed class ZpImageLookup : IZipPostLookup
             }
         }
 
-        return _reader.GetByRange(code);
+        var range = _reader.GetByRange(code);
+
+        if (range == null && _throwReasonExceptions && !IsWellFormedCode(code))
+        {
+            throw new BadlyFormattedCodeException(code);
+        }
+
+        return range;
     }
 
     /// <inheritdoc/>
@@ -193,7 +235,14 @@ public sealed class ZpImageLookup : IZipPostLookup
             }
         }
 
-        return _reader.GetAllByRange(code) ?? (IReadOnlyList<CodeEntry>)Array.Empty<CodeEntry>();
+        var range = _reader.GetAllByRange(code);
+
+        if (range == null && _throwReasonExceptions && !IsWellFormedCode(code))
+        {
+            throw new BadlyFormattedCodeException(code);
+        }
+
+        return range ?? (IReadOnlyList<CodeEntry>)Array.Empty<CodeEntry>();
     }
 
     /// <inheritdoc/>

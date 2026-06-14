@@ -472,7 +472,7 @@ gold certification when the code becomes fully curated. If all rows become curat
 
 **Files:**
 - `Dashboard/ZpCodeEditorDashboard.cs` — `ViewCodeAsync`, `LoadDetailRowsAsync`, `RunUpdateAsync`, `BuildDetailTable`, `TryCertifyGoldAsync`
-- `Database/Sql/CommonQueries.cs` — `GetCodeDetailRows`, `MarkCodeAsCurated`, `MarkCodeTimezoneChecked`, `MarkCodeNameChecked`, `FlagCode`, `UnflagCode`, `CheckGoldEligibility`, `SetGoldCode`
+- `Database/Sql/CommonQueries.cs` — `GetCodeDetailRows`, `MarkCodeAsCurated`, `MarkCodeTimezoneChecked`, `MarkCodeNameChecked`, `SetReferenceFlagReasonById` (per-row v/f/c/o flag reason), `CheckGoldEligibility`, `SetGoldCode`
 
 **DTO (private):** `DetailRow` (incl. `IsGold`)
 
@@ -501,7 +501,7 @@ After the write, reloads via `GetCodeDetailRowById`.
 
 **Files:**
 - `Dashboard/ZpCodeEditorDashboard.cs` — `EditFieldAsync`, `LoadSingleDetailRowAsync`
-- `Database/Sql/CommonQueries.cs` — `RenameZpCode`, `UpdateReferencePlaceNameById`, `UpdateReferenceTimezoneById`, `UpdateReferenceLatById`, `UpdateReferenceLngById`, `UpdateReferenceAltNameOfById`, `UpsertReferenceAdmin`, `GetCodeDetailRowById`, `GetAdminLevelIdForLevel`
+- `Database/Sql/CommonQueries.cs` — `RenameZpCode`, `UpdateReferencePlaceNameById`, `UpdateReferenceTimezoneById`, `UpdateReferenceCoordsById` (paired Lat+Lng write — edited on a dedicated Coordinates page), `UpdateReferenceAltNameOfById`, `UpsertReferenceAdmin`, `GetCodeDetailRowById`, `GetAdminLevelIdForLevel`
 
 ## ZpCode Editor › {CC} › Candidate
 

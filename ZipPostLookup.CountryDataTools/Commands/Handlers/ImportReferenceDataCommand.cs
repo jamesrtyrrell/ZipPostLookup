@@ -2,6 +2,7 @@ using Spectre.Console;
 using Z.Dapper.Plus;
 using ZipPostLookup.Core;
 using ZipPostLookup.CountryDataTools.Database;
+using ZipPostLookup.CountryDataTools.Database.Sql;
 using ZipPostLookup.CountryDataTools.Database.WorkDb;
 using ZipPostLookup.CountryDataTools.Dsv;
 using ZipPostLookup.CountryDataTools.Models.Dbo;
@@ -191,6 +192,11 @@ public static class ImportReferenceDataCommand
                 Console.WriteLine(gold.Certified > 0
                     ? $"  ✓ Gold: {gold.Certified:N0} code(s) certified"
                     : $"  ✓ Gold: no codes eligible yet");
+
+            // Keep the stored data.CountryInfo.CodeCount in sync with the curated distinct-code
+            // count (it is otherwise only ever reset to 0 — see AI-DB-OVERVIEW L-3).
+            await Dapper.SqlMapper.ExecuteAsync(goldConn,
+                CommonQueries.SetCountryCodeCount, new { CountryId = countryCode });
         }
 
         return 0;

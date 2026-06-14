@@ -71,6 +71,37 @@ internal sealed class ColumnMapping
         return new ColumnMapping(fields);
     }
 
+    /// <summary>
+    /// The "Ingestion" star set — only <see cref="CodesCandidate.PlaceName"/> (plus the always-
+    /// mandatory <see cref="CodesCandidate.ZpCode"/>) must come from the file. Everything else is
+    /// populated downstream and so is NOT starred (but stays optionally mappable):
+    ///   • Admin1..Admin5 are resolved at the country level (ZIP→state / FSA→province / range→estado);
+    ///   • Timezone is created from Lat/Lng coordinates when present;
+    ///   • IsDefault defaults to false.
+    /// Files with only bare codes use the "ZpCodes Only" import instead.
+    /// </summary>
+    public static ColumnMapping ForIngestion() =>
+        ForTemplate(nameof(CodesCandidate.PlaceName));
+
+    /// <summary>
+    /// Pre-fills the mapping by binding each template field to the first incoming column whose
+    /// header cell case-insensitively equals the field name. Columns with no matching field (or
+    /// fields already bound) are left as-is. Use to prefill the picker for files that carry a
+    /// standard header row; headerless files simply skip this and map by hand.
+    /// </summary>
+    public void BindByHeader(IReadOnlyList<string> header)
+    {
+        for (var col = 0; col < header.Count; col++)
+        {
+            var name = header[col].Trim();
+            if (string.IsNullOrEmpty(name)) { continue; }
+
+            var field = Fields.FirstOrDefault(f =>
+                string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (field != null && !field.IsMapped) { field.ColumnIndex = col; }
+        }
+    }
+
     /// <summary>The starred (editable + mandatory) fields, in template order.</summary>
     public IReadOnlyList<ColumnMappingField> EditableFields =>
         Fields.Where(f => f.Mandatory).ToList();

@@ -355,7 +355,7 @@
     "CountryName": "Canada",
     "HasPostalCodes": true,
     "CodeRegex": "^[A-Z]\\d[A-Z] \\d[A-Z]\\d$",
-    "ConstrainedRegex": "^[ABCEGHJ-NPR-TV-Z]\\d[ABCEGHJ-NPR-TV-Z] \\d[ABCEGHJ-NPR-TV-Z]\\d$",
+    "ConstrainedRegex": "^[A-CEGHJ-NPR-TVXY][0-9][A-CEGHJ-NPR-TV-Z] ?[0-9][A-CEGHJ-NPR-TV-Z][0-9]$",
     "ConstraintNotes": "Letters D, F, I, O, Q, U not used",
     "DataCurated": true,
     "CurationStatus": "Curated",

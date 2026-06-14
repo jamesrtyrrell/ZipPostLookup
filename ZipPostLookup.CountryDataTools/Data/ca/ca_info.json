@@ -13,11 +13,11 @@
     }
   ],
   "NameLabel": "Place",
-  "CodeCount": 901512,
+  "CodeCount": 901482,
   "CodeRanges": true,
   "Curated": true,
   "CurationStatus": "Curated",
-  "LastUpdated": "2026-06-13",
+  "LastUpdated": "2026-06-14",
   "CodeFormat": "A1A 1A1",
   "CodeRegex": "^[A-Z]\\d[A-Z] \\d[A-Z]\\d$",
   "Description": "Canadian provinces and territories with postal abbreviations and capitals.",
@@ -43,7 +43,7 @@
       "Name": "Ontario",
       "Code": "ON",
       "Capital": "Toronto",
-      "ZipCount": 298855,
+      "ZipCount": 298854,
       "NameCount": 316931
     },
     {
@@ -61,8 +61,8 @@
       "Name": "Nova Scotia",
       "Code": "NS",
       "Capital": "Halifax",
-      "ZipCount": 30106,
-      "NameCount": 31777
+      "ZipCount": 30097,
+      "NameCount": 31768
     },
     {
       "Type": "province",
@@ -70,8 +70,8 @@
       "LocalName": "Nouveau-Brunswick",
       "Code": "NB",
       "Capital": "Fredericton",
-      "ZipCount": 61309,
-      "NameCount": 62088
+      "ZipCount": 61289,
+      "NameCount": 62068
     },
     {
       "Type": "province",

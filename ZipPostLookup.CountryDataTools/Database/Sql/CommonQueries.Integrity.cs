@@ -115,6 +115,20 @@ public static partial class CommonQueries
                OR r.PlaceName = '---')
           ORDER  BY r.ZpCode";
 
+    // Curated rows whose PlaceName is non-blank but contains no alphabetic character
+    // (e.g. "1910", "20 30", "601") — junk colonia/number artefacts that passed curation.
+    // Disjoint from GetCuratedBlankPlaceNames: blank/placeholder names are excluded here.
+    public static readonly string GetCuratedNonAlphaPlaceNames =
+        @"SELECT r.ReferenceId, r.ZpCode, r.PlaceName
+          FROM   data.Reference r
+          WHERE  r.CountryId = @CountryId
+            AND  r.Curated   = 1
+            AND  r.Flagged   = 0
+            AND  r.PlaceName IS NOT NULL
+            AND  LTRIM(RTRIM(r.PlaceName)) NOT IN ('', '---')
+            AND  r.PlaceName NOT LIKE '%[A-Za-z]%'
+          ORDER  BY r.ZpCode";
+
     // TimezoneChecked=1 rows with a blank or placeholder Timezone.
     // Claims verified but would return an empty timezone string.
     public static readonly string GetCheckedBlankTimezones =
@@ -131,8 +145,12 @@ public static partial class CommonQueries
     // Gold ZpCodes with at least one unresolved Name discrepancy.
     // Unresolved = ResolvedAt IS NULL (no accept/reject decision applied yet).
     // These warrant human review: the incoming name on a Gold code may be a real alias.
-    // Silent-catch safe — if data.GoldCode or codes.Discrepancies.Notes don't exist yet,
-    // the caller catches the exception and returns an empty list.
+    // NOTE: deliberately does NOT filter on d.CreatedAt > g.GoldAt. That earlier filter
+    // ("only conflicts newer than certification") made the check silently report 0 after any
+    // GoldCode rebuild — the rebuild resets GoldAt to now, so every pre-existing discrepancy
+    // falls outside the window even though it is still genuinely unresolved on a gold code.
+    // Silent-catch safe — if data.GoldCode or codes.Discrepancies don't exist yet, the caller
+    // catches the exception and returns an empty list.
     public static readonly string GetGoldNameDiscrepancies =
         @"SELECT DISTINCT g.ZpCode
           FROM   data.GoldCode g
@@ -142,6 +160,5 @@ public static partial class CommonQueries
           WHERE  g.CountryId    = @CountryId
             AND  d.FieldName    = 'Name'
             AND  d.ResolvedAt  IS NULL
-            AND  d.CreatedAt    > g.GoldAt
           ORDER  BY g.ZpCode";
 }

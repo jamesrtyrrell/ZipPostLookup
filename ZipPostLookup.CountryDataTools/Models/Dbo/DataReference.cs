@@ -2,6 +2,7 @@
 using System.Text;
 using Dapper.Contrib.Extensions;
 using ZipPostLookup.Core;
+using ZipPostLookup.CountryDataTools.Models.Enums;
 
 namespace ZipPostLookup.CountryDataTools.Models.Dbo;
 
@@ -70,7 +71,12 @@ public class DataReference : IDataSchema
     public string Lng { get; set; } = "---";
     public bool TimezoneChecked { get; set; }
     public bool NameChecked { get; set; }
-    public bool Flagged { get; set; }
+
+    /// <summary>
+    /// Flag reason for this code (0=Valid … 3=Obsolete). Backed by the integer
+    /// <c>data.Reference.Flagged</c> column — Dapper maps the int to/from this enum.
+    /// </summary>
+    public DataFlagReasonType Flagged { get; set; }
 
     public string? AltNameOf { get; set; }
 

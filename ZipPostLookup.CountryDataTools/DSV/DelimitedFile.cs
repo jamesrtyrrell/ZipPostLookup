@@ -96,7 +96,11 @@ public static class DelimitedFile
                     }
                 }
                 fields.Add(sb.ToString());
+                // A closing-quoted field is followed either by a delimiter (more fields) or by
+                // end-of-line. Break at EOL — otherwise the outer loop runs once more and a
+                // quoted final field spuriously appends a trailing empty field.
                 if (pos < line.Length && line[pos] == ',') { pos++; }
+                else { break; }
             }
             else
             {

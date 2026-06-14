@@ -28,6 +28,8 @@ namespace ZipPostLookup.CountryDataTools.Commands.Handlers;
 ///  11. Gold code regressions — gold-certified codes that no longer meet all conditions.
 ///  12. Open Gold Name Discrepancies — gold codes with unresolved Name discrepancies
 ///      that may be real aliases needing promotion.
+///  13. Curated non-alphabetic place names — curated rows whose name is non-blank but
+///      has no letter (e.g. "1910") — junk number artefacts that would export as garbage.
 ///
 /// Writes a Markdown report to DataAnalysis/{cc}-db-integrity-{date}.md.
 /// </summary>
@@ -49,6 +51,7 @@ public static class CdtDbIntegrityCommand
         List<string>         CodesWithNoDefault,
         List<OrphanRow>      AltDefaultRows,
         List<InvalidCodeRow> BlankPlaceNames,
+        List<InvalidCodeRow> NonAlphaPlaceNames,
         List<InvalidCodeRow> BlankTimezones,
         List<string>         GoldRegressions,
         List<string>         GoldNameDiscrepancies,
@@ -172,6 +175,13 @@ public static class CdtDbIntegrityCommand
             new { CountryId = cc })).ToList();
         Console.WriteLine($" — {blankPlaceNames.Count:N0} row(s)");
 
+        // ── Check 13: Curated non-alphabetic place names ─────────────────────
+        Console.Write("  ▸ Curated non-alphabetic place names");
+        var nonAlphaPlaceNames = (await conn.QueryAsync<InvalidCodeRow>(
+            CommonQueries.GetCuratedNonAlphaPlaceNames,
+            new { CountryId = cc })).ToList();
+        Console.WriteLine($" — {nonAlphaPlaceNames.Count:N0} row(s)");
+
         // ── Check 10: TimezoneChecked=1 but Timezone blank ───────────────────
         Console.Write("  ▸ Checked but blank timezones");
         var blankTimezones = (await conn.QueryAsync<InvalidCodeRow>(
@@ -213,7 +223,7 @@ public static class CdtDbIntegrityCommand
 
         var results = new DbCheckResults(
             adminMismatches, missingAdmin1Count, orphans, dupes, invalidCodes,
-            noDefaultCodes, altDefaultRows, blankPlaceNames, blankTimezones,
+            noDefaultCodes, altDefaultRows, blankPlaceNames, nonAlphaPlaceNames, blankTimezones,
             goldRegressions, goldNameDiscrepancies, adminSupported);
 
         // ── Print summary table ────────────────────────────────────────────────
@@ -241,6 +251,7 @@ public static class CdtDbIntegrityCommand
             || noDefaultCodes.Count > 0
             || altDefaultRows.Count > 0
             || blankPlaceNames.Count > 0
+            || nonAlphaPlaceNames.Count > 0
             || blankTimezones.Count > 0
             || goldRegressions.Count > 0
             || goldNameDiscrepancies.Count > 0;
@@ -291,6 +302,10 @@ public static class CdtDbIntegrityCommand
             $"{r.BlankPlaceNames.Count:N0}",
             StatusIcon(r.BlankPlaceNames.Count));
 
+        table.AddRow("Curated non-alphabetic place names",
+            $"{r.NonAlphaPlaceNames.Count:N0}",
+            StatusIcon(r.NonAlphaPlaceNames.Count));
+
         table.AddRow("Checked but blank timezones",
             $"{r.BlankTimezones.Count:N0}",
             StatusIcon(r.BlankTimezones.Count));
@@ -331,6 +346,7 @@ public static class CdtDbIntegrityCommand
         sb.AppendLine($"| Curated codes with no default | {r.CodesWithNoDefault.Count:N0} | {(r.CodesWithNoDefault.Count == 0 ? "✓" : "⚠")} |");
         sb.AppendLine($"| Alt-name rows marked IsDefault | {r.AltDefaultRows.Count:N0} | {(r.AltDefaultRows.Count == 0 ? "✓" : "⚠")} |");
         sb.AppendLine($"| Curated blank place names | {r.BlankPlaceNames.Count:N0} | {(r.BlankPlaceNames.Count == 0 ? "✓" : "⚠")} |");
+        sb.AppendLine($"| Curated non-alphabetic place names | {r.NonAlphaPlaceNames.Count:N0} | {(r.NonAlphaPlaceNames.Count == 0 ? "✓" : "⚠")} |");
         sb.AppendLine($"| Checked but blank timezones | {r.BlankTimezones.Count:N0} | {(r.BlankTimezones.Count == 0 ? "✓" : "⚠")} |");
         sb.AppendLine($"| Gold code regressions | {r.GoldRegressions.Count:N0} | {(r.GoldRegressions.Count == 0 ? "✓" : "⚠")} |");
         sb.AppendLine($"| Open Gold Name discrepancies | {r.GoldNameDiscrepancies.Count:N0} | {(r.GoldNameDiscrepancies.Count == 0 ? "✓" : "⚠")} |");
@@ -488,6 +504,26 @@ public static class CdtDbIntegrityCommand
         }
         sb.AppendLine();
 
+        // ── Curated non-alphabetic place names ────────────────────────────────
+        sb.AppendLine("## Curated Non-Alphabetic Place Names");
+        sb.AppendLine();
+        if (r.NonAlphaPlaceNames.Count == 0)
+        {
+            sb.AppendLine("_None — all curated place names contain at least one letter._");
+        }
+        else
+        {
+            sb.AppendLine($"_{r.NonAlphaPlaceNames.Count:N0} curated row(s) have a non-blank PlaceName with no alphabetic character (e.g. \"1910\", \"20 30\") — junk number artefacts that would export as garbage names. Delete the offending non-default rows or supply a real place name._");
+            sb.AppendLine();
+            sb.AppendLine("| ReferenceId | ZpCode | PlaceName |");
+            sb.AppendLine("|---|---|---|");
+            foreach (var row in r.NonAlphaPlaceNames.Take(200))
+                sb.AppendLine($"| {row.ReferenceId} | {row.ZpCode} | {row.PlaceName} |");
+            if (r.NonAlphaPlaceNames.Count > 200)
+                sb.AppendLine("| … | … | … |");
+        }
+        sb.AppendLine();
+
         // ── Checked but blank timezones ───────────────────────────────────────
         sb.AppendLine("## Checked But Blank Timezones");
         sb.AppendLine();
@@ -578,6 +614,7 @@ public static class CdtDbIntegrityCommand
                 · Curated codes with no default (no IsDefault=1 row — lookup is non-deterministic)
                 · Alt-name rows marked default (AltNameOf + IsDefault=1 — wrong primary result)
                 · Curated blank place names    (NULL/empty PlaceName on curated rows)
+                · Curated non-alpha names      (curated PlaceName with no letter — e.g. "1910")
                 · Checked but blank timezones  (TimezoneChecked=1 but Timezone is blank)
                 · Gold code regressions        (gold-certified codes that lost qualifying conditions)
                 · Open Gold Name discrepancies (gold codes with unresolved Name discrepancies — may be aliases)

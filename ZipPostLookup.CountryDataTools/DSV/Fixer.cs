@@ -72,7 +72,7 @@ public static class Fixer
         var resolved = TimezoneResolver.TryResolveWithCoordinates(row.Lat!, row.Lng!);
         if (resolved != null && !string.Equals(resolved, row.Timezone, StringComparison.Ordinal))
         {
-            Patch(row, log, "timezone", row.Timezone, resolved);
+            Patch(row, log, "Timezone", row.Timezone, resolved);
         }
         
     }
@@ -147,7 +147,7 @@ public static class Fixer
         var guess = TimezoneResolver.GuessFromState(row.Admin1Code, countryCode);
         if (guess != null)
         {
-            Patch(row, log, "timezone", row.Timezone ?? "", guess);
+            Patch(row, log, "Timezone", row.Timezone ?? "", guess);
         }
     }
 

@@ -2,6 +2,7 @@ using System.Data;
 using Dapper;
 using Spectre.Console;
 using ZipPostLookup.CountryDataTools.CountryRules;
+using ZipPostLookup.CountryDataTools.Database.Sql;
 
 namespace ZipPostLookup.CountryDataTools.Validation.Export;
 
@@ -26,16 +27,12 @@ public sealed class NormalizePlaceNamesCheck : IExportPreCheck
         // (AltNameOf IS NULL). Any prior run that inverted this is corrected here before
         // re-processing, so the next pass can set AltNameOf on the right (non-default) row.
         await conn.ExecuteAsync(
-            @"UPDATE data.Reference SET AltNameOf = NULL
-              WHERE CountryId = @CountryId AND IsDefault = 1 AND AltNameOf IS NOT NULL",
+            CommonQueries.ResetAltNameOfOnDefaultRows,
             new { CountryId = ccUpper });
 
         // Load all unlinked rows grouped by code
         var rows = (await conn.QueryAsync<(long ReferenceId, string ZpCode, string PlaceName, bool IsDefault, string Lat, string Lng)>(
-            @"SELECT ReferenceId, ZpCode, PlaceName, CAST(IsDefault AS BIT) AS IsDefault, Lat, Lng
-              FROM data.Reference
-              WHERE CountryId = @CountryId AND AltNameOf IS NULL
-              ORDER BY ZpCode, PlaceName",
+            CommonQueries.GetUnlinkedRowsForAltNameCheck,
             new { CountryId = ccUpper })).ToList();
 
         var updates = new List<(long AltRefId, string CanonicalName)>();

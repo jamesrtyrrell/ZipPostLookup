@@ -391,6 +391,11 @@ public static class ExportReferenceCommand
         var distinctCodes = await conn.ExecuteScalarAsync<int>(
             CommonQueries.GetDistinctCodeCount, new { CountryId = ccUpper });
 
+        // Keep the stored data.CountryInfo.CodeCount in sync with the curated distinct-code
+        // count (it is otherwise only ever reset to 0 — see AI-DB-OVERVIEW L-3).
+        await conn.ExecuteAsync(
+            CommonQueries.SetCountryCodeCount, new { CountryId = ccUpper });
+
         var divisionRows = (await conn.QueryAsync<AdminDivisionCount>(
             CommonQueries.GetAdminDivisionCounts,
             new { CountryId = ccUpper })).ToList();

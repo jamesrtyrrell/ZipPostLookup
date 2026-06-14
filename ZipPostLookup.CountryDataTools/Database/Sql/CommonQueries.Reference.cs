@@ -10,6 +10,17 @@ public static partial class CommonQueries
     public static readonly string ResetCountryCodeCount =
         @"UPDATE data.CountryInfo SET CodeCount = 0 WHERE CountryId = @CountryId";
 
+    // Persist the curated distinct-code count (same definition as GetDistinctCodeCount) onto
+    // data.CountryInfo so the stored counter stays in sync. Called at the end of import and export.
+    public static readonly string SetCountryCodeCount =
+        @"UPDATE ci
+          SET    ci.CodeCount = (SELECT COUNT(DISTINCT r.ZpCode)
+                                 FROM   data.Reference r
+                                 WHERE  r.CountryId = @CountryId AND r.Curated = 1),
+                 ci.UpdatedAt = SYSUTCDATETIME()
+          FROM   data.CountryInfo ci
+          WHERE  ci.CountryId = @CountryId";
+
     // --- Reference ---
 
     public static readonly string HasReferenceData =
@@ -62,7 +73,7 @@ public static partial class CommonQueries
                  CAST(r.IsDefault       AS BIT) AS IsDefault,
                  CAST(r.TimezoneChecked AS BIT) AS TimezoneChecked,
                  CAST(r.Curated         AS BIT) AS Curated,
-                 CAST(r.Flagged         AS BIT) AS Flagged,
+                 r.Flagged AS Flagged,
                  ISNULL(r.Lat, '---') AS Lat, ISNULL(r.Lng, '---') AS Lng,
                  r.AltNameOf,
                  CASE WHEN g.ZpCode IS NOT NULL THEN CAST(1 AS BIT)
@@ -215,7 +226,7 @@ public static partial class CommonQueries
                  ISNULL(ra2.Code,  '---')        AS Admin2Code,
                  CAST(r.TimezoneChecked AS BIT)  AS TimezoneChecked,
                  CAST(r.NameChecked     AS BIT)  AS NameChecked,
-                 CAST(r.Flagged         AS BIT)  AS Flagged,
+                 r.Flagged  AS Flagged,
                  CAST(CASE WHEN EXISTS (
                      SELECT 1 FROM data.GoldCode g
                      WHERE g.CountryId = r.CountryId AND g.ZpCode = r.ZpCode
@@ -246,7 +257,7 @@ public static partial class CommonQueries
                  ISNULL(ra2.Code,  '---')        AS Admin2Code,
                  CAST(r.TimezoneChecked AS BIT)  AS TimezoneChecked,
                  CAST(r.NameChecked     AS BIT)  AS NameChecked,
-                 CAST(r.Flagged         AS BIT)  AS Flagged,
+                 r.Flagged  AS Flagged,
                  CAST(CASE WHEN EXISTS (
                      SELECT 1 FROM data.GoldCode g
                      WHERE g.CountryId = r.CountryId AND g.ZpCode = r.ZpCode
@@ -262,6 +273,27 @@ public static partial class CommonQueries
                                       WHERE CountryId = r.CountryId AND LevelNumber = 2)
           WHERE r.ReferenceId = @ReferenceId";
 
+    // Reference rows for the candidate-vs-reference comparison view (ZpCode editor).
+    // Maps to BrowseRow (no ReferenceId / Admin2 / IsGold); excludes flagged rows.
+    public static readonly string GetReferenceBrowseRowsByCode =
+        @"SELECT r.ZpCode, r.PlaceName, r.Timezone,
+                 CAST(r.IsDefault       AS BIT) AS IsDefault,
+                 ISNULL(r.Lat,  '---')          AS Lat,
+                 ISNULL(r.Lng,  '---')          AS Lng,
+                 r.AltNameOf,
+                 ISNULL(ra.Value, '---')        AS Admin1,
+                 ISNULL(ra.Code,  '---')        AS Admin1Code,
+                 CAST(r.TimezoneChecked AS BIT) AS TimezoneChecked,
+                 CAST(r.NameChecked     AS BIT) AS NameChecked,
+                 r.Flagged AS Flagged
+          FROM   data.Reference r
+          LEFT   JOIN data.ReferenceAdmins ra
+                 ON  ra.ReferenceId  = r.ReferenceId
+                 AND ra.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
+                                        WHERE CountryId = r.CountryId AND LevelNumber = 1)
+          WHERE  r.CountryId = @CountryId AND r.ZpCode = @ZpCode AND r.Flagged = 0
+          ORDER  BY r.IsDefault DESC, r.PlaceName";
+
     // Individual reference rows for the browse screen (all uncurated, including AltNameOf rows).
     public static readonly string GetBrowseRowsPage =
         @"SELECT r.ZpCode, r.PlaceName, r.Timezone,
@@ -273,7 +305,7 @@ public static partial class CommonQueries
                  ISNULL(ra.Code,  '---')         AS Admin1Code,
                  CAST(r.TimezoneChecked AS BIT)  AS TimezoneChecked,
                  CAST(r.NameChecked     AS BIT)  AS NameChecked,
-                 CAST(r.Flagged         AS BIT)  AS Flagged
+                 r.Flagged  AS Flagged
           FROM data.Reference r
           LEFT JOIN data.ReferenceAdmins ra
               ON  ra.ReferenceId  = r.ReferenceId
@@ -291,7 +323,8 @@ public static partial class CommonQueries
           FROM   data.Reference
           WHERE  CountryId = @CountryId AND Curated = 0 AND Flagged = 0";
 
-    // Flagged browse — mirrors the above pair but filtered to Flagged = 1.
+    // Flagged browse — mirrors the above pair but filtered to any flagged reason (Flagged <> 0),
+    // so CommonFake (2) and Obsolete (3) codes are listed alongside generic-Flagged (1) ones.
     public static readonly string GetFlaggedBrowseRowsPage =
         @"SELECT r.ZpCode, r.PlaceName, r.Timezone,
                  CAST(r.IsDefault       AS BIT) AS IsDefault,
@@ -302,34 +335,31 @@ public static partial class CommonQueries
                  ISNULL(ra.Code,  '---')         AS Admin1Code,
                  CAST(r.TimezoneChecked AS BIT)  AS TimezoneChecked,
                  CAST(r.NameChecked     AS BIT)  AS NameChecked,
-                 CAST(r.Flagged         AS BIT)  AS Flagged
+                 r.Flagged  AS Flagged
           FROM data.Reference r
           LEFT JOIN data.ReferenceAdmins ra
               ON  ra.ReferenceId  = r.ReferenceId
               AND ra.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
                                      WHERE CountryId = r.CountryId AND LevelNumber = 1)
           WHERE r.CountryId = @CountryId
-            AND r.Flagged   = 1
+            AND r.Flagged  <> 0
           ORDER BY r.ZpCode, r.IsDefault DESC, r.PlaceName
           OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
 
     public static readonly string GetFlaggedBrowseRowCount =
         @"SELECT COUNT(*)
           FROM   data.Reference
-          WHERE  CountryId = @CountryId AND Flagged = 1";
+          WHERE  CountryId = @CountryId AND Flagged <> 0";
 
-    // Flag / unflag all rows for a ZpCode — flagged codes are excluded from exports.
-    public static readonly string FlagCode =
+    // Set the flag reason (DataFlagReasonType: 0=Valid, 1=Flagged, 2=CommonFake, 3=Obsolete) on a
+    // SINGLE reference row, identified by ReferenceId. Any non-zero value excludes that row from
+    // every export query; @Flagged = 0 clears the flag. Per-row so that flagging one place name of a
+    // multi-name ZpCode does not flag the code's other rows. Replaces the old FlagCode/UnflagCode pair.
+    public static readonly string SetReferenceFlagReasonById =
         @"UPDATE data.Reference
-          SET    Flagged   = 1,
+          SET    Flagged   = @Flagged,
                  UpdatedAt = SYSUTCDATETIME()
-          WHERE  CountryId = @CountryId AND ZpCode = @ZpCode";
-
-    public static readonly string UnflagCode =
-        @"UPDATE data.Reference
-          SET    Flagged   = 0,
-                 UpdatedAt = SYSUTCDATETIME()
-          WHERE  CountryId = @CountryId AND ZpCode = @ZpCode";
+          WHERE  ReferenceId = @ReferenceId";
 
     // Per-field in-place updates for the row editor (target a single ReferenceId).
     public static readonly string UpdateReferenceTimezoneById =
@@ -344,15 +374,15 @@ public static partial class CommonQueries
                  UpdatedAt = SYSUTCDATETIME()
           WHERE  ReferenceId = @ReferenceId";
 
-    public static readonly string UpdateReferenceLatById =
+    // Coordinates are written as a complete pair only — never one without the other.
+    // Callers must pass a pair already run through DataReference.NormalizeCoordinatePair()
+    // so an incomplete pair is stored as ('---','---') rather than a stranded coordinate.
+    // (Replaces the old per-coordinate UpdateReferenceLatById/UpdateReferenceLngById, which
+    // could strand a lone Lat or Lng — see the CK_Reference_CoordPair check constraint.)
+    public static readonly string UpdateReferenceCoordsById =
         @"UPDATE data.Reference
           SET    Lat       = @Lat,
-                 UpdatedAt = SYSUTCDATETIME()
-          WHERE  ReferenceId = @ReferenceId";
-
-    public static readonly string UpdateReferenceLngById =
-        @"UPDATE data.Reference
-          SET    Lng       = @Lng,
+                 Lng       = @Lng,
                  UpdatedAt = SYSUTCDATETIME()
           WHERE  ReferenceId = @ReferenceId";
 
@@ -361,6 +391,43 @@ public static partial class CommonQueries
           SET    AltNameOf = @AltNameOf,
                  UpdatedAt = SYSUTCDATETIME()
           WHERE  ReferenceId = @ReferenceId";
+
+    // Coordinate-resolved timezone write-back (normalize-tz): set the value AND mark verified.
+    public static readonly string SetReferenceTimezoneVerifiedById =
+        @"UPDATE data.Reference
+          SET    Timezone        = @Timezone,
+                 TimezoneChecked = 1,
+                 UpdatedAt       = SYSUTCDATETIME()
+          WHERE  ReferenceId = @ReferenceId";
+
+    // Confirm an already-correct timezone as verified (normalize-tz), only if not yet checked.
+    public static readonly string MarkReferenceTimezoneCheckedById =
+        @"UPDATE data.Reference
+          SET    TimezoneChecked = 1,
+                 UpdatedAt       = SYSUTCDATETIME()
+          WHERE  ReferenceId = @ReferenceId AND TimezoneChecked = 0";
+
+    // Batch set Timezone + mark verified, keyed by ReferenceId (normalize-tz).
+    // {0} = a "(ReferenceId, N'tz'), ..." VALUES list. Caller must chunk to <= 1000 rows
+    // (SQL Server table-value-constructor limit). ReferenceId is bigint (safe to inline).
+    public static readonly string SetReferenceTimezoneVerifiedBatch =
+        @"UPDATE r
+            SET    r.Timezone        = src.Timezone,
+                   r.TimezoneChecked = 1,
+                   r.UpdatedAt       = SYSUTCDATETIME()
+            FROM   data.Reference r
+            JOIN  (VALUES {0}) AS src(ReferenceId, Timezone)
+                ON r.ReferenceId = src.ReferenceId;";
+
+    // Batch mark TimezoneChecked=1 for already-correct rows, keyed by ReferenceId (normalize-tz).
+    // {0} = a "(ReferenceId), ..." VALUES list. Caller must chunk to <= 1000 rows.
+    public static readonly string MarkReferenceTimezoneCheckedBatch =
+        @"UPDATE r
+            SET    r.TimezoneChecked = 1,
+                   r.UpdatedAt       = SYSUTCDATETIME()
+            FROM   data.Reference r
+            JOIN  (VALUES {0}) AS src(ReferenceId)
+                ON r.ReferenceId = src.ReferenceId;";
 
     // Reference rows that have no admin level 1 entry, a blank/placeholder entry,
     // or an all-numeric entry (INEGI-format codes like "19" that should be SEPOMEX
@@ -415,7 +482,10 @@ public static partial class CommonQueries
     // Set both curation flags for every row sharing a ZpCode.
     // TimezoneChecked is only raised to 1 when the row actually has a timezone value —
     // rows with a blank/placeholder timezone are left with their current TimezoneChecked
-    // state so they surface in the "checked but blank" integrity check.
+    // state so they surface in the "checked but blank" integrity check. NameChecked is
+    // guarded the same way: it is only raised when PlaceName is a real value, so a code
+    // with a blank/placeholder name can never become Curated (a PERSISTED computed column
+    // = TimezoneChecked AND NameChecked).
     public static readonly string MarkCodeAsCurated =
         @"UPDATE data.Reference
           SET    TimezoneChecked = CASE
@@ -423,7 +493,11 @@ public static partial class CommonQueries
                       AND Timezone NOT IN ('', '---') THEN 1
                      ELSE TimezoneChecked
                  END,
-                 NameChecked     = 1,
+                 NameChecked     = CASE
+                     WHEN PlaceName IS NOT NULL
+                      AND PlaceName NOT IN ('', '---') THEN 1
+                     ELSE NameChecked
+                 END,
                  UpdatedAt       = SYSUTCDATETIME()
           WHERE  CountryId = @CountryId
             AND  ZpCode    = @ZpCode";
@@ -438,12 +512,30 @@ public static partial class CommonQueries
             AND  Timezone   IS NOT NULL
             AND  Timezone   NOT IN ('', '---')";
 
+    // Only raises NameChecked when the row has an actual place name — rows with a
+    // blank/placeholder name are left untouched so they cannot become Curated.
     public static readonly string MarkCodeNameChecked =
         @"UPDATE data.Reference
           SET    NameChecked = 1,
                  UpdatedAt   = SYSUTCDATETIME()
-          WHERE  CountryId = @CountryId
-            AND  ZpCode    = @ZpCode";
+          WHERE  CountryId  = @CountryId
+            AND  ZpCode     = @ZpCode
+            AND  PlaceName  IS NOT NULL
+            AND  PlaceName  NOT IN ('', '---')";
+
+    // Place-name normalisation (NormalizePlaceNamesCheck): clear AltNameOf wrongly set on an
+    // IsDefault=1 (official/canonical) row before re-processing.
+    public static readonly string ResetAltNameOfOnDefaultRows =
+        @"UPDATE data.Reference SET AltNameOf = NULL
+          WHERE CountryId = @CountryId AND IsDefault = 1 AND AltNameOf IS NOT NULL";
+
+    // Unlinked (AltNameOf IS NULL) reference rows for a country, ordered for per-code grouping,
+    // used by NormalizePlaceNamesCheck to detect abbreviation-equivalent place-name pairs.
+    public static readonly string GetUnlinkedRowsForAltNameCheck =
+        @"SELECT ReferenceId, ZpCode, PlaceName, CAST(IsDefault AS BIT) AS IsDefault, Lat, Lng
+          FROM data.Reference
+          WHERE CountryId = @CountryId AND AltNameOf IS NULL
+          ORDER BY ZpCode, PlaceName";
 
     // Alt-name rows whose canonical code is curated but they themselves are not.
     // These are "orphaned" — they should have been propagated when the canonical was curated.
@@ -453,6 +545,8 @@ public static partial class CommonQueries
           WHERE  alt.CountryId = @CountryId
             AND  alt.AltNameOf IS NOT NULL
             AND  alt.Curated   = 0
+            AND  alt.PlaceName IS NOT NULL
+            AND  alt.PlaceName NOT IN ('', '---')
             AND  EXISTS (
                 SELECT 1 FROM data.Reference canon
                 WHERE  canon.CountryId = alt.CountryId
@@ -498,6 +592,8 @@ public static partial class CommonQueries
           WHERE  alt.CountryId = @CountryId
             AND  alt.AltNameOf IS NOT NULL
             AND  alt.Curated   = 0
+            AND  alt.PlaceName IS NOT NULL
+            AND  alt.PlaceName NOT IN ('', '---')
             AND  EXISTS (
                 SELECT 1 FROM data.Reference canon
                 WHERE  canon.CountryId = alt.CountryId
@@ -558,7 +654,9 @@ public static partial class CommonQueries
               WHERE  CountryId       = @CountryId
                 AND  ZpCode          = @ZpCode
                 AND  TimezoneChecked = 1
-                AND  NameChecked     = 0";
+                AND  NameChecked     = 0
+                AND  PlaceName       IS NOT NULL
+                AND  PlaceName       NOT IN ('', '---')";
 
     public static readonly string GetReferenceAdmin =
         @"SELECT * FROM data.ReferenceAdmins

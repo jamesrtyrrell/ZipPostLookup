@@ -72,6 +72,45 @@ public sealed class ZipPostRegistry : IZipPostLookup
     private static readonly ICountryCodeRules _caRules = new CaCountryCodeRules();
     private static readonly ICountryCodeRules _mxRules = new MxCountryCodeRules();
 
+    // ── Opt-in reason exceptions (default off — behaviour unchanged) ───────────
+    private volatile bool _throwReasonExceptions;
+
+    /// <summary>
+    /// Opts this registry in (or out) of throwing <see cref="CodeReasonException"/>s from the
+    /// code-lookup path instead of returning a silent <c>null</c>/empty miss. Default <c>false</c>.
+    /// </summary>
+    /// <remarks>
+    /// When enabled, <see cref="GetByCode"/> / <see cref="GetAllByCode"/> (and their
+    /// <c>GetByZip</c> aliases) throw <see cref="BadlyFormattedCodeException"/> for input that is
+    /// not a valid format for any supported country (US, CA, MX). A well-formed code that simply
+    /// is not present still returns <c>null</c>/empty. Thread-safe; may be toggled at any time.
+    /// </remarks>
+    public void ThrowReasonExceptions(bool enabled) => _throwReasonExceptions = enabled;
+
+    /// <summary>
+    /// True when <paramref name="code"/> is a valid format for any supported country rule
+    /// (raw or normalised). Used to decide whether a miss is a malformed-input case.
+    /// </summary>
+    private bool IsWellFormedCode(string code)
+    {
+        foreach (var rule in _rules)
+        {
+            if (rule.Validate(code))
+            {
+                return true;
+            }
+
+            var normalized = rule.Normalize(code);
+
+            if (rule.Validate(normalized))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // =========================================================================
     // Constructors
     // =========================================================================
@@ -422,7 +461,14 @@ public sealed class ZipPostRegistry : IZipPostLookup
     {
         if (code == null) { return null; }
 
-        return NormalizeAndLookup(code)?[0];
+        var hit = NormalizeAndLookup(code)?[0];
+
+        if (hit == null && _throwReasonExceptions && !IsWellFormedCode(code))
+        {
+            throw new BadlyFormattedCodeException(code);
+        }
+
+        return hit;
     }
 
     /// <inheritdoc/>
@@ -438,6 +484,12 @@ public sealed class ZipPostRegistry : IZipPostLookup
         if (code == null) { throw new ArgumentNullException(nameof(code)); }
 
         var list = NormalizeAndLookup(code);
+
+        if (list == null && _throwReasonExceptions && !IsWellFormedCode(code))
+        {
+            throw new BadlyFormattedCodeException(code);
+        }
+
         return list?.AsReadOnly() ?? (IReadOnlyList<CodeEntry>)Array.Empty<CodeEntry>();
     }
 

@@ -118,7 +118,22 @@ public static class ZipPostLookup
     /// </summary>
     public static IReadOnlyDictionary<string, CodeEntry?> GetBatch(IEnumerable<string> codes) =>
         ZipPostRegistry.Default.GetBatch(codes);
-    
+
+    /// <summary>
+    /// Opts the default US registry in (or out) of throwing <see cref="CodeReasonException"/>s
+    /// from the code-lookup path instead of returning a silent <c>null</c>/empty miss.
+    /// Default <c>false</c> — behaviour is unchanged unless you call this.
+    /// </summary>
+    /// <remarks>
+    /// When enabled, <see cref="GetByCode"/> / <see cref="GetByZip"/> / <see cref="GetAllByCode"/>
+    /// throw <see cref="BadlyFormattedCodeException"/> for input that is not a valid format for any
+    /// supported country (US, CA, MX). A well-formed code that is simply not present still returns
+    /// <c>null</c>/empty. Affects <see cref="ZipPostRegistry.Default"/> only; registries created via
+    /// <see cref="CreateRegistry"/> / <see cref="CreateCustomRegistry"/> have their own toggle.
+    /// </remarks>
+    public static void ThrowReasonExceptions(bool enabled) =>
+        ZipPostRegistry.Default.ThrowReasonExceptions(enabled);
+
     /// <summary>
     /// Creates a registry from one or more country codes using their built-in embedded data.
     /// </summary>
