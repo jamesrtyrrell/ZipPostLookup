@@ -45,6 +45,15 @@ public sealed class ZpImageLookup : IZipPostLookup
     /// </summary>
     public void ThrowReasonExceptions(bool enabled) => _throwReasonExceptions = enabled;
 
+    private static void ThrowIfFlagged(CodeEntry entry)
+    {
+        switch (entry.Reason)
+        {
+            case CodeReason.Obsolete:   throw new ObsoleteCodeException(entry.ZpCode);
+            case CodeReason.CommonFake: throw new CommonFakeDataException(entry.ZpCode);
+        }
+    }
+
     /// <summary>
     /// True when <paramref name="code"/> is a valid format for any supported country rule
     /// (raw or normalised). Used to decide whether a miss is a malformed-input case.
@@ -186,7 +195,11 @@ public sealed class ZpImageLookup : IZipPostLookup
         if (code == null) { return null;}
 
         var hit = _reader.GetByCodeExact(code);
-        if (hit != null) { return hit; }
+        if (hit != null)
+        {
+            if (_throwReasonExceptions) ThrowIfFlagged(hit);
+            return hit;
+        }
 
         foreach (var rule in _rules)
         {
@@ -195,18 +208,28 @@ public sealed class ZpImageLookup : IZipPostLookup
                 rule.Validate(normalized))
             {
                 hit = _reader.GetByCodeExact(normalized);
-                if (hit != null) { return hit; }
+                if (hit != null)
+                {
+                    if (_throwReasonExceptions) ThrowIfFlagged(hit);
+                    return hit;
+                }
             }
         }
 
         var range = _reader.GetByRange(code);
 
-        if (range == null && _throwReasonExceptions && !IsWellFormedCode(code))
+        if (range != null)
+        {
+            if (_throwReasonExceptions) ThrowIfFlagged(range);
+            return range;
+        }
+
+        if (_throwReasonExceptions && !IsWellFormedCode(code))
         {
             throw new BadlyFormattedCodeException(code);
         }
 
-        return range;
+        return null;
     }
 
     /// <inheritdoc/>
@@ -222,7 +245,11 @@ public sealed class ZpImageLookup : IZipPostLookup
         if (code == null) { throw new ArgumentNullException(nameof(code)); }
 
         var list = _reader.GetAllByCodeExact(code);
-        if (list != null) { return list; }
+        if (list != null)
+        {
+            if (_throwReasonExceptions && list.Count > 0) ThrowIfFlagged(list[0]);
+            return list;
+        }
 
         foreach (var rule in _rules)
         {
@@ -231,18 +258,28 @@ public sealed class ZpImageLookup : IZipPostLookup
                 rule.Validate(normalized))
             {
                 list = _reader.GetAllByCodeExact(normalized);
-                if (list != null) { return list; }
+                if (list != null)
+                {
+                    if (_throwReasonExceptions && list.Count > 0) ThrowIfFlagged(list[0]);
+                    return list;
+                }
             }
         }
 
         var range = _reader.GetAllByRange(code);
 
-        if (range == null && _throwReasonExceptions && !IsWellFormedCode(code))
+        if (range != null)
+        {
+            if (_throwReasonExceptions && range.Count > 0) ThrowIfFlagged(range[0]);
+            return range;
+        }
+
+        if (_throwReasonExceptions && !IsWellFormedCode(code))
         {
             throw new BadlyFormattedCodeException(code);
         }
 
-        return range ?? (IReadOnlyList<CodeEntry>)Array.Empty<CodeEntry>();
+        return Array.Empty<CodeEntry>();
     }
 
     /// <inheritdoc/>

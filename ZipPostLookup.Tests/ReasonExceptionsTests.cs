@@ -5,6 +5,15 @@ using Facade = ZipPostLookup.ZipPostLookup;
 
 namespace ZipPostLookup.Tests;
 
+// Inline data source used only by Phase 2 reason-flag tests.
+file sealed class ReasonSource : ICodeDataSource
+{
+    private readonly CodeEntry[] _entries;
+    public ReasonSource(params CodeEntry[] entries) => _entries = entries;
+    public string SourceName => "reason-test";
+    public IEnumerable<CodeEntry> GetEntries() => _entries;
+}
+
 /// <summary>
 /// Phase 1 of "Code Reason Flags &amp; Lookup Exceptions" — the opt-in
 /// <see cref="BadlyFormattedCodeException"/> on the code-lookup path. Verifies the toggle is
@@ -188,5 +197,99 @@ public sealed class ReasonExceptionsTests : IClassFixture<UsRegistryFixture>
         Assert.Equal("90210", fake.Code);
         Assert.IsAssignableFrom<CodeReasonException>(obsolete);
         Assert.IsAssignableFrom<CodeReasonException>(fake);
+    }
+
+    // ── Phase 2 — CodeReason on CodeEntry ──────────────────────────────────────
+
+    [Fact]
+    public void CodeEntry_DefaultReasonIsNone()
+    {
+        var entry = new CodeEntry("10001", "New York", "America/New_York", true, Array.Empty<AdminLevel>());
+        Assert.Equal(CodeReason.None, entry.Reason);
+    }
+
+    [Fact]
+    public void CodeEntry_ExplicitReason_RoundTrips()
+    {
+        var entry = new CodeEntry("12345", "Test Town", "America/New_York", true,
+            Array.Empty<AdminLevel>(), CodeReason.Obsolete);
+        Assert.Equal(CodeReason.Obsolete, entry.Reason);
+    }
+
+    // ── Phase 2 — Registry throws on flagged code ───────────────────────────────
+
+    private static ZipPostRegistry BuildReasonRegistry(string code, CodeReason reason)
+    {
+        var entry = new CodeEntry(code, "Test Town", "America/Chicago", true,
+            new[] { new AdminLevel("Illinois", "IL", "State") }, reason);
+        return new ZipPostRegistry(new[] { new ReasonSource(entry) });
+    }
+
+    [Fact]
+    public void Registry_ThrowEnabled_ObsoleteCode_ThrowsObsoleteCodeException()
+    {
+        const string code = "60601";
+        var reg = BuildReasonRegistry(code, CodeReason.Obsolete);
+        try
+        {
+            reg.ThrowReasonExceptions(true);
+            var ex = Assert.Throws<ObsoleteCodeException>(() => reg.GetByCode(code));
+            Assert.Equal(code, ex.Code);
+            Assert.IsAssignableFrom<CodeReasonException>(ex);
+        }
+        finally { reg.ThrowReasonExceptions(false); }
+    }
+
+    [Fact]
+    public void Registry_ThrowEnabled_FakeCode_ThrowsCommonFakeDataException()
+    {
+        const string code = "60602";
+        var reg = BuildReasonRegistry(code, CodeReason.CommonFake);
+        try
+        {
+            reg.ThrowReasonExceptions(true);
+            var ex = Assert.Throws<CommonFakeDataException>(() => reg.GetByCode(code));
+            Assert.Equal(code, ex.Code);
+        }
+        finally { reg.ThrowReasonExceptions(false); }
+    }
+
+    [Fact]
+    public void Registry_ThrowEnabled_GetAllByCode_ObsoleteCode_ThrowsObsoleteCodeException()
+    {
+        const string code = "60603";
+        var reg = BuildReasonRegistry(code, CodeReason.Obsolete);
+        try
+        {
+            reg.ThrowReasonExceptions(true);
+            Assert.Throws<ObsoleteCodeException>(() => reg.GetAllByCode(code));
+        }
+        finally { reg.ThrowReasonExceptions(false); }
+    }
+
+    [Fact]
+    public void Registry_ThrowDisabled_ReasonedCode_ReturnsEntry()
+    {
+        const string code = "60604";
+        var reg = BuildReasonRegistry(code, CodeReason.Obsolete);
+        // Toggle is off (default) — returns entry, no throw.
+        var entry = reg.GetByCode(code);
+        Assert.NotNull(entry);
+        Assert.Equal(CodeReason.Obsolete, entry!.Reason);
+    }
+
+    [Fact]
+    public void Registry_GenericFlaggedCode_NeverThrows()
+    {
+        const string code = "60605";
+        var reg = BuildReasonRegistry(code, CodeReason.Flagged);
+        reg.ThrowReasonExceptions(true);
+        try
+        {
+            // CodeReason.Flagged is generic — does NOT throw, unlike Obsolete/CommonFake.
+            var entry = reg.GetByCode(code);
+            Assert.NotNull(entry);
+        }
+        finally { reg.ThrowReasonExceptions(false); }
     }
 }

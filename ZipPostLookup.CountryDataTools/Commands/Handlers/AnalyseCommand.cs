@@ -135,7 +135,20 @@ public static class AnalyseCommand
             new { CountryId = cc },
             splitOn: "ReferenceAdminId");
 
-        return map.Values.ToList();
+        // Sync Admin1 / Admin1Code flat properties from the AdminReferenceList that the
+        // multi-map callback populated. The Dapper default constructor leaves them at "---";
+        // the level-1 sync only runs in the CodeEntry constructor path, not here.
+        var result = map.Values.ToList();
+        foreach (var r in result)
+        {
+            var level1 = r.AdminReferenceList.OrderBy(a => a.AdminLevelId).FirstOrDefault();
+            if (level1 != null)
+            {
+                r.Admin1     = level1.Value;
+                r.Admin1Code = level1.Code;
+            }
+        }
+        return result;
     }
 
     // ── Pass execution — a failing pass must not abort the whole report ──────────

@@ -87,6 +87,15 @@ public sealed class ZipPostRegistry : IZipPostLookup
     /// </remarks>
     public void ThrowReasonExceptions(bool enabled) => _throwReasonExceptions = enabled;
 
+    private static void ThrowIfFlagged(CodeEntry entry)
+    {
+        switch (entry.Reason)
+        {
+            case CodeReason.Obsolete:   throw new ObsoleteCodeException(entry.ZpCode);
+            case CodeReason.CommonFake: throw new CommonFakeDataException(entry.ZpCode);
+        }
+    }
+
     /// <summary>
     /// True when <paramref name="code"/> is a valid format for any supported country rule
     /// (raw or normalised). Used to decide whether a miss is a malformed-input case.
@@ -463,6 +472,11 @@ public sealed class ZipPostRegistry : IZipPostLookup
 
         var hit = NormalizeAndLookup(code)?[0];
 
+        if (hit != null && _throwReasonExceptions)
+        {
+            ThrowIfFlagged(hit);
+        }
+
         if (hit == null && _throwReasonExceptions && !IsWellFormedCode(code))
         {
             throw new BadlyFormattedCodeException(code);
@@ -484,6 +498,11 @@ public sealed class ZipPostRegistry : IZipPostLookup
         if (code == null) { throw new ArgumentNullException(nameof(code)); }
 
         var list = NormalizeAndLookup(code);
+
+        if (list != null && _throwReasonExceptions && list.Count > 0)
+        {
+            ThrowIfFlagged(list[0]);
+        }
 
         if (list == null && _throwReasonExceptions && !IsWellFormedCode(code))
         {

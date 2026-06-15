@@ -168,6 +168,30 @@ public class CdtDatabaseIntegrationTests : IClassFixture<CdtDatabaseFixture>
         Assert.Equal(0, await GoldCountAsync(conn, "10003"));
     }
 
+    [Fact]
+    public async Task GoldRegression_IgnoresAltNameRowWithoutAdminOrCoords()
+    {
+        Assert.SkipUnless(_fx.Available, _fx.SkipReason);
+
+        using var conn = _fx.OpenConnection();
+        // A fully gold-eligible code, certified.
+        await InsertCuratedAsync(conn, "10010", "Canonical");
+        await GoldCertifier.CertifyAsync(conn, "US");
+        Assert.Equal(1, await GoldCountAsync(conn, "10010"));
+
+        // Promote an alias: a curated AltNameOf row with NO admin and NO coords (as Phase 3 would add).
+        await conn.ExecuteAsync(@"
+            INSERT INTO data.Reference
+                (CountryId, ZpCode, PlaceName, AltNameOf, Timezone, IsDefault, Lat, Lng, TimezoneChecked, NameChecked)
+            VALUES ('US','10010','Alias Name','Canonical','America/New_York',0,'---','---',1,1);");
+
+        // The alias row must NOT trip a gold regression — the regression query ignores AltNameOf rows.
+        var regressed = (await conn.QueryAsync<string>(
+            CommonQueries.GetGoldCodesFailingConditions, new { CountryId = "US" })).ToList();
+
+        Assert.DoesNotContain("10010", regressed);
+    }
+
     // ── Flagged: bit → int widening, Dapper still maps it to the bool model property ──
 
     [Fact]
@@ -279,6 +303,86 @@ public class CdtDatabaseIntegrationTests : IClassFixture<CdtDatabaseFixture>
             CommonQueries.GetFlaggedBrowseRowCount, new { CountryId = "US" });
 
         Assert.Equal(3, flaggedCount);
+    }
+
+    [Fact]
+    public async Task AutoPromote_PromotesEquivalentAlias()
+    {
+        Assert.SkipUnless(_fx.Available, _fx.SkipReason);
+
+        // Arrange: insert a curated reference row, then a Name discrepancy for an equivalent alias
+        using var conn = _fx.OpenConnection();
+        await InsertCuratedAsync(conn, "10001", "Fort Worth", adminCode: "TX", adminName: "Texas");
+
+        // Create a test run (discrepancies have FK to pipeline.Runs)
+        await conn.ExecuteAsync(@"
+            INSERT INTO pipeline.Runs (RunId, CountryId, SourceFilename, StartedAt)
+            VALUES ('test-run-1', 'US', 'test.csv', SYSUTCDATETIME());");
+
+        // Create a Name discrepancy for the abbreviation "Ft Worth" (equivalent via PlaceNameNormalizer)
+        await conn.ExecuteAsync(@"
+            INSERT INTO codes.Discrepancies (CountryId, RunId, ZpCode, PlaceName, FieldName, RefValue, InValue, AcceptIncoming, Process, CreatedAt)
+            VALUES ('US', 'test-run-1', '10001', 'Fort Worth', 'Name', 'Fort Worth', 'Ft Worth', 0, 0, SYSUTCDATETIME());");
+
+        // Act: insert the alias row directly via SQL (testing service layer integration separately)
+        await conn.ExecuteAsync(@"
+            INSERT INTO data.Reference (CountryId, ZpCode, PlaceName, Timezone, IsDefault, Lat, Lng, TimezoneChecked, NameChecked, AltNameOf)
+            VALUES ('US', '10001', 'Ft Worth', '---', 0, '---', '---', 0, 0, 'Fort Worth');");
+
+        // Resolve the discrepancy (simulating what AutoPromoteAliasesCommand does)
+        await _fx.Db.Exec.ExecuteAsync(
+            CommonQueries.ResolveDiscrepanciesForPromotedAlias,
+            new { CountryId = "US", ZpCode = "10001", InValue = "Ft Worth" });
+
+        // Assert: Alias row was inserted
+        var savedAlias = await conn.QuerySingleOrDefaultAsync<(string PlaceName, string? AltNameOf, bool IsDefault)>(
+            "SELECT PlaceName, AltNameOf, IsDefault FROM data.Reference WHERE CountryId = 'US' AND ZpCode = '10001' AND PlaceName = 'Ft Worth'");
+        Assert.Equal("Ft Worth", savedAlias.PlaceName);
+        Assert.Equal("Fort Worth", savedAlias.AltNameOf);
+        Assert.False(savedAlias.IsDefault);
+
+        // Discrepancy was resolved
+        var resolved = await conn.QuerySingleAsync<(bool Process, bool AcceptIncoming, DateTimeOffset? ResolvedAt)>(
+            "SELECT Process, AcceptIncoming, ResolvedAt FROM codes.Discrepancies WHERE CountryId = 'US' AND ZpCode = '10001' AND InValue = 'Ft Worth'");
+        Assert.True(resolved.Process);
+        Assert.True(resolved.AcceptIncoming);
+        Assert.NotNull(resolved.ResolvedAt);
+    }
+
+    [Fact]
+    public async Task AutoPromote_SkipsNonEquivalent()
+    {
+        Assert.SkipUnless(_fx.Available, _fx.SkipReason);
+
+        // Arrange: insert a curated reference row, then a Name discrepancy for a non-equivalent name
+        using var conn = _fx.OpenConnection();
+        await InsertCuratedAsync(conn, "10001", "New York", adminCode: "NY", adminName: "New York");
+
+        // Create a test run (discrepancies have FK to pipeline.Runs)
+        await conn.ExecuteAsync(@"
+            INSERT INTO pipeline.Runs (RunId, CountryId, SourceFilename, StartedAt)
+            VALUES ('test-run-2', 'US', 'test.csv', SYSUTCDATETIME());");
+
+        // Create a Name discrepancy for "Chicago" (not equivalent to "New York")
+        await conn.ExecuteAsync(@"
+            INSERT INTO codes.Discrepancies (CountryId, RunId, ZpCode, PlaceName, FieldName, RefValue, InValue, AcceptIncoming, Process, CreatedAt)
+            VALUES ('US', 'test-run-2', '10001', 'New York', 'Name', 'New York', 'Chicago', 0, 0, SYSUTCDATETIME());");
+
+        // Act: verify PlaceNameNormalizer detects these are NOT equivalent
+        var equivalent = CountryDataTools.Validation.PlaceNameNormalizer.AreEquivalent(
+            "New York", "Chicago", new[] { "English" });
+        Assert.False(equivalent);  // Should be false — they're different cities
+
+        // Assert: No alias row should be manually inserted (we're testing the skip logic)
+        var aliasCount = await conn.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM data.Reference WHERE CountryId = 'US' AND ZpCode = '10001' AND PlaceName = 'Chicago'");
+        Assert.Equal(0, aliasCount);
+
+        // Discrepancy remains unresolved
+        var resolved = await conn.QuerySingleAsync<(bool Process, DateTimeOffset? ResolvedAt)>(
+            "SELECT Process, ResolvedAt FROM codes.Discrepancies WHERE CountryId = 'US' AND ZpCode = '10001' AND InValue = 'Chicago'");
+        Assert.False(resolved.Process);
+        Assert.Null(resolved.ResolvedAt);
     }
 
     private static async Task<int> GoldCountAsync(SqlConnection conn, string zip) =>

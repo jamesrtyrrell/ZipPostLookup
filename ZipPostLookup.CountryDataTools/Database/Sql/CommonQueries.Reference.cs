@@ -799,6 +799,30 @@ public static partial class CommonQueries
                 AND r.PlaceName  = src.PlaceName
             WHERE  r.NameChecked = 0;";
 
+    // Propagate lat/lng and timezone from a principal row to every alias that is missing them.
+    // An alias row (AltNameOf IS NOT NULL) is an alternate name for its principal
+    // (PlaceName = alias.AltNameOf, AltNameOf IS NULL, same ZpCode+CountryId). Because an alias
+    // carries no independent coordinates or timezone, it should inherit both from its principal.
+    // TimezoneChecked is also copied so the alias row does not re-surface as "unverified".
+    // The WHERE clause only touches rows that are actually missing something, so re-running is safe.
+    public static readonly string InheritPrincipalCoordsAndTimezone =
+        @"UPDATE a
+          SET    a.Lat             = CASE WHEN a.Lat      IN ('---','') OR a.Lat      IS NULL THEN p.Lat      ELSE a.Lat      END,
+                 a.Lng             = CASE WHEN a.Lng      IN ('---','') OR a.Lng      IS NULL THEN p.Lng      ELSE a.Lng      END,
+                 a.Timezone        = CASE WHEN a.Timezone IN ('---','') OR a.Timezone IS NULL THEN p.Timezone ELSE a.Timezone END,
+                 a.TimezoneChecked = CASE WHEN a.Timezone IN ('---','') OR a.Timezone IS NULL THEN p.TimezoneChecked ELSE a.TimezoneChecked END,
+                 a.UpdatedAt       = SYSUTCDATETIME()
+          FROM   data.Reference a
+          JOIN   data.Reference p
+              ON  p.CountryId = a.CountryId
+              AND p.ZpCode    = a.ZpCode
+              AND p.PlaceName = a.AltNameOf
+              AND p.AltNameOf IS NULL
+          WHERE  a.AltNameOf IS NOT NULL
+            AND  (   a.Lat      IN ('---','') OR a.Lat      IS NULL
+                  OR a.Lng      IN ('---','') OR a.Lng      IS NULL
+                  OR a.Timezone IN ('---','') OR a.Timezone IS NULL )";
+
     // Reset TimezoneChecked=0 on any row where the timezone is blank/null/placeholder
     // but TimezoneChecked is currently 1. This undoes false "verified" marks so the
     // rows surface in the uncurated browse list for manual fixing (or are immediately

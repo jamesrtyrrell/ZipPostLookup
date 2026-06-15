@@ -601,6 +601,36 @@ CREATE VIEW [pipeline].[CountrySummary] AS
     GROUP BY ci.CountryId, ci.CountryName, ci.CodeCount, ci.DataCurated, ci.CurationStatus;
 GO
 
+-- Deduplicated open Name-discrepancy backlog: one row per distinct (CountryId, ZpCode, InValue)
+-- across all RunIds, with classification columns. codes.Discrepancies has a per-RunId unique key,
+-- so the same code+name conflict recurs once per import run; this view collapses those to a single
+-- working row for review and the cleanup phases (see PROJECTS "Gold Name-Discrepancy Backlog").
+--   InValueBlank        — InValue is NULL / '' / '---' (nothing to keep → reject)
+--   InValueAlreadyARow  — InValue already exists as a data.Reference PlaceName for the code (moot → close)
+-- A non-blank, not-already-a-row InValue is a candidate alias for review/promotion.
+CREATE OR ALTER VIEW [pipeline].[OpenNameDiscrepancies] AS
+    SELECT
+        d.CountryId,
+        d.ZpCode,
+        d.InValue,
+        MIN(d.RefValue)                                          AS RefValue,
+        COUNT(*)                                                 AS DuplicateRows,
+        MIN(d.CreatedAt)                                         AS FirstSeen,
+        MAX(d.CreatedAt)                                         AS LastSeen,
+        CAST(CASE WHEN d.InValue IS NULL OR LTRIM(RTRIM(d.InValue)) IN ('', '---')
+                  THEN 1 ELSE 0 END AS BIT)                      AS InValueBlank,
+        CAST(CASE WHEN EXISTS (
+                      SELECT 1 FROM [data].[Reference] r
+                      WHERE r.CountryId = d.CountryId
+                        AND r.ZpCode    = d.ZpCode
+                        AND r.PlaceName = d.InValue)
+                  THEN 1 ELSE 0 END AS BIT)                      AS InValueAlreadyARow
+    FROM [codes].[Discrepancies] d
+    WHERE d.FieldName  = 'Name'
+      AND d.ResolvedAt IS NULL
+    GROUP BY d.CountryId, d.ZpCode, d.InValue;
+GO
+
 
 -- ============================================================================
 -- SECTION 8: STORED PROCEDURES

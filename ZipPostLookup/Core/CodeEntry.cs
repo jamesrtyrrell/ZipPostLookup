@@ -47,12 +47,19 @@ namespace ZipPostLookup.Core;
 /// Use <see cref="Admin1"/>, <see cref="Admin1Code"/> etc. for convenient access to the
 /// most common levels, or <see cref="GetAdmin(string)"/> to look up by level name.
 /// </param>
+/// <param name="Reason">
+/// Why this code carries a flag. <see cref="CodeReason.None"/> for all normal entries.
+/// When <see cref="ZipPostLookup.ThrowReasonExceptions(bool)"/> is enabled, lookups on codes
+/// with <see cref="CodeReason.Obsolete"/> or <see cref="CodeReason.CommonFake"/> throw a
+/// <see cref="CodeReasonException"/> instead of returning the entry.
+/// </param>
 public sealed record CodeEntry(
     string ZpCode,
     string PlaceName,
     string Timezone,
     bool IsDefault,
-    AdminLevel[] Admins
+    AdminLevel[] Admins,
+    CodeReason Reason = CodeReason.None
 )
 {
     // -------------------------------------------------------------------------

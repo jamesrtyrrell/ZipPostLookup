@@ -86,8 +86,11 @@ internal static class ZpImageFormat
     /// into the Records section. The record still lives in Records (postings, GetAll, reverse lookups
     /// are unchanged). u32 images never inline. v3 readers would misread the directory, so the
     /// version is bumped and the reader rejects mismatches.</para>
+    /// <para>v5: <b>per-record reason byte</b>. Record byte 5 (previously reserved=0) now carries the
+    /// <c>CodeReason</c> enum value. v4 images are backward-compatible: their reserved byte is always 0
+    /// (<c>CodeReason.None</c>), so the v5 reader can load them correctly.</para>
     /// </summary>
-    public const ushort CurrentVersion = 4;
+    public const ushort CurrentVersion = 5;
 
     /// <summary>Fixed header size in bytes, before the section table.</summary>
     public const int HeaderBytes = 32;
@@ -118,7 +121,9 @@ internal static class ZpImageFormat
     /// <summary>Offset of adminIndex (u8) within a record.</summary>
     public const int RecordAdminOffset = 3;
     /// <summary>Offset of flags (u8) within a record.</summary>
-    public const int RecordFlagsOffset = 4;
+    public const int RecordFlagsOffset  = 4;
+    /// <summary>Offset of the reason byte (u8) within a record. Was reserved=0 in v4; safe to read from v4 images.</summary>
+    public const int RecordReasonOffset = 5;
 
     // ── v4 Directory entry field offsets (entry stays DirectoryEntryBytes = 16) ──
     // [0..8) packedCode u64 · [8..12) firstRecord u32 (bit31 Inline, bit30 InlineIsDefault,

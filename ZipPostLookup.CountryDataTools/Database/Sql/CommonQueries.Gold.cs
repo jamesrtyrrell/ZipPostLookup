@@ -10,6 +10,8 @@ public static partial class CommonQueries
     // Returns NULL when the code is eligible for gold, or a reason string when it is not.
     // Conditions: curated default row exists; all curated rows have admin1; all have timezone;
     // no curated row has a non-alphabetic (junk number) place name; at least one has lat/lng.
+    // The per-row admin1/timezone/non-alpha checks ignore AltNameOf (alias) rows — an alias is just
+    // an alternate name and carries no admin/coords of its own, so adding one must not break gold.
     public static readonly string CheckGoldEligibility =
         @"SELECT CASE
               WHEN NOT EXISTS (
@@ -24,20 +26,20 @@ public static partial class CommonQueries
                       AND ra.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
                                              WHERE CountryId = r.CountryId AND LevelNumber = 1)
                   WHERE r.CountryId = @CountryId AND r.ZpCode = @ZpCode
-                    AND r.Curated = 1 AND r.Flagged = 0
+                    AND r.Curated = 1 AND r.Flagged = 0 AND r.AltNameOf IS NULL
                     AND (ra.Code IS NULL OR ra.Code IN ('', '---')
                          OR ra.Code NOT LIKE '%[^0-9]%')
               ) THEN 'missing admin1 code'
               WHEN EXISTS (
                   SELECT 1 FROM data.Reference
                   WHERE CountryId = @CountryId AND ZpCode = @ZpCode
-                    AND Curated = 1 AND Flagged = 0
+                    AND Curated = 1 AND Flagged = 0 AND AltNameOf IS NULL
                     AND (Timezone IS NULL OR Timezone IN ('', '---'))
               ) THEN 'missing timezone'
               WHEN EXISTS (
                   SELECT 1 FROM data.Reference
                   WHERE CountryId = @CountryId AND ZpCode = @ZpCode
-                    AND Curated = 1 AND Flagged = 0
+                    AND Curated = 1 AND Flagged = 0 AND AltNameOf IS NULL
                     AND PlaceName IS NOT NULL
                     AND LTRIM(RTRIM(PlaceName)) NOT IN ('', '---')
                     AND PlaceName NOT LIKE '%[A-Za-z]%'
@@ -89,7 +91,7 @@ public static partial class CommonQueries
                         AND ra.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
                                                WHERE CountryId = r.CountryId AND LevelNumber = 1)
                     WHERE r.CountryId = g.CountryId AND r.ZpCode = g.ZpCode
-                      AND r.Curated = 1 AND r.Flagged = 0
+                      AND r.Curated = 1 AND r.Flagged = 0 AND r.AltNameOf IS NULL
                       AND (ra.Code IS NULL OR ra.Code IN ('', '---')
                            OR ra.Code NOT LIKE '%[^0-9]%')
                 )
@@ -97,14 +99,14 @@ public static partial class CommonQueries
                 OR EXISTS (
                     SELECT 1 FROM data.Reference
                     WHERE CountryId = g.CountryId AND ZpCode = g.ZpCode
-                      AND Curated = 1 AND Flagged = 0
+                      AND Curated = 1 AND Flagged = 0 AND AltNameOf IS NULL
                       AND (Timezone IS NULL OR Timezone IN ('', '---'))
                 )
                 -- A curated row now has a non-alphabetic (junk number) place name
                 OR EXISTS (
                     SELECT 1 FROM data.Reference
                     WHERE CountryId = g.CountryId AND ZpCode = g.ZpCode
-                      AND Curated = 1 AND Flagged = 0
+                      AND Curated = 1 AND Flagged = 0 AND AltNameOf IS NULL
                       AND PlaceName IS NOT NULL
                       AND LTRIM(RTRIM(PlaceName)) NOT IN ('', '---')
                       AND PlaceName NOT LIKE '%[A-Za-z]%'
@@ -149,7 +151,7 @@ public static partial class CommonQueries
                     AND ra.AdminLevelId = (SELECT MIN(AdminLevelId) FROM data.AdminLevels
                                            WHERE CountryId = r2.CountryId AND LevelNumber = 1)
                 WHERE  r2.CountryId = r.CountryId AND r2.ZpCode = r.ZpCode
-                  AND  r2.Curated = 1 AND r2.Flagged = 0
+                  AND  r2.Curated = 1 AND r2.Flagged = 0 AND r2.AltNameOf IS NULL
                   AND  (ra.Code IS NULL OR ra.Code IN ('', '---')
                         OR ra.Code NOT LIKE '%[^0-9]%')
             )
@@ -157,14 +159,14 @@ public static partial class CommonQueries
             AND  NOT EXISTS (
                 SELECT 1 FROM data.Reference
                 WHERE  CountryId = r.CountryId AND ZpCode = r.ZpCode
-                  AND  Curated = 1 AND Flagged = 0
+                  AND  Curated = 1 AND Flagged = 0 AND AltNameOf IS NULL
                   AND  (Timezone IS NULL OR Timezone IN ('', '---'))
             )
             -- no curated row may have a non-alphabetic (junk number) place name
             AND  NOT EXISTS (
                 SELECT 1 FROM data.Reference
                 WHERE  CountryId = r.CountryId AND ZpCode = r.ZpCode
-                  AND  Curated = 1 AND Flagged = 0
+                  AND  Curated = 1 AND Flagged = 0 AND AltNameOf IS NULL
                   AND  PlaceName IS NOT NULL
                   AND  LTRIM(RTRIM(PlaceName)) NOT IN ('', '---')
                   AND  PlaceName NOT LIKE '%[A-Za-z]%'

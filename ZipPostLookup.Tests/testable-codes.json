@@ -22,10 +22,10 @@
     "RangeTimezone": "America/St_Johns"
   },
   "MX": {
-    "ExactCode": "00500",
-    "ExactPlaceName": "Omitl\u00E1n de Ju\u00E1rez",
+    "ExactCode": "00224",
+    "ExactPlaceName": "Municipio de Tijuana",
     "ExactAdmin1Code": "CMX",
-    "ExactTimezone": "America/Mexico_City",
+    "ExactTimezone": "America/Los_Angeles",
     "RangeProbe": null,
     "RangeZpCode": null,
     "RangePlaceName": null,

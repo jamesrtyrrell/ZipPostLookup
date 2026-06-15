@@ -103,7 +103,8 @@ internal sealed class ZpImageReader
         }
 
         var version = ReadU16(4);
-        if (version != CurrentVersion)
+        // v4 images are backward-compatible: their reserved byte (offset 5) is always 0 = CodeReason.None.
+        if (version != CurrentVersion && version != 4)
         {
             throw new InvalidDataException(
                 $"Unsupported ZP image version {version} (reader supports {CurrentVersion}).");
@@ -507,8 +508,10 @@ internal sealed class ZpImageReader
         var timezone  = _timezones[_image[entry + DirInlineTzOffset]];
         var admins    = _adminLevels[_image[entry + DirInlineAdminOffset]];
         var isDefault = (fr & DirInlineDefault) != 0;
+        // Reason is not inlined in the directory entry — read from the record (one cheap byte access).
+        var reason    = (CodeReason)_image[_recordsBase + recordId * _recordBytes + RecordReasonOffset];
 
-        var ce = new CodeEntry(CodePacker.Unpack(packed), name, timezone, isDefault, admins);
+        var ce = new CodeEntry(CodePacker.Unpack(packed), name, timezone, isDefault, admins, reason);
         _entryCache[recordId] = ce;
         return ce;
     }
@@ -832,11 +835,12 @@ internal sealed class ZpImageReader
         var name      = Name(nameIdx);
         var timezone  = _timezones[_image[rec + RecordTzOffset]];
         var isDefault = (_image[rec + RecordFlagsOffset] & (byte)RecordFlags.IsDefault) != 0;
+        var reason    = (CodeReason)_image[rec + RecordReasonOffset];
 
         // Piece 2 — reference the pre-built AdminLevel[] instead of allocating a new one.
         var admins = _adminLevels[_image[rec + RecordAdminOffset]];
 
-        var entry = new CodeEntry(codeStr, name, timezone, isDefault, admins);
+        var entry = new CodeEntry(codeStr, name, timezone, isDefault, admins, reason);
         _entryCache[recordId] = entry;
         return entry;
     }

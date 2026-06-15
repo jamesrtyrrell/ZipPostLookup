@@ -21,7 +21,7 @@ internal static class ZpImageFormat
 {
     public static readonly byte[] Magic = "ZPIM"u8.ToArray();
 
-    public const ushort CurrentVersion      = 4;   // v4: fused directory — single-record codes inline their record
+    public const ushort CurrentVersion      = 5;   // v5: per-record reason byte (offset 5, previously reserved=0)
     public const int    HeaderBytes         = 32;
     public const int    SectionEntryBytes   = 12;
     public const int    RecordBytes         = 6;   // nameIndex u16 — normal datasets (.u16.zpi.br)
@@ -34,7 +34,8 @@ internal static class ZpImageFormat
     public const int RecordNameOffset  = 0;  // u16 — index into NamePool
     public const int RecordTzOffset    = 2;  // u8  — index into TimezoneTable
     public const int RecordAdminOffset = 3;  // u8  — index into AdminTable
-    public const int RecordFlagsOffset = 4;  // u8  — RecordFlags
+    public const int RecordFlagsOffset  = 4;  // u8  — RecordFlags
+    public const int RecordReasonOffset = 5;  // u8  — CodeReason (was reserved=0 in v4; safe to read from v4 images)
 
     // ── v4 Directory entry layout (still DirectoryEntryBytes = 16) ────────────
     // [0..8)  packedCode u64

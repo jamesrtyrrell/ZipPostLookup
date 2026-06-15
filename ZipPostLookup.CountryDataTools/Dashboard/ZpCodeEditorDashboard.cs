@@ -496,6 +496,8 @@ internal static class ZpCodeEditorDashboard
         AnsiConsole.MarkupLine(
             $"  [grey]Current: Lat [/][white]{Markup.Escape(row.Lat)}[/][grey]  Lng [/][white]{Markup.Escape(row.Lng)}[/]");
         AnsiConsole.MarkupLine(
+            $"  [grey]Current Timezone: [/][white]{Markup.Escape(row.Timezone)}[/]");
+        AnsiConsole.MarkupLine(
             "  [grey]Edit both — Enter keeps the current value. Set both to '---' to clear coordinates.[/]");
         AnsiConsole.WriteLine();
 
@@ -511,17 +513,81 @@ internal static class ZpCodeEditorDashboard
         };
         var blanked = coord.NormalizeCoordinatePair();
 
+        // Try to resolve timezone from the new coordinates
+        string? resolvedTimezone = null;
+        if (!blanked)
+        {
+            resolvedTimezone = Utilities.TimezoneResolver.TryResolveWithCoordinates(coord.Lat, coord.Lng);
+
+            // Canonicalize via country rules if resolved
+            if (resolvedTimezone != null)
+            {
+                // Get the country ID from the row
+                using var conn = factory.CreateConnection();
+                var countryId = await conn.ExecuteScalarAsync<string?>(
+                    "SELECT CountryId FROM data.Reference WHERE ReferenceId = @ReferenceId",
+                    new { row.ReferenceId });
+
+                if (!string.IsNullOrEmpty(countryId))
+                {
+                    var rules = CountryRules.CountryRulesFactory.For(countryId);
+                    resolvedTimezone = rules.CanonicalizeTimezone(resolvedTimezone);
+                }
+            }
+        }
+
         try
         {
             await ExecAsync(factory, CommonQueries.UpdateReferenceCoordsById,
                 new { row.ReferenceId, coord.Lat, coord.Lng });
 
+            AnsiConsole.WriteLine();
             if (blanked)
+            {
                 AnsiConsole.MarkupLine(
                     "  [yellow]⚠  Coordinates must be a complete pair — both cleared to '---' (one coordinate was missing or invalid).[/]");
+            }
             else
+            {
                 AnsiConsole.MarkupLine(
                     $"  [green]✓ Coordinates set to Lat {Markup.Escape(coord.Lat)}, Lng {Markup.Escape(coord.Lng)}.[/]");
+
+                // Show timezone resolution results
+                if (resolvedTimezone != null)
+                {
+                    var currentTz = row.Timezone;
+                    var isMatch = string.Equals(resolvedTimezone, currentTz, StringComparison.OrdinalIgnoreCase);
+
+                    if (isMatch)
+                    {
+                        AnsiConsole.MarkupLine(
+                            $"  [green]✓ Resolved timezone [white]{Markup.Escape(resolvedTimezone)}[/] matches current timezone.[/]");
+                    }
+                    else if (currentTz == "---" || string.IsNullOrWhiteSpace(currentTz))
+                    {
+                        await ExecAsync(factory, CommonQueries.UpdateReferenceTimezoneById,
+                            new { row.ReferenceId, Timezone = resolvedTimezone });
+                        AnsiConsole.MarkupLine(
+                            $"  [green]✓ Timezone automatically set to [white]{Markup.Escape(resolvedTimezone)}[/] (derived from coordinates).[/]");
+                    }
+                    else
+                    {
+                        AnsiConsole.MarkupLine(
+                            $"  [yellow]⚠  Timezone mismatch![/]");
+                        AnsiConsole.MarkupLine(
+                            $"      [yellow]Resolved from coordinates: [white]{Markup.Escape(resolvedTimezone)}[/][/]");
+                        AnsiConsole.MarkupLine(
+                            $"      [yellow]Current in database:        [white]{Markup.Escape(currentTz)}[/][/]");
+                        AnsiConsole.MarkupLine(
+                            "      [grey]Use the Timezone field to update it if needed.[/]");
+                    }
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine(
+                        "  [grey]Could not resolve timezone from coordinates.[/]");
+                }
+            }
         }
         catch (Exception ex)
         {

@@ -1,3 +1,4 @@
+using ZipPostLookup.CountryDataTools.Models.Enums;
 using static ZipPostLookup.CountryDataTools.Export.ZpImage.ZpImageFormat;
 
 namespace ZipPostLookup.CountryDataTools.Export.ZpImage;
@@ -42,10 +43,11 @@ internal static class ZpImageBuilder
 {
     private struct BuiltRecord
     {
-        public int          NameIndex;
-        public byte         TimezoneIndex;
-        public byte         AdminIndex;
-        public RecordFlags  Flags;
+        public int                NameIndex;
+        public byte               TimezoneIndex;
+        public byte               AdminIndex;
+        public RecordFlags        Flags;
+        public DataFlagReasonType Reason;
     }
 
     public static ZpImageBuildResult Build(
@@ -121,6 +123,7 @@ internal static class ZpImageBuilder
                     TimezoneIndex = ResolveTz(row.Timezone),
                     AdminIndex    = ResolveAdmin(row.Admin1Code),
                     Flags         = row.IsDefault ? RecordFlags.IsDefault : RecordFlags.None,
+                    Reason        = row.Reason,
                 });
             }
 
@@ -143,6 +146,7 @@ internal static class ZpImageBuilder
                 TimezoneIndex = ResolveTz(row.Timezone),
                 AdminIndex    = ResolveAdmin(row.Admin1Code),
                 Flags         = RecordFlags.IsRange | (row.IsDefault ? RecordFlags.IsDefault : RecordFlags.None),
+                Reason        = row.Reason,
             });
 
             // The original range notation (e.g. "B2G0**:B2G9**") is interned verbatim so the
@@ -365,7 +369,7 @@ internal static class ZpImageBuilder
             w.U8(r.TimezoneIndex);
             w.U8(r.AdminIndex);
             w.U8((byte)r.Flags);
-            w.U8(0); // reserved / pad
+            w.U8((byte)r.Reason); // reason byte (was reserved=0 in v4)
         }
 
         return w.ToArray();

@@ -3,7 +3,7 @@
 Fast, extensible in-memory postal code lookup for .NET.  
 Built-in data for the **United States** (<!-- zpl:us:codes -->43,501<!-- /zpl:us:codes --> ZIP codes), **Canada** (~<!-- zpl:ca:codes -->901,482<!-- /zpl:ca:codes --> postal codes, <!-- zpl:ca:entries -->620k<!-- /zpl:ca:entries --> compressed entries via FSA range compression), and **Mexico** (<!-- zpl:mx:codes -->32,896<!-- /zpl:mx:codes --> postal codes). All three countries are fully curated ✅.
 
-Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-14 16:39:09<!-- /zpl:updated -->)**
+Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-15 08:07:27<!-- /zpl:updated -->)**
 
 ---
 
@@ -356,7 +356,7 @@ On .NET 8+, all indexes use `FrozenDictionary`. The `.zpi.br` frozen image loads
 
 \* Distinct codes are the number of unique Zip/Postal codes in the country's set.
 
-Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-14 16:39:09<!-- /zpl:updated -->)**
+Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-15 08:07:27<!-- /zpl:updated -->)**
 
 ---
 

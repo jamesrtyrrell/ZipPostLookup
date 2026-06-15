@@ -341,6 +341,15 @@ public static class WorkDbCommand
 
         try
         {
+            Console.WriteLine("  Propagating coords and timezone from principal to alias rows...");
+            var aliasInherited = await Dapper.SqlMapper.ExecuteAsync(conn,
+                CommonQueries.InheritPrincipalCoordsAndTimezone, transaction: tx);
+            if (aliasInherited > 0)
+                AnsiConsole.MarkupLine(
+                    $"  [green]✓ {aliasInherited:N0} alias row(s) inherited coords/timezone from their principal.[/]");
+            else
+                Console.WriteLine("  ✓ All alias rows already have coords and timezone.");
+
             Console.WriteLine("  Resetting TimezoneChecked on rows with blank timezone...");
             var blanksReset = await Dapper.SqlMapper.ExecuteAsync(conn,
                 CommonQueries.ResetBlankTimezoneChecked, transaction: tx);
@@ -827,12 +836,14 @@ public static class WorkDbCommand
               normalize-tz
                           1. (US only) Count out-of-bounds ZIP codes (outside 00501–99950)
                              and prompt to permanently delete them.
-                          2. Reset TimezoneChecked=0 on rows with blank/null timezone
+                          2. Propagate lat/lng + timezone from each principal row to its
+                             alias rows (AltNameOf IS NOT NULL) that are missing them.
+                          3. Reset TimezoneChecked=0 on rows with blank/null timezone
                              (undoes false "verified" marks; rows re-surface in editor).
-                          3. Normalise deprecated IANA timezone aliases to canonical forms.
-                          4. Delete resulting duplicate rows.
-                          4. Normalise admin level 1 name variants to dominant spelling.
-                          5. Resolve IANA timezone from Lat/Lng for rows where
+                          4. Normalise deprecated IANA timezone aliases to canonical forms.
+                          5. Delete resulting duplicate rows.
+                          6. Normalise admin level 1 name variants to dominant spelling.
+                          7. Resolve IANA timezone from Lat/Lng for rows where
                              TimezoneChecked=0 — sets correct timezone and marks verified.
                           Idempotent. Re-export affected countries after running.
               normalize-names --country XX

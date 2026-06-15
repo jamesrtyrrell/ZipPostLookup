@@ -11,7 +11,7 @@ internal static class NormalizeDashboard
     private static readonly Sub[] Subs =
     [
         new("all",             "Normalize-All",    "Run all normalization steps in sequence", Future: true),
-        new("normalize-tz",    "Normalize-Tz",     "Normalise timezone aliases and resolve from coordinates"),
+        new("normalize-tz",    "Normalize-Tz",     "Inherit alias coords/tz, reset blank-tz flags, canonicalise IANA aliases, resolve from coords"),
         new("normalize-names", "Normalize-Names",  "Detect and link place-name abbreviation alternates"),
         new("normalize-admins","Normalize-Admins", "Backfill missing admin1 from ZIP prefix rules"),
     ];
@@ -57,7 +57,23 @@ internal static class NormalizeDashboard
     {
         HeaderBar.Render("Normalize › normalize-tz");
 
-        // Up-front policy for rows whose existing timezone differs from the coordinate-derived one.
+        Spectre.Console.AnsiConsole.MarkupLine(
+            "  Runs all of the following steps for [bold]US + CA + MX[/] in sequence:");
+        Spectre.Console.AnsiConsole.MarkupLine(
+            "  [grey]  1.[/] Propagate lat/lng + timezone from each principal row to its alias rows.");
+        Spectre.Console.AnsiConsole.MarkupLine(
+            "  [grey]  2.[/] Reset [white]TimezoneChecked=0[/] on rows that have a blank/null timezone.");
+        Spectre.Console.AnsiConsole.MarkupLine(
+            "  [grey]  3.[/] Canonicalise deprecated IANA timezone aliases (e.g. US/Eastern → America/New_York).");
+        Spectre.Console.AnsiConsole.MarkupLine(
+            "  [grey]  4.[/] Delete duplicate rows produced by the alias renaming.");
+        Spectre.Console.AnsiConsole.MarkupLine(
+            "  [grey]  5.[/] Normalise admin1 name variants to the dominant spelling.");
+        Spectre.Console.AnsiConsole.MarkupLine(
+            "  [grey]  6.[/] Resolve timezone from lat/lng for rows with [white]TimezoneChecked=0[/] and coordinates.");
+        Spectre.Console.AnsiConsole.WriteLine();
+
+        // Step 6 needs a policy when an existing timezone disagrees with the coordinate-derived one.
         var accept = new TzPolicy("accept", "Accept coordinates as truth",
             "Overwrite existing timezones that differ from lat/lng (+ mark verified)");
         var report = new TzPolicy("report", "Report differences only",
@@ -70,7 +86,7 @@ internal static class NormalizeDashboard
                 ? "[grey]← Cancel[/]"
                 : $"[bold cyan]{p.Label,-28}[/]  [grey]{p.Desc}[/]",
             escapeReturns: cancel,
-            title: "When a coordinate timezone differs from the existing value:");
+            title: "Step 6 — when a coordinate timezone differs from the existing value:");
 
         if (choice == cancel) return 0;
 

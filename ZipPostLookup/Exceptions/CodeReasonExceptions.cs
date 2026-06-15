@@ -8,11 +8,6 @@ namespace ZipPostLookup;
 /// These are only thrown when the caller opts in via
 /// <see cref="ZipPostLookup.ThrowReasonExceptions(bool)"/> (default <c>false</c>). With the
 /// toggle off, lookups behave exactly as before (return <c>null</c> / empty).
-/// <para>
-/// Phase 1 throws only <see cref="BadlyFormattedCodeException"/> (input format, no data needed).
-/// <see cref="ObsoleteCodeException"/> and <see cref="CommonFakeDataException"/> are defined now
-/// but are not thrown until the per-row reason flags ship (Phase 2).
-/// </para>
 /// </remarks>
 public abstract class CodeReasonException : Exception
 {
@@ -42,7 +37,7 @@ public sealed class BadlyFormattedCodeException : CodeReasonException
 
 /// <summary>
 /// Thrown when a found postal code has been decommissioned/retired by the postal authority but
-/// is still in circulation. <b>Not thrown in Phase 1</b> — reserved for the Phase 2 reason flags.
+/// is still in circulation.
 /// </summary>
 public sealed class ObsoleteCodeException : CodeReasonException
 {
@@ -55,7 +50,7 @@ public sealed class ObsoleteCodeException : CodeReasonException
 
 /// <summary>
 /// Thrown when a found postal code is widely-circulated bogus/placeholder data rather than a real
-/// deliverable code. <b>Not thrown in Phase 1</b> — reserved for the Phase 2 reason flags.
+/// deliverable code.
 /// </summary>
 public sealed class CommonFakeDataException : CodeReasonException
 {

@@ -1,3 +1,5 @@
+using ZipPostLookup.CountryDataTools.Models.Enums;
+
 namespace ZipPostLookup.CountryDataTools.Export;
 
 /// <summary>
@@ -7,12 +9,13 @@ namespace ZipPostLookup.CountryDataTools.Export;
 /// </summary>
 internal sealed class ExportRow
 {
-    public string ZpCode     { get; set; } = "";
-    public string PlaceName  { get; set; } = "";
-    public string Timezone  { get; set; } = "";
-    public bool   IsDefault { get; set; }
-    public string Lat       { get; set; } = "---";
-    public string Lng       { get; set; } = "---";
-    public string Admin1    { get; set; } = "---";
-    public string Admin1Code{ get; set; } = "---";
+    public string             ZpCode     { get; set; } = "";
+    public string             PlaceName  { get; set; } = "";
+    public string             Timezone   { get; set; } = "";
+    public bool               IsDefault  { get; set; }
+    public string             Lat        { get; set; } = "---";
+    public string             Lng        { get; set; } = "---";
+    public string             Admin1     { get; set; } = "---";
+    public string             Admin1Code { get; set; } = "---";
+    public DataFlagReasonType Reason     { get; set; }
 }

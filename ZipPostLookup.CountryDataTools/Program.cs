@@ -44,6 +44,7 @@ static async Task<int> RunCommandAsync(string command, string[] cmdArgs) =>
         "extractissues" => await ExtractIssuesCommand.RunAsync(cmdArgs),
         "convert"       => await ConvertKnownFormatsCommand.RunAsync(cmdArgs),
         "snapshot"      => await SnapshotCommand.RunAsync(cmdArgs),
+        "autopromote"   => await AutoPromoteCommand.RunAsync(cmdArgs),
         _               => UnknownCommand(command)
     };
 

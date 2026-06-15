@@ -176,7 +176,16 @@ public static class ImportCandidatesCommand
                         .GroupBy(r => r.ZpCode, StringComparer.OrdinalIgnoreCase)
                         .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
-                    ProcessChunkCandidates(chunkCandidates, refLookup,
+                    // Pre-fetch existing Name-discrepancy keys for these codes so we don't recreate a
+                    // discrepancy that already exists (open → avoids per-RunId duplicate rows; resolved
+                    // → respects the prior accept/reject decision and stops the backlog regrowing).
+                    var existingNameDisc = new HashSet<string>(
+                        (await conn.QueryAsync<(string ZpCode, string InValue)>(
+                            CommonQueries.GetNameDiscrepancyKeysForBatch, parameters))
+                            .Select(r => $"{r.ZpCode}\0{r.InValue}"),
+                        StringComparer.OrdinalIgnoreCase);
+
+                    ProcessChunkCandidates(chunkCandidates, refLookup, existingNameDisc,
                         acc, pendingCoordUpdates, counters, countryRules);
 
                     await FlushChunkAsync(db, opts.Country, runId, acc);
@@ -296,6 +305,7 @@ public static class ImportCandidatesCommand
     private static void ProcessChunkCandidates(
         IReadOnlyList<CodesCandidate>             chunkCandidates,
         IReadOnlyDictionary<string, List<DataReference>> refLookup,
+        HashSet<string>                           existingNameDisc,
         ChunkAccumulators                         acc,
         List<DataReference>                       pendingCoordUpdates,
         ImportCounters                            counters,
@@ -365,6 +375,17 @@ public static class ImportCandidatesCommand
                     candidate.Status = StatusString(CandidateStatus.Clean);
                     acc.StatusUpdates.Add(candidate);
                     counters.AbbreviationMatches++;
+                    continue;
+                }
+
+                // Skip if a Name discrepancy for this (code, name) already exists — open one would
+                // just duplicate (per-RunId key); a resolved one already carries a decision. Either
+                // way, don't recreate it.
+                if (existingNameDisc.Contains($"{code}\0{name}"))
+                {
+                    candidate.Status = StatusString(CandidateStatus.Clean);
+                    acc.StatusUpdates.Add(candidate);
+                    counters.DiscrepancySkipped++;
                     continue;
                 }
 

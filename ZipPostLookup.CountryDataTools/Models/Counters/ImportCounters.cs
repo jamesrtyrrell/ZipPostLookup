@@ -13,4 +13,5 @@ public sealed class ImportCounters
     public int AbbreviationMatches   { get; set; }
     public int CuratedSkipped        { get; set; }
     public int FlaggedSkipped        { get; set; }
+    public int DiscrepancySkipped    { get; set; }
 }

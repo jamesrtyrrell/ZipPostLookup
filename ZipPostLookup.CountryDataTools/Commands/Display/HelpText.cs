@@ -119,6 +119,13 @@ public static class HelpText
         Console.WriteLine("                    prints recommended next steps (integrity, build, test, commit).");
         Console.WriteLine();
 
+        AnsiConsole.MarkupLine("  [bold cyan]autopromote[/]     --country XX [[--dry-run]]");
+        AnsiConsole.MarkupLine("           or:    --all [[--dry-run]]");
+        Console.WriteLine("                    Auto-promote candidate aliases from the Gold Name-Discrepancy");
+        Console.WriteLine("                    backlog using PlaceNameNormalizer equivalence matching.");
+        Console.WriteLine("                    Phase 3 of Gold Name-Discrepancy Backlog Resolution.");
+        Console.WriteLine();
+
         AnsiConsole.MarkupLine("  [bold cyan]db[/]              Manage the working database connection.");
         Console.WriteLine("    init          --country XX --connection \"Server=...\"");
         Console.WriteLine("    status        Show config, connection, and recent runs.");

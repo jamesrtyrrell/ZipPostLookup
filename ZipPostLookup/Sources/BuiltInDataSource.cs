@@ -267,12 +267,18 @@ internal sealed class BuiltInDataSource : ICodeDataSource
             ? new[] { new AdminLevel(admin1, admin1Code, levelName) }
             : Array.Empty<AdminLevel>();
 
+        // Optional reason field at index 6 (unquoted integer; absent in older CSVs → None).
+        var reason = CodeReason.None;
+        if (fields.Count >= 7 && int.TryParse(fields[6].Trim(), out var r))
+            reason = (CodeReason)r;
+
         return new CodeEntry(
             ZpCode:    code,
             PlaceName: name,
             Timezone:  timezone,
             IsDefault: isDefault,
-            Admins:    admins);
+            Admins:    admins,
+            Reason:    reason);
     }
 
     /// <summary>
@@ -324,12 +330,18 @@ internal sealed class BuiltInDataSource : ICodeDataSource
             levelIndex++;
         }
 
+        // Optional reason field — the single leftover column after all admin pairs.
+        var reason = CodeReason.None;
+        if (adminStart < fields.Count && int.TryParse(Unquote(fields[adminStart]), out var r))
+            reason = (CodeReason)r;
+
         return new CodeEntry(
             ZpCode:    code,
             PlaceName: name,
             Timezone:  timezone,
             IsDefault: isDefault,
-            Admins:    adminList.ToArray());
+            Admins:    adminList.ToArray(),
+            Reason:    reason);
     }
 
     // =========================================================================

@@ -17,7 +17,7 @@
   "CodeRanges": true,
   "Curated": true,
   "CurationStatus": "Curated",
-  "LastUpdated": "2026-06-14",
+  "LastUpdated": "2026-06-15",
   "CodeFormat": "A1A 1A1",
   "CodeRegex": "^[A-Z]\\d[A-Z] \\d[A-Z]\\d$",
   "Description": "Canadian provinces and territories with postal abbreviations and capitals.",
@@ -44,7 +44,7 @@
       "Code": "ON",
       "Capital": "Toronto",
       "ZipCount": 298854,
-      "NameCount": 316931
+      "NameCount": 317008
     },
     {
       "Type": "province",
@@ -54,7 +54,7 @@
       "Capital": "Quebec City",
       "CapitalLocal": "Qu\u00E9bec",
       "ZipCount": 226948,
-      "NameCount": 235090
+      "NameCount": 235104
     },
     {
       "Type": "province",
@@ -62,7 +62,7 @@
       "Code": "NS",
       "Capital": "Halifax",
       "ZipCount": 30097,
-      "NameCount": 31768
+      "NameCount": 31853
     },
     {
       "Type": "province",
@@ -71,7 +71,7 @@
       "Code": "NB",
       "Capital": "Fredericton",
       "ZipCount": 61289,
-      "NameCount": 62068
+      "NameCount": 62077
     },
     {
       "Type": "province",
@@ -79,7 +79,7 @@
       "Code": "MB",
       "Capital": "Winnipeg",
       "ZipCount": 27072,
-      "NameCount": 27227
+      "NameCount": 27230
     },
     {
       "Type": "province",
@@ -87,7 +87,7 @@
       "Code": "BC",
       "Capital": "Victoria",
       "ZipCount": 122591,
-      "NameCount": 125380
+      "NameCount": 125400
     },
     {
       "Type": "province",
@@ -95,7 +95,7 @@
       "Code": "PE",
       "Capital": "Charlottetown",
       "ZipCount": 4343,
-      "NameCount": 4425
+      "NameCount": 4426
     },
     {
       "Type": "province",
@@ -103,7 +103,7 @@
       "Code": "SK",
       "Capital": "Regina",
       "ZipCount": 23806,
-      "NameCount": 24210
+      "NameCount": 24211
     },
     {
       "Type": "province",
@@ -111,7 +111,7 @@
       "Code": "AB",
       "Capital": "Edmonton",
       "ZipCount": 92785,
-      "NameCount": 93761
+      "NameCount": 93767
     },
     {
       "Type": "province",
@@ -119,7 +119,7 @@
       "Code": "NL",
       "Capital": "St. John\u0027s",
       "ZipCount": 12008,
-      "NameCount": 12208
+      "NameCount": 12226
     },
     {
       "Type": "territory",

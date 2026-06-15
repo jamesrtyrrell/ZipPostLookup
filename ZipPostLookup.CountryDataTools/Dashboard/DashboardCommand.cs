@@ -16,11 +16,12 @@ public static class DashboardCommand
     [
         new MenuGroup("Data Operations", "Curating uncurated data, finding missing information",
         [
-            new MenuItem("Enrichment",   "Enrich uncurated DB or candidate data via APIs",    EnrichDashboard.RunAsync),
-            new MenuItem("Normalize",    "Fix timezone aliases, names, and admin data",        NormalizeDashboard.RunAsync),
-            new MenuItem("Editor",       "Browse and curate uncurated reference codes",        ZpCodeEditorDashboard.RunAsync),
-            new MenuItem("Find Gold",    "Certify all reference ZpCodes that are Gold Standard", FindGoldDashboard.RunAsync),
-            new MenuItem("Db Integrity", "Scan DB for admin errors, orphans, duplicates",     DbIntegrityDashboard.RunAsync),
+            new MenuItem("Enrichment",      "Enrich uncurated DB or candidate data via APIs",       EnrichDashboard.RunAsync),
+            new MenuItem("Normalize",       "Fix timezone aliases, names, and admin data",           NormalizeDashboard.RunAsync),
+            new MenuItem("Editor",          "Browse and curate uncurated reference codes",           ZpCodeEditorDashboard.RunAsync),
+            new MenuItem("Find Gold",       "Certify all reference ZpCodes that are Gold Standard",  FindGoldDashboard.RunAsync),
+            new MenuItem("Auto-Promote",    "Auto-promote candidate aliases (Phase 3)",              AutoPromoteDashboard.RunAsync),
+            new MenuItem("Db Integrity",    "Scan DB for admin errors, orphans, duplicates",        DbIntegrityDashboard.RunAsync),
         ]),
 
         new MenuGroup("Importing Data", "Working with, cleaning, and preparing data to import",

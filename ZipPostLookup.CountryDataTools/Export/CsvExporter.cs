@@ -47,11 +47,11 @@ internal static class CsvExporter
         // ── Column header ─────────────────────────────────────────────────────
         if (meta.IncludeCoords)
         {
-            await writer.WriteLineAsync("Code,Name,Timezone,IsDefault,Lat,Lng,Admin1,Admin1Code");
+            await writer.WriteLineAsync("Code,Name,Timezone,IsDefault,Lat,Lng,Admin1,Admin1Code,Reason");
         }
         else
         {
-            await writer.WriteLineAsync("Code,Name,Timezone,IsDefault,Admin1,Admin1Code");
+            await writer.WriteLineAsync("Code,Name,Timezone,IsDefault,Admin1,Admin1Code,Reason");
         }
 
         // ── Data rows ─────────────────────────────────────────────────────────
@@ -129,14 +129,16 @@ internal static class CsvExporter
             admin1Code = Quote(row.Admin1Code);
         }
 
+        var reason = (int)row.Reason;
+
         if (meta.IncludeCoords)
         {
             var lat = Quote(row.Lat);
             var lng = Quote(row.Lng);
-            return $"{code},{name},{timezone},{isDefault},{lat},{lng},{admin1},{admin1Code}";
+            return $"{code},{name},{timezone},{isDefault},{lat},{lng},{admin1},{admin1Code},{reason}";
         }
 
-        return $"{code},{name},{timezone},{isDefault},{admin1},{admin1Code}";
+        return $"{code},{name},{timezone},{isDefault},{admin1},{admin1Code},{reason}";
     }
 
     // -------------------------------------------------------------------------
