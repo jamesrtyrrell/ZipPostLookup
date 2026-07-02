@@ -23,6 +23,7 @@ public static class IngestCommand
             "ref" => await Handlers.ImportReferenceDataCommand.RunAsync(args[1..]),
             "candidate" => await Handlers.ImportCandidatesCommand.RunAsync(args[1..]),
             "coords" => await Handlers.EnrichReferenceFromCoordinatesCommand.RunAsync(args[1..]),
+            "auto" => await Handlers.AutoImportCommand.RunAsync(args[1..]),
             _ => Unknown(args[0])
         };
     }
@@ -44,5 +45,7 @@ public static class IngestCommand
                                          Import a candidate CSV against verified reference data.
                             coords     --source <file.csv> [--country XX] [--batch 1000] [--dry-run]
                                          Bulk-resolve timezones from a ZIP,LAT,LNG or ZIP,CITY,STATE,LAT,LNG CSV.
+                            auto       <file> [--sample-rows N] [--min-hit-rate N] [--country XX] [--dry-run] [--no-llm] [--no-ui]
+                                         Auto-detect file format and import postal code data (CSV/TSV/Excel/JSON).
                           """);
 }

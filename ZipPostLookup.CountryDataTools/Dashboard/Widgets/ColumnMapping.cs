@@ -18,6 +18,12 @@ internal sealed class ColumnMappingField
     /// <summary>Bound incoming column index, or null when unmapped.</summary>
     public int? ColumnIndex { get; set; }
 
+    /// <summary>
+    /// Confidence score (0.0–1.0) for this mapping, used by auto-import to show ★★★/★★☆/★☆☆ badges.
+    /// 0.0 when not set (manual bindings, non-auto-import flows).
+    /// </summary>
+    public double Confidence { get; set; }
+
     public bool IsMapped => ColumnIndex.HasValue;
 }
 

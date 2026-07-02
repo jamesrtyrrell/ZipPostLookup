@@ -25,6 +25,10 @@ namespace ZipPostLookup.Core;
 /// </remarks>
 /// <param name="CountryId">ISO 3166-1 alpha-2 code, e.g. <c>"US"</c>.</param>
 /// <param name="CountryName">Full English country name, e.g. <c>"United States"</c>.</param>
+/// <param name="Enabled">
+/// <c>true</c> if the country is enabled for import/export operations in the system.
+/// Controls which countries appear in active workflows.
+/// </param>
 /// <param name="HasPostalCodes">
 /// <c>true</c> if the country uses a postal code system;
 /// <c>false</c> for countries like the UAE that do not.
@@ -61,6 +65,7 @@ namespace ZipPostLookup.Core;
 public sealed record CountryInfo(
     string         CountryId,
     string         CountryName,
+    bool           Enabled,
     bool           HasPostalCodes,
     string?        CodeRegex,
     string?        ConstrainedRegex,

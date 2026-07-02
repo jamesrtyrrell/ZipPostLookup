@@ -1,9 +1,9 @@
 ﻿# ZipPostLookup
 
 Fast, extensible in-memory postal code lookup for .NET.  
-Built-in data for the **United States** (<!-- zpl:us:codes -->43,501<!-- /zpl:us:codes --> ZIP codes), **Canada** (~<!-- zpl:ca:codes -->901,482<!-- /zpl:ca:codes --> postal codes, <!-- zpl:ca:entries -->620k<!-- /zpl:ca:entries --> compressed entries via FSA range compression), and **Mexico** (<!-- zpl:mx:codes -->32,896<!-- /zpl:mx:codes --> postal codes). All three countries are fully curated ✅.
+Built-in data for the **United States** (<!-- zpl:us:codes -->43,501<!-- /zpl:us:codes --> ZIP codes), **Canada** (~<!-- zpl:ca:codes -->901,487<!-- /zpl:ca:codes --> postal codes, <!-- zpl:ca:entries -->620k<!-- /zpl:ca:entries --> compressed entries via FSA range compression), and **Mexico** (<!-- zpl:mx:codes -->32,896<!-- /zpl:mx:codes --> postal codes). All three countries are fully curated ✅.
 
-Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-15 08:07:27<!-- /zpl:updated -->)**
+Code counts and status, last updated on: **(<!-- zpl:updated -->2026-07-02 17:28:19<!-- /zpl:updated -->)**
 
 ---
 
@@ -83,6 +83,7 @@ All static methods on `ZipPostLookup` target the built-in US registry. `GetByCod
 | `Admin3Code`          | `string?`        | Code of the third admin level                                      |
 | `GetAdmin(levelName)` | `AdminLevel?`    | Lookup by level name or alias, e.g. `GetAdmin("Province")`         |
 | `GetLocalTime()`      | `DateTimeOffset` | Current local time in this entry's timezone                        |
+| `Reason`              | `CodeReason`     | Why this code is flagged — `None`, `Flagged`, `CommonFake`, or `Obsolete` (see [Lookup Exceptions](#lookup-exceptions-opt-in)) |
 
 Administrative subdivisions are stored as an `AdminLevel[]` array (ordered largest to smallest), each with `Value`, `Code`, and `LevelName` (`"State"`, `"Province"`, `"Estado"`). `GetByAdmin` and `GetAdmin` resolve level name aliases from the country schema.
 
@@ -170,7 +171,10 @@ When the toggle is on, `GetByCode` / `GetByZip` / `GetAllByCode` throw
 `BadlyFormattedCodeException` for input that isn't a valid postal-code format for **any** supported
 country (US, CA, MX) — the format is checked against the same per-country normalizers used for
 lookups, so **no data is needed**. A well-formed code that just isn't in the data still returns
-`null`/empty, and `null` input still returns `null`.
+`null`/empty, and `null` input still returns `null`. Note that `TryGetByCode` / `TryGetByZip`
+delegate to `GetByCode`, so with the toggle on they throw too rather than returning `false` —
+keep the toggle off on paths that rely on the Try-pattern's no-throw contract. Reverse lookups
+(`GetByName` / `GetByState` / `GetByTimeZone`) and `GetBatch` are unaffected by the toggle.
 
 ```csharp
 try
@@ -189,9 +193,35 @@ registry; registries from `CreateRegistry` / `CreateCustomRegistry` and `ZpImage
 carry their own setting. All exceptions derive from `CodeReasonException`, which exposes the offending
 `Code`.
 
-> Roadmap: a future release adds per-code reason flags so a *found* code can also report that it is
-> **obsolete** or **known fake data** (via `ObsoleteCodeException` / `CommonFakeDataException`, already
-> present as types). Today only the format-based `BadlyFormattedCodeException` is thrown.
+A *found* code can also carry a reason — `CodeEntry.Reason` (a `CodeReason` enum: `None`, `Flagged`,
+`CommonFake`, `Obsolete`). With the toggle on, a found code flagged `Obsolete` or `CommonFake` throws
+`ObsoleteCodeException` / `CommonFakeDataException` instead of returning the entry silently.
+`Flagged` (a generic, unspecified flag) never throws — it's informational only, readable via
+`entry.Reason` on a normal successful lookup.
+
+```csharp
+ZipPostLookup.ThrowReasonExceptions(true);
+
+try
+{
+    var entry = ZipPostLookup.GetByCode(userInput);
+}
+catch (ObsoleteCodeException ex)
+{
+    Console.WriteLine($"'{ex.Code}' is obsolete — decommissioned by the postal authority.");
+}
+catch (CommonFakeDataException ex)
+{
+    Console.WriteLine($"'{ex.Code}' is known common fake/placeholder data.");
+}
+```
+
+All three exceptions derive from `CodeReasonException`, so a single `catch (CodeReasonException ex)`
+handles any of them uniformly.
+
+> Curation status: the reason-flag mechanism (enum, exceptions, CSV column, ZPI byte) ships in the
+> library today. Identifying and flagging the actual obsolete/fake codes in the built-in US/CA/MX
+> data is an ongoing curation effort — see the roadmap below.
 
 ---
 
@@ -209,11 +239,11 @@ Planned work toward the 2.0 release. The runtime library's public API is stable;
 
 | Item | Description |
 |------|-------------|
-| **Audit CDT** | Harden the `CountryDataTools` data-curation CLI — route all DB access through its service layer and centralise every SQL string, so the pipeline is consistent and maintainable. |
-| **AI Import Helper** | An `import auto` command that ingests any CSV/TSV/JSON, auto-detects the postal-code column, and maps the remaining fields — using the built-in data as a ground-truth oracle — so new sources need no manual format description. |
-| **Code Reason Flags** | Mark codes as *obsolete* or *known fake data* and let lookups throw to explain a miss. The opt-in format check (`BadlyFormattedCodeException` via `ThrowReasonExceptions`) has shipped; per-code obsolete/fake flags are the next phase. |
+| **Audit CDT** ✅ | Done. All `CountryDataTools` DB access routes through its service layer with every SQL string centralised in `CommonQueries`; the pipeline is consistent and maintainable. |
+| **AI Import Helper** | An `import auto` command that ingests any CSV/TSV/JSON/Excel, auto-detects the postal-code column, and maps the remaining fields — using the built-in data as a ground-truth oracle — so new sources need no manual format description. In progress: sniff, oracle probe, column correlation, and ingestion phases are built and under test. |
+| **Code Reason Flags** | Mark codes as *obsolete* or *known fake data* and let lookups throw to explain a miss. Shipped: `ThrowReasonExceptions`, `BadlyFormattedCodeException` (format check), `ObsoleteCodeException` / `CommonFakeDataException` (per-code flags), `CodeEntry.Reason`. Remaining: curating which US/CA/MX codes actually carry a non-`None` reason. |
 | **More countries** | Expand built-in data beyond US, CA, and MX. The embedded CSV format is the contract; each new country ships as an embedded resource. |
-| **Unit Tests on CDT** | Add automated test coverage to the `CountryDataTools` pipeline (currently covered only by the library's own test suite). |
+| **Unit Tests on CDT** | Core coverage landed — 180+ tests over the CDT's rules, parsing, export stages, auto-import services, and DB integration (extending incrementally). |
 | **Python Port** | A PyPI package mirroring the lookup API (`get_by_code`, `get_by_name`, `get_by_state`, …), backed by the same embedded CSV data. |
 
 ---
@@ -259,9 +289,17 @@ IZipPostLookup mx = ZpImageLookup.FromBuiltIn(CountryCode.MX);
 // From a file on disk (e.g. a custom country image)
 IZipPostLookup img = ZpImageLookup.FromFile("path/to/us.u16.zpi.br");
 
+// From an untrusted source: bounds-check the structure and verify the
+// {path}.sha256 sidecar before loading (both off by default for speed)
+IZipPostLookup safe = ZpImageLookup.FromFile("path/to/us.u16.zpi.br",
+    validate: true, verifyHash: true);
+
 // All IZipPostLookup methods work identically
 CodeEntry? entry = us.GetByCode("90210");
 ```
+
+Every shipped data file (`.csv`, `.csv.br`, `.zpi.br`) has a `.sha256` sidecar committed
+alongside it, so file integrity can be verified out-of-band as well.
 
 See the [Performance](#performance) section for load-time benchmarks.
 
@@ -351,12 +389,12 @@ On .NET 8+, all indexes use `FrozenDictionary`. The `.zpi.br` frozen image loads
 | Country |                                        Distinct Codes* | Admin Levels |                Timezones                | Status     |
 |---------|-------------------------------------------------------:|:------------:|:---------------------------------------:|------------|
 | US      |  **<!-- zpl:us:codes -->43,501<!-- /zpl:us:codes -->** |    State     | <!-- zpl:us:tz -->56<!-- /zpl:us:tz --> | ✅ Curated  |
-| CA      | **<!-- zpl:ca:codes -->901,482<!-- /zpl:ca:codes -->** |   Province   | <!-- zpl:ca:tz -->28<!-- /zpl:ca:tz --> | ✅ Curated  |
+| CA      | **<!-- zpl:ca:codes -->901,487<!-- /zpl:ca:codes -->** |   Province   | <!-- zpl:ca:tz -->29<!-- /zpl:ca:tz --> | ✅ Curated  |
 | MX      |  **<!-- zpl:mx:codes -->32,896<!-- /zpl:mx:codes -->** |    Estado    | <!-- zpl:mx:tz -->20<!-- /zpl:mx:tz --> | ✅ Curated  |
 
 \* Distinct codes are the number of unique Zip/Postal codes in the country's set.
 
-Code counts and status, last updated on: **(<!-- zpl:updated -->2026-06-15 08:07:27<!-- /zpl:updated -->)**
+Code counts and status, last updated on: **(<!-- zpl:updated -->2026-07-02 17:28:19<!-- /zpl:updated -->)**
 
 ---
 

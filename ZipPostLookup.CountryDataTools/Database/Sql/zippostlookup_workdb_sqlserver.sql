@@ -142,6 +142,7 @@ GO
 CREATE TABLE [data].[CountryInfo] (
     [CountryId]         [nvarchar](2)    NOT NULL,
     [CountryName]       [nvarchar](100)  NOT NULL,
+    [Enabled]           [bit]            NOT NULL  CONSTRAINT [DF_CountryInfo_Enabled]         DEFAULT (0),
     [HasPostalCodes]    [bit]            NOT NULL  CONSTRAINT [DF_CountryInfo_HasPostalCodes]  DEFAULT (1),
     [CodeRegex]         [nvarchar](255)  NULL,
     [ConstrainedRegex]  [nvarchar](255)  NULL,

@@ -1,3 +1,5 @@
+using ZipPostLookup.CountryDataTools.Models.Enums;
+
 namespace ZipPostLookup.CountryDataTools.Export;
 
 /// <summary>
@@ -71,6 +73,12 @@ internal static class OptimisedCsvSource
             {
                 row.Lat = Field(fields, columns, "lat");
                 row.Lng = Field(fields, columns, "lng");
+            }
+
+            // Optional column — absent in CSVs exported before the Reason column shipped.
+            if (int.TryParse(Field(fields, columns, "reason"), out var reason))
+            {
+                row.Reason = (DataFlagReasonType)reason;
             }
 
             rows.Add(row);

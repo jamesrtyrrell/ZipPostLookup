@@ -96,4 +96,14 @@ public static partial class CommonQueries
                 AND  name      = 'Notes'
           )
           ALTER TABLE codes.Discrepancies ADD Notes NVARCHAR(500) NULL;";
+
+    // Run once to add Enabled to data.CountryInfo. Safe to repeat (IF NOT EXISTS guard).
+    // Enabled controls whether a country is active in the system for imports/exports.
+    public static readonly string MigrateAddEnabledColumn =
+        @"IF NOT EXISTS (
+              SELECT 1 FROM sys.columns
+              WHERE  object_id = OBJECT_ID('data.CountryInfo')
+                AND  name      = 'Enabled'
+          )
+          ALTER TABLE data.CountryInfo ADD Enabled BIT NOT NULL DEFAULT 0;";
 }

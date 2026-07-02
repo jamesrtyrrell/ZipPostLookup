@@ -1,5 +1,3 @@
-using ZipPostLookup.CountryDataTools.Models.Enums;
-
 namespace ZipPostLookup.CountryDataTools.CountryRules;
 
 /// <summary>
@@ -12,7 +10,10 @@ namespace ZipPostLookup.CountryDataTools.CountryRules;
 /// </summary>
 public interface ICountryRules
 {
-    PipelineCountry Country { get; }
+    /// <summary>
+    /// The country code these rules apply to (e.g., "US", "CA", "MX").
+    /// </summary>
+    string CountryCode { get; }
 
     /// <summary>
     /// True if <paramref name="code"/> belongs to a known special domain

@@ -28,6 +28,13 @@
     <ProjectReference Include="..\ZipPostLookup.CountryDataTools\ZipPostLookup.CountryDataTools.csproj" />
   </ItemGroup>
 
+  <!-- Sample TSV/CSV files used by AutoImport tests — copy to output so tests can open them by relative path. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <None Include="..\samples\**\*.*" CopyToOutputDirectory="PreserveNewest">
+      <Link>samples\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </None>
+  </ItemGroup>
+
   <ItemGroup Condition="'$(TargetFramework)' != 'net10.0'">
     <Compile Remove="Cdt\**\*.cs" />
   </ItemGroup>

@@ -40,8 +40,46 @@ internal static class ColumnMappingWidget
         bool showValidation = false,
         Func<ColumnMapping, string[], IReadOnlyDictionary<string, string>>? derivedValues = null)
     {
+        return ShowInternal(pageTitle, mapping, sampleRows, null, showValidation, derivedValues, null, confidenceBadges: false);
+    }
+
+    /// <summary>
+    /// Auto-import overload with confidence badges and extended derived-values provider.
+    /// </summary>
+    public static bool Show(
+        ColumnMapping mapping,
+        string[] fileColumns,
+        string[][] sampleRows,
+        Func<ColumnMapping, string[], (string[] derivedValues, string[] validationNotes)>? derivedValuesProvider = null,
+        bool showValidation = false,
+        bool confidenceBadges = false)
+    {
+        var result = ShowInternal(
+            pageTitle: "Auto-Import: Confirm Mapping",
+            mapping: mapping,
+            sampleRows: sampleRows,
+            fileColumns: fileColumns,
+            showValidation: showValidation,
+            derivedValues: null,
+            derivedValuesProviderEx: derivedValuesProvider,
+            confidenceBadges: confidenceBadges
+        );
+
+        return result.Outcome == ColumnMappingOutcome.Accept;
+    }
+
+    private static ColumnMappingResult ShowInternal(
+        string pageTitle,
+        ColumnMapping mapping,
+        IReadOnlyList<string[]> sampleRows,
+        string[]? fileColumns,
+        bool showValidation,
+        Func<ColumnMapping, string[], IReadOnlyDictionary<string, string>>? derivedValues,
+        Func<ColumnMapping, string[], (string[] derivedValues, string[] validationNotes)>? derivedValuesProviderEx,
+        bool confidenceBadges)
+    {
         var editable = mapping.EditableFields;
-        var columnCount = sampleRows.Count > 0 ? sampleRows.Max(r => r.Length) : 0;
+        var columnCount = fileColumns?.Length ?? (sampleRows.Count > 0 ? sampleRows.Max(r => r.Length) : 0);
 
         var selected = 0;          // index into editable fields
         var showPreview = showValidation;   // start with the validation table visible when asked
@@ -49,7 +87,7 @@ internal static class ColumnMappingWidget
 
         while (true)
         {
-            Render(pageTitle, mapping, sampleRows, columnCount, editable, selected, showPreview, message, derivedValues);
+            Render(pageTitle, mapping, sampleRows, columnCount, editable, selected, showPreview, message, derivedValues, confidenceBadges, derivedValuesProviderEx, fileColumns);
             message = null;
 
             var keyInfo = Console.ReadKey(intercept: true);
@@ -146,15 +184,18 @@ internal static class ColumnMappingWidget
         int selected,
         bool showPreview,
         string? message,
-        Func<ColumnMapping, string[], IReadOnlyDictionary<string, string>>? derivedValues)
+        Func<ColumnMapping, string[], IReadOnlyDictionary<string, string>>? derivedValues,
+        bool confidenceBadges = false,
+        Func<ColumnMapping, string[], (string[] derivedValues, string[] validationNotes)>? derivedValuesProviderEx = null,
+        string[]? fileColumns = null)
     {
         HeaderBar.Render(pageTitle);
 
         var firstRow     = sampleRows.Count > 0 ? sampleRows[0] : Array.Empty<string>();
         var derivedFirst = derivedValues?.Invoke(mapping, firstRow) ?? NoDerivedValues;
 
-        var template = BuildTemplateTable(mapping, sampleRows, editable, selected, derivedFirst);
-        var incoming = BuildIncomingTable(sampleRows, columnCount);
+        var template = BuildTemplateTable(mapping, sampleRows, editable, selected, derivedFirst, confidenceBadges);
+        var incoming = BuildIncomingTable(sampleRows, columnCount, fileColumns);
         AnsiConsole.Write(new Columns(template, incoming).Collapse());
         AnsiConsole.WriteLine();
 
@@ -180,7 +221,8 @@ internal static class ColumnMappingWidget
         IReadOnlyList<string[]> sampleRows,
         IReadOnlyList<ColumnMappingField> editable,
         int selected,
-        IReadOnlyDictionary<string, string> derived)
+        IReadOnlyDictionary<string, string> derived,
+        bool confidenceBadges = false)
     {
         var table = new Table()
             .Title("[bold]ZipPostLookup Data[/]")
@@ -203,7 +245,10 @@ internal static class ColumnMappingWidget
             if (field.IsMapped)
             {
                 value  = Markup.Escape(Sample(sampleRows, field.ColumnIndex!.Value));
-                colTag = $" [grey](col {field.ColumnIndex})[/]";
+                var badge = confidenceBadges && field.Confidence > 0
+                    ? GetConfidenceBadge(field.Confidence)
+                    : "";
+                colTag = $" [grey](col {field.ColumnIndex}){badge}[/]";
             }
             else if (derived.TryGetValue(field.Name, out var dv) && !string.IsNullOrEmpty(dv))
             {
@@ -242,16 +287,32 @@ internal static class ColumnMappingWidget
         return table;
     }
 
-    private static Table BuildIncomingTable(IReadOnlyList<string[]> sampleRows, int columnCount)
+    private static string GetConfidenceBadge(double confidence)
+    {
+        return confidence switch
+        {
+            >= 0.8 => " [green]★★★[/]",
+            >= 0.6 => " [yellow]★★☆[/]",
+            >= 0.4 => " [dim yellow]★☆☆[/]",
+            _ => " [dim]☆☆☆[/]"
+        };
+    }
+
+    private static Table BuildIncomingTable(IReadOnlyList<string[]> sampleRows, int columnCount, string[]? fileColumns = null)
     {
         var table = new Table()
             .Title("[bold]Incoming Data[/]")
             .Border(TableBorder.Rounded)
-            .AddColumn(new TableColumn("[grey]Col[/]").Width(3))
-            .AddColumn(new TableColumn("[grey]Sample value[/]"));
+            .AddColumn(new TableColumn("[grey]Col[/]").Width(5).NoWrap())
+            .AddColumn(new TableColumn("[grey]Sample value[/]").Width(40));
 
         for (var c = 0; c < columnCount; c++)
-            table.AddRow($"[cyan]{c}[/]", $"[grey]{Markup.Escape(Sample(sampleRows, c))}[/]");
+        {
+            var colName = fileColumns != null && c < fileColumns.Length
+                ? $"[cyan]{c}[/] [dim]{Markup.Escape(fileColumns[c])}[/]"
+                : $"[cyan]{c}[/]";
+            table.AddRow(colName, $"[grey]{Markup.Escape(Sample(sampleRows, c))}[/]");
+        }
 
         if (columnCount == 0)
             table.AddRow("", "[red]no columns[/]");

@@ -22,7 +22,7 @@ namespace ZipPostLookup.CountryDataTools.CountryRules.Us;
 /// </summary>
 public sealed class UsCountryRules : ICountryRules
 {
-    public PipelineCountry Country              => PipelineCountry.US;
+    public string CountryCode => "US";
     public bool SupportsAdmin1Derivation        => true;
 
     // ── Name patterns ──────────────────────────────────────────────────────────

@@ -572,6 +572,7 @@ public static class ExportReferenceCommand
                     Lng        = r.Lng        ?? "---",
                     Admin1     = r.Admin1     ?? "---",
                     Admin1Code = r.Admin1Code ?? "---",
+                    Reason     = r.Flagged,
                 })
                 .ToList();
 
@@ -690,6 +691,7 @@ public static class ExportReferenceCommand
                 Lng        = r.Lng        ?? "---",
                 Admin1     = r.Admin1     ?? "---",
                 Admin1Code = r.Admin1Code ?? "---",
+                Reason     = r.Flagged,
             })
             .ToList();
 

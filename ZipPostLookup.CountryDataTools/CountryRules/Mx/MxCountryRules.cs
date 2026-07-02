@@ -17,7 +17,7 @@ namespace ZipPostLookup.CountryDataTools.CountryRules.Mx;
 /// </summary>
 public sealed class MxCountryRules : ICountryRules
 {
-    public PipelineCountry Country                       => PipelineCountry.MX;
+    public string CountryCode => "MX";
     public bool SupportsAdmin1Derivation                 => true;
     public bool IsKnownSpecialCode(string code)          => false;
     public bool IsKnownSpecialName(string name)          => false;

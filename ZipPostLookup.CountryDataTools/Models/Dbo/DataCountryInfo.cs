@@ -25,6 +25,7 @@ public class DataCountryInfo : IDataSchema
     
     [ExplicitKey] public string CountryId { get; set; } = string.Empty;
     public string CountryName { get; set; } = string.Empty;
+    public bool Enabled { get; set; }
     public bool HasPostalCodes { get; set; }
     public string? CodeRegex { get; set; }
     public string? ConstrainedRegex { get; set; }

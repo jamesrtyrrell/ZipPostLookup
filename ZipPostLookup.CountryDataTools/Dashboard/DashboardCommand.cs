@@ -14,6 +14,11 @@ public static class DashboardCommand
 
     private static IReadOnlyList<MenuGroup> BuildGroups() =>
     [
+        new MenuGroup("System", "Country management and system configuration",
+        [
+            new MenuItem("Country Management", "Enable/disable countries, initialize from JSON", CountryManagementDashboard.RunAsync),
+        ]),
+
         new MenuGroup("Data Operations", "Curating uncurated data, finding missing information",
         [
             new MenuItem("Enrichment",      "Enrich uncurated DB or candidate data via APIs",       EnrichDashboard.RunAsync),
@@ -27,6 +32,7 @@ public static class DashboardCommand
         new MenuGroup("Importing Data", "Working with, cleaning, and preparing data to import",
         [
             new MenuItem("Import Pipeline",    "Entire process, step by step",                    null, IsFuture: true),
+            new MenuItem("Auto-Import",        "AI-powered: auto-detect format and import",       AutoImportDashboard.RunAsync),
             new MenuItem("Ingest",             "Import ref data or candidate CSVs",               IngestDashboard.RunAsync),
             new MenuItem("ZpCodes Only",       "Import a flat csv of codes to check",             CodesOnlyDashboard.RunAsync),
             new MenuItem("Convert",            "Convert known formats from OSM, GeoNames, etc.",  ConvertDashboard.RunAsync),

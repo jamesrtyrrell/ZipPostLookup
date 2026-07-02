@@ -13,11 +13,11 @@
     }
   ],
   "NameLabel": "Place",
-  "CodeCount": 901482,
+  "CodeCount": 901487,
   "CodeRanges": true,
   "Curated": true,
   "CurationStatus": "Curated",
-  "LastUpdated": "2026-06-15",
+  "LastUpdated": "2026-07-02",
   "CodeFormat": "A1A 1A1",
   "CodeRegex": "^[A-Z]\\d[A-Z] \\d[A-Z]\\d$",
   "Description": "Canadian provinces and territories with postal abbreviations and capitals.",
@@ -110,8 +110,8 @@
       "Name": "Alberta",
       "Code": "AB",
       "Capital": "Edmonton",
-      "ZipCount": 92785,
-      "NameCount": 93767
+      "ZipCount": 92790,
+      "NameCount": 93773
     },
     {
       "Type": "province",

@@ -27,10 +27,10 @@ internal static class TestCodes
 
     internal static class MX
     {
-        public const string ExactCode       = "00224";
-        public const string ExactPlaceName  = "Municipio de Tijuana";
+        public const string ExactCode       = "00500";
+        public const string ExactPlaceName  = "Omitlán de Juárez";
         public const string ExactAdmin1Code = "CMX";
-        public const string ExactTimezone   = "America/Los_Angeles";
+        public const string ExactTimezone   = "America/Mexico_City";
     }
 
 }

@@ -219,6 +219,79 @@ public static class ImportCandidatesCommand
         return 0;
     }
 
+    /// <summary>
+    /// Process a batch of candidates against reference data (internal API for IngestionService).
+    /// Returns counters without console output or progress bars.
+    /// </summary>
+    internal static async Task<ImportCounters> ProcessBatchAsync(
+        WorkDbContext db,
+        string country,
+        string runId,
+        List<CodesCandidate> candidates)
+    {
+        var counters = new ImportCounters();
+        var acc = new ChunkAccumulators();
+        var pendingCoordUpdates = new List<DataReference>();
+        var countryRules = CountryRulesFactory.For(country);
+
+        await using var conn = (SqlConnection)db.GetFactory().CreateConnection();
+
+        // Resolve admin level map
+        var adminLevelMap = (await conn.QueryAsync<DataAdminLevel>(
+                CommonQueries.GetCandidateAdminLevels,
+                new { CountryId = country.ToUpperInvariant() }))
+            .ToDictionary(r => r.LevelNumber, r => r.AdminLevelId);
+
+        // Remap admin levels in candidates
+        foreach (var candidate in candidates)
+        {
+            candidate.RemapCandidatesList(adminLevelMap);
+        }
+
+        // Bulk-insert all candidate rows first
+        foreach (var candidateChunk in candidates.Chunk(ChunkSize))
+        {
+            await db.Exec.BulkInsertWithChildrenAsync(candidateChunk, x => x.AdminCandidateList);
+        }
+
+        // Process each candidate against reference in chunks
+        for (int chunkStart = 0; chunkStart < candidates.Count; chunkStart += ChunkSize)
+        {
+            var chunkEnd = Math.Min(chunkStart + ChunkSize, candidates.Count);
+            var chunkCandidates = candidates.GetRange(chunkStart, chunkEnd - chunkStart);
+            var chunkCodes = chunkCandidates.Select(c => c.ZpCode).Distinct().ToArray();
+
+            var parameters = new DynamicParameters();
+            parameters.Add("Codes", DataTools.ConvertArrayToCodeTableParameter(chunkCodes));
+            parameters.Add("CountryId", country.ToUpperInvariant());
+
+            var refLookup = (await conn.QueryAsync<DataReference>(CommonQueries.GetReferenceForImportBatch, parameters))
+                .GroupBy(r => r.ZpCode, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+            var existingNameDisc = new HashSet<string>(
+                (await conn.QueryAsync<(string ZpCode, string InValue)>(
+                    CommonQueries.GetNameDiscrepancyKeysForBatch, parameters))
+                    .Select(r => $"{r.ZpCode}\0{r.InValue}"),
+                StringComparer.OrdinalIgnoreCase);
+
+            ProcessChunkCandidates(chunkCandidates, refLookup, existingNameDisc,
+                acc, pendingCoordUpdates, counters, countryRules);
+
+            await FlushChunkAsync(db, country, runId, acc);
+        }
+
+        // Flush coord enrichments
+        if (pendingCoordUpdates.Count > 0)
+        {
+            await db.Exec.BulkUpdateAsync("CoordUpdate", pendingCoordUpdates);
+        }
+
+        await db.Runs.CompleteRunAsync(runId);
+
+        return counters;
+    }
+
     // =========================================================================
     // Chunk flush — writes all accumulated records to the database
     // =========================================================================

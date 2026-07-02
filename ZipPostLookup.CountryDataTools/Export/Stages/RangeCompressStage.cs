@@ -6,9 +6,11 @@ namespace ZipPostLookup.CountryDataTools.Export.Stages;
 /// Collapses homogeneous prefix groups into a single range row.
 ///
 /// A group is homogeneous when every row in it shares the same
-/// Name, Timezone, Admin1, and Admin1Code.  Such groups are encoded as
+/// Name, Timezone, Admin1, Admin1Code, and Reason.  Such groups are encoded as
 /// a single row with a range code (<c>T0A0**:T0A9**</c>) that
-/// <see cref="ZipPostRegistry"/> expands at load time.
+/// <see cref="ZipPostRegistry"/> expands at load time. Reason is included in the
+/// homogeneity test so a flagged code is never silently merged with — and made to
+/// share the flag of, or erase the flag from — unflagged neighbors.
 ///
 /// Grouping prefix lengths:
 ///   CA, US — first 3 characters (FSA / 3-digit SCF prefix)
@@ -100,7 +102,8 @@ internal sealed class RangeCompressStage : IExportStage
                 if (!string.Equals(r.PlaceName,   first.PlaceName,  StringComparison.OrdinalIgnoreCase) ||
                     !string.Equals(r.Timezone,    first.Timezone,   StringComparison.OrdinalIgnoreCase) ||
                     !string.Equals(r.Admin1,      first.Admin1,     StringComparison.OrdinalIgnoreCase) ||
-                    !string.Equals(r.Admin1Code,  first.Admin1Code, StringComparison.OrdinalIgnoreCase))
+                    !string.Equals(r.Admin1Code,  first.Admin1Code, StringComparison.OrdinalIgnoreCase) ||
+                    r.Reason != first.Reason)
                 {
                     homogeneous = false;
                     break;
@@ -135,6 +138,7 @@ internal sealed class RangeCompressStage : IExportStage
                 Lng        = first.Lng,
                 Admin1     = first.Admin1,
                 Admin1Code = first.Admin1Code,
+                Reason     = first.Reason,
             });
 
             groupsCompressed++;

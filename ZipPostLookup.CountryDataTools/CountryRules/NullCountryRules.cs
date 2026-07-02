@@ -13,7 +13,7 @@ internal sealed class NullCountryRules : ICountryRules
 
     private NullCountryRules() { }
 
-    public PipelineCountry Country          => PipelineCountry.US;
+    public string CountryCode => "NONE";
     public bool IsKnownSpecialCode(string code) => false;
     public bool IsKnownSpecialName(string name) => false;
     public string? GetDomainLabel(string code)  => null;

@@ -29,6 +29,7 @@ internal static class CountryInfoSource
         ["US"] = (new CountryInfo(
             CountryId:        "US",
             CountryName:      "United States",
+            Enabled:          true,
             HasPostalCodes:   true,
             CodeRegex:        @"^\d{5}([- ]\d{4})?$",
             ConstrainedRegex: null,
@@ -47,6 +48,7 @@ internal static class CountryInfoSource
         ["CA"] = (new CountryInfo(
             CountryId:        "CA",
             CountryName:      "Canada",
+            Enabled:          true,
             HasPostalCodes:   true,
             CodeRegex:        @"^[A-Z]\d[A-Z] \d[A-Z]\d$",
             ConstrainedRegex: @"^[ABCEGHJ-NPR-TV-Z]\d[ABCEGHJ-NPR-TV-Z] \d[ABCEGHJ-NPR-TV-Z]\d$",
@@ -62,6 +64,7 @@ internal static class CountryInfoSource
         ["MX"] = (new CountryInfo(
             CountryId:        "MX",
             CountryName:      "Mexico",
+            Enabled:          true,
             HasPostalCodes:   true,
             CodeRegex:        @"^\d{5}$",
             ConstrainedRegex: null,

@@ -8,7 +8,7 @@ namespace ZipPostLookup.CountryDataTools.CountryRules.Ca;
 /// </summary>
 public sealed class CaCountryRules : ICountryRules
 {
-    public PipelineCountry Country                       => PipelineCountry.CA;
+    public string CountryCode => "CA";
     public bool SupportsAdmin1Derivation                 => true;
     public bool IsKnownSpecialCode(string code)          => false;
     public bool IsKnownSpecialName(string name)          => false;

@@ -7,6 +7,17 @@ public static partial class CommonQueries
     public static readonly string GetCountryInfoById =
         @"SELECT * FROM data.CountryInfo WHERE CountryId = @CountryId";
 
+    public static readonly string GetAllCountryInfo =
+        @"SELECT * FROM data.CountryInfo ORDER BY CountryName";
+
+    public static readonly string GetEnabledCountries =
+        @"SELECT * FROM data.CountryInfo WHERE Enabled = 1 ORDER BY CountryName";
+
+    public static readonly string UpdateCountryEnabled =
+        @"UPDATE data.CountryInfo
+          SET Enabled = @Enabled, UpdatedAt = SYSUTCDATETIME()
+          WHERE CountryId = @CountryId";
+
     public static readonly string ResetCountryCodeCount =
         @"UPDATE data.CountryInfo SET CodeCount = 0 WHERE CountryId = @CountryId";
 
@@ -671,7 +682,8 @@ public static partial class CommonQueries
                 ISNULL(r.Lat, '---')        AS Lat,
                 ISNULL(r.Lng, '---')        AS Lng,
                 ISNULL(ra.Value, '---')     AS Admin1,
-                ISNULL(ra.Code,  '---')     AS Admin1Code
+                ISNULL(ra.Code,  '---')     AS Admin1Code,
+                r.Flagged                   AS Flagged
             FROM data.Reference r
             LEFT JOIN data.ReferenceAdmins ra
                 ON  ra.ReferenceId  = r.ReferenceId
@@ -682,6 +694,9 @@ public static partial class CommonQueries
               AND r.AltNameOf IS NULL
             ORDER BY r.ZpCode, r.IsDefault DESC, r.PlaceName";
 
+    // Flagged rows are included (with their reason) rather than excluded — the shipped
+    // library's CodeReason/ThrowReasonExceptions feature needs the flag to actually reach
+    // the exported data instead of the code silently vanishing from the dataset.
     public static readonly string ExportReferenceDataCuratedOnly =
         @"SELECT
                 r.ZpCode,
@@ -691,7 +706,8 @@ public static partial class CommonQueries
                 ISNULL(r.Lat, '---')        AS Lat,
                 ISNULL(r.Lng, '---')        AS Lng,
                 ISNULL(ra.Value, '---')     AS Admin1,
-                ISNULL(ra.Code,  '---')     AS Admin1Code
+                ISNULL(ra.Code,  '---')     AS Admin1Code,
+                r.Flagged                   AS Flagged
             FROM data.Reference r
             LEFT JOIN data.ReferenceAdmins ra
                 ON  ra.ReferenceId  = r.ReferenceId
@@ -701,7 +717,6 @@ public static partial class CommonQueries
             WHERE r.CountryId = @CountryId
               AND r.Curated   = 1
               AND r.AltNameOf IS NULL
-              AND r.Flagged   = 0
             ORDER BY r.ZpCode, r.IsDefault DESC, r.PlaceName";
 
     public static readonly string ExportReferenceDataWithCuration =
