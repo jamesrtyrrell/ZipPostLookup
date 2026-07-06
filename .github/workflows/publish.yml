@@ -39,7 +39,10 @@ jobs:
           dotnet build ZipPostLookup.Legacy/ZipPostLookup.Legacy.csproj --configuration Release --no-restore /p:Version=${{ github.event.inputs.version }}
 
       - name: Test
-        run: dotnet test ZipPostLookup.Tests/ZipPostLookup.Tests.csproj --configuration Release --verbosity normal
+        # net8.0 only: the net10.0 test build pulls in the CountryDataTools CLI and its
+        # test suite (needs a local SQL Server working DB), which isn't part of the
+        # shipped package. net8.0 exercises the library that actually gets packed.
+        run: dotnet test ZipPostLookup.Tests/ZipPostLookup.Tests.csproj --configuration Release --framework net8.0 --verbosity normal
 
       - name: Pack
         run: |
